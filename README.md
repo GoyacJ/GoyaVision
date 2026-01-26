@@ -14,7 +14,7 @@
 
 ---
 
-GoyaVision 是一个企业级、开源的 AI 视频流分析处理平台，专为生产环境设计。支持 RTSP 流接入、智能抽帧、视频录制、AI 模型推理，以及灵活的算法调度策略。
+GoyaVision 是一个企业级、开源的 AI 视频流分析处理平台。支持 RTSP 流接入、智能抽帧、视频录制、AI 模型推理，以及灵活的算法调度策略。
 
 ## ✨ 功能特性
 
@@ -97,15 +97,24 @@ export GOYAVISION_SERVER_PORT=8080
 ### 运行
 
 ```bash
-# 开发模式
+# 开发模式（仅后端）
 go run ./cmd/server
 
-# 或构建后运行
-go build -o goyavision ./cmd/server
-./goyavision
+# 构建完整项目（包含前端）
+make build-all
+
+# 或分别构建
+make build-web  # 构建前端
+make build      # 构建后端
+
+# 运行
+./bin/goyavision
 ```
 
-服务将在 `http://localhost:8080` 启动，API 前缀为 `/api/v1`。
+服务将在 `http://localhost:8080` 启动：
+- **Web 界面**：`http://localhost:8080/`
+- **API 前缀**：`/api/v1`
+- **HLS 文件**：`/live/*`
 
 ### Docker（规划中）
 
@@ -120,13 +129,14 @@ docker-compose up
 
 - [需求文档](docs/requirements.md) - 功能需求与范围定义
 - [开发进度](docs/development-progress.md) - 项目开发状态与路线图
+- [架构文档](docs/architecture.md) - 系统架构设计说明
+- [API 文档](docs/api.md) - RESTful API 接口文档
+- [部署指南](docs/DEPLOYMENT.md) - 部署和运维指南
 - [贡献指南](CONTRIBUTING.md) - 如何参与项目贡献
 - [安全策略](SECURITY.md) - 安全漏洞报告流程
 - [变更日志](CHANGELOG.md) - 版本更新记录
 
-### API 文档
-
-API 文档正在完善中，当前 API 端点：
+### API 端点概览
 
 | 资源            | 方法 | 路径 |
 |-----------------|------|------|
@@ -134,8 +144,12 @@ API 文档正在完善中，当前 API 端点：
 | Algorithm       | CRUD | `/api/v1/algorithms` |
 | AlgorithmBinding| CRUD | `/api/v1/streams/:id/algorithm-bindings` |
 | Record          | POST | `/api/v1/streams/:id/record/start`, `/stop` |
-| InferenceResult | GET  | `/api/v1/inference_results` |
+| Record          | GET  | `/api/v1/streams/:id/record/sessions` |
+| InferenceResult | GET  | `/api/v1/inference_results`（支持过滤和分页） |
 | Preview         | GET  | `/api/v1/streams/:id/preview/start` |
+| Preview         | POST | `/api/v1/streams/:id/preview/stop` |
+
+详细 API 文档见 [API 文档](docs/api.md)（规划中）。
 
 ## 🏗️ 技术架构
 
@@ -162,8 +176,12 @@ goyavision/
 │   ├── app/             # 应用服务（用例编排）
 │   ├── adapter/         # 适配器实现（persistence、ffmpeg、preview、ai）
 │   └── api/             # HTTP 层（路由、handler、dto）
-├── pkg/ffmpeg/          # FFmpeg 进程池
-├── web/                 # Vue 前端（待建）
+├── pkg/
+│   ├── ffmpeg/          # FFmpeg 进程池和管理器
+│   └── preview/         # 预览池和管理器
+├── web/                 # Vue 3 前端（TypeScript + Vite）
+│   ├── src/             # 源代码
+│   └── dist/            # 构建产物（会被 embed）
 ├── migrations/          # 数据库迁移
 └── docs/                # 项目文档
 ```
@@ -178,7 +196,7 @@ GoyaVision 采用分层架构（Clean Architecture / Hexagonal Architecture）�
 - **Adapter Layer**: 基础设施实现（数据库、FFmpeg、AI 服务等）
 - **API Layer**: HTTP 接口层，处理请求与响应
 
-详细架构说明见 [架构文档](docs/architecture.md)（规划中）。
+详细架构说明见 [架构文档](docs/architecture.md)。API 使用说明见 [API 文档](docs/api.md)。
 
 ## 🤝 贡献
 

@@ -10,8 +10,11 @@ import (
 	"time"
 
 	"goyavision/config"
+	"goyavision/internal/adapter/ai"
 	"goyavision/internal/adapter/persistence"
 	"goyavision/internal/api"
+	"goyavision/internal/app"
+	"goyavision/pkg/ffmpeg"
 
 	"github.com/labstack/echo/v4"
 	"gorm.io/driver/postgres"
@@ -40,6 +43,26 @@ func main() {
 	}
 
 	repo := persistence.NewRepository(db)
+
+	var scheduler *app.Scheduler
+	if db != nil {
+		inferenceAdapter := ai.NewInferenceAdapter(cfg.AI.Timeout, cfg.AI.Retry)
+		pool := ffmpeg.NewPool(cfg.FFmpeg.Bin, cfg.FFmpeg.MaxRecord, cfg.FFmpeg.MaxFrame)
+		manager := ffmpeg.NewManager(pool, cfg.Record.BasePath)
+		frameBasePath := "./data/frames"
+		scheduler, err = app.NewScheduler(repo, inferenceAdapter, manager, frameBasePath)
+		if err != nil {
+			log.Fatalf("create scheduler: %v", err)
+		}
+
+		ctx := context.Background()
+		if err := scheduler.Start(ctx); err != nil {
+			log.Fatalf("start scheduler: %v", err)
+		}
+		log.Print("scheduler started")
+		defer scheduler.Stop()
+	}
+
 	e := echo.New()
 	api.RegisterRouter(e, api.Deps{Repo: repo, Cfg: cfg})
 

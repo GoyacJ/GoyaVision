@@ -55,10 +55,13 @@ GoyaVision 采用分层架构（Clean Architecture / Hexagonal Architecture）�
 - 不直接依赖 adapter 具体实现
 
 **服务**:
-- `StreamService`: 流管理用例
-- `RecordService`: 录制用例
-- `InferenceService`: 推理用例
-- `PreviewService`: 预览用例
+- `StreamService`: 流管理用例（CRUD、状态管理）
+- `AlgorithmService`: 算法管理用例（CRUD）
+- `AlgorithmBindingService`: 算法绑定管理用例（CRUD、验证）
+- `RecordService`: 录制用例（启停、会话管理、任务监控）
+- `InferenceService`: 推理结果查询用例（过滤、分页）
+- `PreviewService`: 预览用例（启停、HLS URL 管理）
+- `Scheduler`: 调度器（gocron，管理推理任务）
 
 **原则**:
 - 通过 port 接口操作，而非直接调用 adapter
@@ -75,10 +78,8 @@ GoyaVision 采用分层架构（Clean Architecture / Hexagonal Architecture）�
 - 可依赖 domain
 
 **适配器**:
-- `persistence`: 实现 `port.Repository`（GORM）
-- `ffmpeg`: FFmpeg 进程管理（规划中）
-- `preview`: 预览服务（规划中）
-- `ai`: AI 推理服务调用（规划中）
+- `persistence`: 实现 `port.Repository`（GORM + PostgreSQL）
+- `ai`: 实现 `port.Inference`（HTTP 客户端，支持超时和重试）
 
 **原则**:
 - 实现 port 接口
@@ -160,11 +161,33 @@ GoyaVision 采用分层架构（Clean Architecture / Hexagonal Architecture）�
 
 ## 进程管理
 
-**位置**: `pkg/ffmpeg/`
+**位置**: `pkg/ffmpeg/`、`pkg/preview/`
 
-- FFmpeg 进程池
-- 资源限流（最大录制数、最大抽帧数）
-- 进程生命周期管理
+- **FFmpeg Pool**：进程池与限流（最大录制数、最大抽帧数）
+- **FFmpegManager**：录制任务（RTSP -> 分段 MP4）、抽帧任务（单帧提取、连续抽帧）
+- **Preview Pool**：预览资源池（最大预览数）
+- **PreviewManager**：预览任务管理（MediaMTX/FFmpeg HLS）
+- 进程生命周期管理（启动、停止、监控）
+
+## 调度器
+
+**位置**: `internal/app/scheduler.go`
+
+- 使用 gocron 管理定时任务
+- 支持固定间隔（`interval_sec`）
+- 支持定时调度（`schedule`：start、end、days_of_week）
+- 支持首次延迟（`initial_delay_sec`）
+- 启动时自动加载启用的算法绑定
+- 任务管理（创建、删除、监控）
+
+## 前端集成
+
+**位置**: `web/`、`internal/api/static.go`
+
+- Vue 3 + TypeScript + Vite + Element Plus + video.js
+- 构建产物嵌入到 Go 二进制（`embed.FS`）
+- SPA 路由处理（所有非 API 路由返回 index.html）
+- HLS 文件服务（`/live/*`）
 
 ## 扩展点
 
@@ -179,6 +202,13 @@ GoyaVision 采用分层架构（Clean Architecture / Hexagonal Architecture）�
 1. 在 `app/` 创建新的 Service
 2. 编排 domain 和 port
 3. 在 `api/handler/` 中调用
+4. 创建对应的 DTO
+
+### 添加新的进程管理
+
+1. 在 `pkg/` 创建新的管理器
+2. 实现进程池和限流
+3. 在对应的 Service 中集成
 
 ## 测试策略
 
@@ -195,10 +225,27 @@ GoyaVision 采用分层架构（Clean Architecture / Hexagonal Architecture）�
 
 ## 安全考虑
 
-- 输入验证（API 层）
+- 输入验证（API 层和 Service 层）
 - SQL 注入防护（使用 GORM 参数化查询）
+- 错误处理不泄露敏感信息
 - 认证与鉴权（规划中）
 - 敏感信息加密（规划中）
+
+## 已实现的关键组件
+
+### 错误处理
+- `internal/api/errors.go`：统一错误响应格式
+- 区分业务错误（4xx）与基础设施错误（5xx）
+- Echo HTTPErrorHandler 集成
+
+### 数据库约束
+- RecordSession 唯一约束（部分唯一索引，确保一个流只有一个 running 状态）
+- InferenceResult 查询索引（stream_id + ts, algorithm_binding_id + ts）
+
+### 任务管理
+- RecordService：内存中存储活跃录制任务，后台监控
+- PreviewManager：内存中存储活跃预览任务
+- Scheduler：内存中存储活跃调度任务
 
 ---
 

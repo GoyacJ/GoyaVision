@@ -8,17 +8,61 @@ alwaysApply: true
 ## 分层与依赖
 
 - **domain**：仅实体与纯领域逻辑，不导入 `internal/adapter`、`internal/api`、`config` 等 infra。
+  - 实体：`Stream`、`Algorithm`、`AlgorithmBinding`、`RecordSession`、`InferenceResult`
+  - 常量：`RecordStatusRunning`、`RecordStatusStopped`
 - **port**：接口定义（如 `Repository`、`Inference`）；可被 `app`、`api` 依赖；实现放在 `adapter`。
+  - `Repository`：数据持久化接口（Stream、Algorithm、AlgorithmBinding、RecordSession、InferenceResult）
+  - `Inference`：AI 推理服务接口（HTTP + JSON）
 - **app**：编排 domain 与 port，实现用例；不直接依赖 `adapter` 具体实现，通过 `port` 注入。
+  - `StreamService`：流管理用例
+  - `AlgorithmService`：算法管理用例
+  - `AlgorithmBindingService`：算法绑定管理用例
+  - `RecordService`：录制用例（集成 FFmpegManager）
+  - `InferenceService`：推理结果查询用例
+  - `PreviewService`：预览用例（集成 PreviewManager）
+  - `Scheduler`：调度器（gocron，管理推理任务）
 - **adapter**：实现 `port`，可依赖 `domain`；如 `persistence` 实现 `port.Repository`。
+  - `persistence`：实现 `port.Repository`（GORM + PostgreSQL）
+  - `ai`：实现 `port.Inference`（HTTP 客户端）
 - **api**：HTTP 路由、middleware、handler、dto；handler 调用 `app` 或 `port`，不直接写 GORM/SQL。
+  - `handler/`：请求处理器（stream、algorithm、algorithm_binding、record、inference、preview）
+  - `dto/`：数据传输对象（请求与响应）
+  - `errors.go`：统一错误处理
+  - `static.go`：前端静态文件服务（embed）
 
 ## Go 与风格
 
 - 使用 `gofmt`/`goimports` 风格；不写行尾注释。
 - 错误：不吞掉；业务错误与基础设施错误区分返回（如 4xx 与 5xx）。
+  - 使用 `internal/api/errors.go` 统一错误处理
+  - 区分 `ErrNotFound`、`ErrInvalidInput`、`ErrAlreadyExists`
 - 配置：统一经 `config` 包与 Viper；敏感信息不写死，可用 `GOYAVISION_*` 环境变量覆盖。
+- 上下文：所有需要取消的操作使用 `context.Context`。
+- 并发：使用 `sync.RWMutex` 保护共享资源（如任务映射）。
+
+## 进程管理
+
+- **FFmpeg Pool**：`pkg/ffmpeg/pool.go`，限制并发录制数和抽帧数。
+- **Preview Pool**：`pkg/preview/pool.go`，限制并发预览数。
+- **FFmpegManager**：`pkg/ffmpeg/manager.go`，管理录制和抽帧任务。
+- **PreviewManager**：`pkg/preview/manager.go`，管理预览任务（MediaMTX/FFmpeg）。
+
+## 调度器
+
+- **Scheduler**：`internal/app/scheduler.go`，使用 gocron 管理推理任务。
+- 支持 `interval_sec`（固定间隔）、`schedule`（定时调度）、`initial_delay_sec`（首次延迟）。
+- 启动时自动加载所有启用的算法绑定并创建任务。
+
+## 前端
+
+- **位置**：`web/`，Vue 3 + TypeScript + Vite + Element Plus + video.js
+- **构建**：`npm run build` 输出到 `web/dist/`
+- **嵌入**：使用 Go `embed.FS` 嵌入构建产物
+- **路由**：SPA 路由，所有非 API 路由返回 `index.html`
 
 ## 文档与进度
 
-- 需求与范围见 `docs/requirements.md`；开发阶段与状态见 `docs/development-progress.md`；实现时同步更新。
+- 需求与范围见 `docs/requirements.md`
+- 开发阶段与状态见 `docs/development-progress.md`
+- 架构说明见 `docs/architecture.md`
+- 实现时同步更新相关文档

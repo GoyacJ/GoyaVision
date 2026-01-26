@@ -31,13 +31,51 @@ func (r *repository) checkDB() error {
 }
 
 func AutoMigrate(db *gorm.DB) error {
-	return db.AutoMigrate(
+	if err := db.AutoMigrate(
 		&domain.Stream{},
 		&domain.Algorithm{},
 		&domain.AlgorithmBinding{},
 		&domain.RecordSession{},
 		&domain.InferenceResult{},
-	)
+	); err != nil {
+		return err
+	}
+
+	if err := addIndexesAndConstraints(db); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func addIndexesAndConstraints(db *gorm.DB) error {
+	if db.Migrator().HasIndex(&domain.RecordSession{}, "idx_record_sessions_stream_running") {
+		return nil
+	}
+
+	if err := db.Exec(`
+		CREATE UNIQUE INDEX IF NOT EXISTS idx_record_sessions_stream_running 
+		ON record_sessions (stream_id) 
+		WHERE status = 'running'
+	`).Error; err != nil {
+		return err
+	}
+
+	if err := db.Exec(`
+		CREATE INDEX IF NOT EXISTS idx_inference_results_stream_ts 
+		ON inference_results (stream_id, ts DESC)
+	`).Error; err != nil {
+		return err
+	}
+
+	if err := db.Exec(`
+		CREATE INDEX IF NOT EXISTS idx_inference_results_binding_ts 
+		ON inference_results (algorithm_binding_id, ts DESC)
+	`).Error; err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func ensureID(id *uuid.UUID) {
