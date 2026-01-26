@@ -1,0 +1,24 @@
+server:
+  port: 8080
+
+db:
+  dsn: "host=localhost user=goyavision password=goyavision dbname=goyavision port=5432 sslmode=disable"
+
+ffmpeg:
+  bin: "ffmpeg"
+  max_record: 16
+  max_frame: 16
+
+preview:
+  provider: "mediamtx"
+  mediamtx_bin: "mediamtx"
+  max_preview: 10
+  hls_base: "/live"
+
+record:
+  base_path: "./data/recordings"
+  segment_sec: 300
+
+ai:
+  timeout: 10s
+  retry: 2

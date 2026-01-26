@@ -1,0 +1,24 @@
+---
+description: GoyaVision 项目分层、端口适配器与 Go 约定
+alwaysApply: true
+---
+
+# GoyaVision 项目规则
+
+## 分层与依赖
+
+- **domain**：仅实体与纯领域逻辑，不导入 `internal/adapter`、`internal/api`、`config` 等 infra。
+- **port**：接口定义（如 `Repository`、`Inference`）；可被 `app`、`api` 依赖；实现放在 `adapter`。
+- **app**：编排 domain 与 port，实现用例；不直接依赖 `adapter` 具体实现，通过 `port` 注入。
+- **adapter**：实现 `port`，可依赖 `domain`；如 `persistence` 实现 `port.Repository`。
+- **api**：HTTP 路由、middleware、handler、dto；handler 调用 `app` 或 `port`，不直接写 GORM/SQL。
+
+## Go 与风格
+
+- 使用 `gofmt`/`goimports` 风格；不写行尾注释。
+- 错误：不吞掉；业务错误与基础设施错误区分返回（如 4xx 与 5xx）。
+- 配置：统一经 `config` 包与 Viper；敏感信息不写死，可用 `GOYAVISION_*` 环境变量覆盖。
+
+## 文档与进度
+
+- 需求与范围见 `docs/requirements.md`；开发阶段与状态见 `docs/development-progress.md`；实现时同步更新。
