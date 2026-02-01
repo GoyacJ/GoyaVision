@@ -1,7 +1,6 @@
 package api
 
 import (
-	"embed"
 	"io/fs"
 	"net/http"
 	"strings"
@@ -9,18 +8,10 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-var (
-	//go:embed all:web/dist
-	webFS embed.FS
-)
-
-func RegisterStatic(e *echo.Echo) {
-	webDist, err := fs.Sub(webFS, "web/dist")
-	if err != nil {
+func RegisterStatic(e *echo.Echo, webFS fs.FS) {
+	if webFS == nil {
 		return
 	}
-
-	fileServer := http.FileServer(http.FS(webDist))
 
 	e.GET("/*", func(c echo.Context) error {
 		path := c.Request().URL.Path
@@ -33,9 +24,9 @@ func RegisterStatic(e *echo.Echo) {
 			path = "/index.html"
 		}
 
-		file, err := webDist.Open(strings.TrimPrefix(path, "/"))
+		file, err := webFS.Open(strings.TrimPrefix(path, "/"))
 		if err != nil {
-			indexFile, err := webDist.Open("index.html")
+			indexFile, err := webFS.Open("index.html")
 			if err != nil {
 				return c.String(http.StatusNotFound, "Not Found")
 			}
@@ -50,7 +41,7 @@ func RegisterStatic(e *echo.Echo) {
 		}
 
 		if stat.IsDir() {
-			indexFile, err := webDist.Open("index.html")
+			indexFile, err := webFS.Open("index.html")
 			if err != nil {
 				return c.String(http.StatusNotFound, "Not Found")
 			}
@@ -63,21 +54,28 @@ func RegisterStatic(e *echo.Echo) {
 }
 
 func getContentType(path string) string {
+	if len(path) < 3 {
+		return "application/octet-stream"
+	}
 	switch {
-	case path[len(path)-5:] == ".html":
+	case strings.HasSuffix(path, ".html"):
 		return "text/html"
-	case path[len(path)-4:] == ".css":
+	case strings.HasSuffix(path, ".css"):
 		return "text/css"
-	case path[len(path)-3:] == ".js":
+	case strings.HasSuffix(path, ".js"):
 		return "application/javascript"
-	case path[len(path)-4:] == ".json":
+	case strings.HasSuffix(path, ".json"):
 		return "application/json"
-	case path[len(path)-4:] == ".png":
+	case strings.HasSuffix(path, ".png"):
 		return "image/png"
-	case path[len(path)-4:] == ".jpg" || path[len(path)-5:] == ".jpeg":
+	case strings.HasSuffix(path, ".jpg"), strings.HasSuffix(path, ".jpeg"):
 		return "image/jpeg"
-	case path[len(path)-4:] == ".svg":
+	case strings.HasSuffix(path, ".svg"):
 		return "image/svg+xml"
+	case strings.HasSuffix(path, ".woff2"):
+		return "font/woff2"
+	case strings.HasSuffix(path, ".woff"):
+		return "font/woff"
 	default:
 		return "application/octet-stream"
 	}

@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"goyavision/internal/api"
 	"goyavision/internal/api/dto"
 	"goyavision/internal/app"
 	"goyavision/pkg/ffmpeg"
@@ -11,7 +10,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func RegisterPreview(g *echo.Group, d api.Deps) {
+func RegisterPreview(g *echo.Group, d Deps) {
 	ffmpegPool := ffmpeg.NewPool(d.Cfg.FFmpeg.Bin, d.Cfg.FFmpeg.MaxRecord, d.Cfg.FFmpeg.MaxFrame)
 	previewPool := preview.NewPool(d.Cfg.Preview.MaxPreview)
 	manager := preview.NewManager(
@@ -23,16 +22,12 @@ func RegisterPreview(g *echo.Group, d api.Deps) {
 		"./data/hls",
 	)
 	svc := app.NewPreviewService(d.Repo, manager)
-	h := previewHandler{
-		d:   d,
-		svc: svc,
-	}
+	h := previewHandler{svc: svc}
 	g.GET("/streams/:id/preview/start", h.Start)
 	g.POST("/streams/:id/preview/stop", h.Stop)
 }
 
 type previewHandler struct {
-	d   api.Deps
 	svc *app.PreviewService
 }
 
@@ -40,7 +35,7 @@ func (h *previewHandler) Start(c echo.Context) error {
 	streamIDStr := c.Param("id")
 	streamID, err := uuid.Parse(streamIDStr)
 	if err != nil {
-		return c.JSON(400, api.ErrorResponse{
+		return c.JSON(400, dto.ErrorResponse{
 			Error:   "Bad Request",
 			Message: "invalid stream id",
 		})
@@ -60,7 +55,7 @@ func (h *previewHandler) Stop(c echo.Context) error {
 	streamIDStr := c.Param("id")
 	streamID, err := uuid.Parse(streamIDStr)
 	if err != nil {
-		return c.JSON(400, api.ErrorResponse{
+		return c.JSON(400, dto.ErrorResponse{
 			Error:   "Bad Request",
 			Message: "invalid stream id",
 		})

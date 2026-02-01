@@ -4,6 +4,8 @@ import (
 	"errors"
 	"net/http"
 
+	"goyavision/internal/api/dto"
+
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 )
@@ -13,11 +15,6 @@ var (
 	ErrInvalidInput  = errors.New("invalid input")
 	ErrAlreadyExists = errors.New("resource already exists")
 )
-
-type ErrorResponse struct {
-	Error   string `json:"error"`
-	Message string `json:"message,omitempty"`
-}
 
 func ErrorHandler(err error, c echo.Context) {
 	code := http.StatusInternalServerError
@@ -32,7 +29,7 @@ func ErrorHandler(err error, c echo.Context) {
 	}
 
 	if !c.Response().Committed {
-		c.JSON(code, ErrorResponse{
+		c.JSON(code, dto.ErrorResponse{
 			Error:   http.StatusText(code),
 			Message: message,
 		})

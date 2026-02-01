@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"goyavision/internal/api"
 	"goyavision/internal/api/dto"
 	"goyavision/internal/app"
 
@@ -9,24 +8,20 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func RegisterInference(g *echo.Group, d api.Deps) {
+func RegisterInference(g *echo.Group, d Deps) {
 	svc := app.NewInferenceService(d.Repo)
-	h := inferenceHandler{
-		d:   d,
-		svc: svc,
-	}
+	h := inferenceHandler{svc: svc}
 	g.GET("/inference_results", h.List)
 }
 
 type inferenceHandler struct {
-	d   api.Deps
 	svc *app.InferenceService
 }
 
 func (h *inferenceHandler) List(c echo.Context) error {
 	var query dto.InferenceResultListQuery
 	if err := c.Bind(&query); err != nil {
-		return c.JSON(400, api.ErrorResponse{
+		return c.JSON(400, dto.ErrorResponse{
 			Error:   "Bad Request",
 			Message: "invalid query parameters",
 		})
@@ -36,7 +31,7 @@ func (h *inferenceHandler) List(c echo.Context) error {
 	if query.StreamID != nil {
 		id, err := uuid.Parse(*query.StreamID)
 		if err != nil {
-			return c.JSON(400, api.ErrorResponse{
+			return c.JSON(400, dto.ErrorResponse{
 				Error:   "Bad Request",
 				Message: "invalid stream_id",
 			})
@@ -46,7 +41,7 @@ func (h *inferenceHandler) List(c echo.Context) error {
 	if query.BindingID != nil {
 		id, err := uuid.Parse(*query.BindingID)
 		if err != nil {
-			return c.JSON(400, api.ErrorResponse{
+			return c.JSON(400, dto.ErrorResponse{
 				Error:   "Bad Request",
 				Message: "invalid binding_id",
 			})

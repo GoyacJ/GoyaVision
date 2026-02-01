@@ -7,7 +7,6 @@ import (
 	"goyavision/internal/domain"
 
 	"github.com/google/uuid"
-	"gorm.io/datatypes"
 )
 
 type AlgorithmBindingCreateReq struct {
@@ -52,8 +51,8 @@ func AlgorithmBindingToResponse(b *domain.AlgorithmBinding) *AlgorithmBindingRes
 		Enabled:         b.Enabled,
 		IntervalSec:     b.IntervalSec,
 		InitialDelaySec: b.InitialDelaySec,
-		Schedule:        b.Schedule,
-		Config:          b.Config,
+		Schedule:        json.RawMessage(b.Schedule),
+		Config:          json.RawMessage(b.Config),
 		CreatedAt:       b.CreatedAt,
 		UpdatedAt:       b.UpdatedAt,
 	}

@@ -85,7 +85,7 @@ func (s *RecordService) Start(ctx context.Context, streamID uuid.UUID) (*domain.
 }
 
 func (s *RecordService) Stop(ctx context.Context, streamID uuid.UUID) error {
-	stream, err := s.repo.GetStream(ctx, streamID)
+	_, err := s.repo.GetStream(ctx, streamID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.New("stream not found")

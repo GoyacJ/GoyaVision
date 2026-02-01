@@ -42,8 +42,8 @@ func AlgorithmToResponse(a *domain.Algorithm) *AlgorithmResponse {
 		ID:         a.ID,
 		Name:       a.Name,
 		Endpoint:   a.Endpoint,
-		InputSpec:  a.InputSpec,
-		OutputSpec: a.OutputSpec,
+		InputSpec:  json.RawMessage(a.InputSpec),
+		OutputSpec: json.RawMessage(a.OutputSpec),
 		CreatedAt:  a.CreatedAt,
 		UpdatedAt:  a.UpdatedAt,
 	}

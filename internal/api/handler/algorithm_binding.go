@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"goyavision/internal/api"
 	"goyavision/internal/api/dto"
 	"goyavision/internal/app"
 	"goyavision/internal/domain"
@@ -11,12 +10,9 @@ import (
 	"gorm.io/datatypes"
 )
 
-func RegisterAlgorithmBinding(g *echo.Group, d api.Deps) {
+func RegisterAlgorithmBinding(g *echo.Group, d Deps) {
 	svc := app.NewAlgorithmBindingService(d.Repo)
-	h := algorithmBindingHandler{
-		d:   d,
-		svc: svc,
-	}
+	h := algorithmBindingHandler{svc: svc}
 	g.GET("/streams/:id/algorithm-bindings", h.List)
 	g.POST("/streams/:id/algorithm-bindings", h.Create)
 	g.GET("/streams/:id/algorithm-bindings/:bid", h.Get)
@@ -25,7 +21,6 @@ func RegisterAlgorithmBinding(g *echo.Group, d api.Deps) {
 }
 
 type algorithmBindingHandler struct {
-	d   api.Deps
 	svc *app.AlgorithmBindingService
 }
 
@@ -33,7 +28,7 @@ func (h *algorithmBindingHandler) List(c echo.Context) error {
 	streamIDStr := c.Param("id")
 	streamID, err := uuid.Parse(streamIDStr)
 	if err != nil {
-		return c.JSON(400, api.ErrorResponse{
+		return c.JSON(400, dto.ErrorResponse{
 			Error:   "Bad Request",
 			Message: "invalid stream id",
 		})
@@ -51,7 +46,7 @@ func (h *algorithmBindingHandler) Create(c echo.Context) error {
 	streamIDStr := c.Param("id")
 	streamID, err := uuid.Parse(streamIDStr)
 	if err != nil {
-		return c.JSON(400, api.ErrorResponse{
+		return c.JSON(400, dto.ErrorResponse{
 			Error:   "Bad Request",
 			Message: "invalid stream id",
 		})
@@ -59,7 +54,7 @@ func (h *algorithmBindingHandler) Create(c echo.Context) error {
 
 	var req dto.AlgorithmBindingCreateReq
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(400, api.ErrorResponse{
+		return c.JSON(400, dto.ErrorResponse{
 			Error:   "Bad Request",
 			Message: "invalid request body",
 		})
@@ -93,7 +88,7 @@ func (h *algorithmBindingHandler) Get(c echo.Context) error {
 	bindingIDStr := c.Param("bid")
 	bindingID, err := uuid.Parse(bindingIDStr)
 	if err != nil {
-		return c.JSON(400, api.ErrorResponse{
+		return c.JSON(400, dto.ErrorResponse{
 			Error:   "Bad Request",
 			Message: "invalid algorithm binding id",
 		})
@@ -111,7 +106,7 @@ func (h *algorithmBindingHandler) Update(c echo.Context) error {
 	bindingIDStr := c.Param("bid")
 	bindingID, err := uuid.Parse(bindingIDStr)
 	if err != nil {
-		return c.JSON(400, api.ErrorResponse{
+		return c.JSON(400, dto.ErrorResponse{
 			Error:   "Bad Request",
 			Message: "invalid algorithm binding id",
 		})
@@ -119,7 +114,7 @@ func (h *algorithmBindingHandler) Update(c echo.Context) error {
 
 	var req dto.AlgorithmBindingUpdateReq
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(400, api.ErrorResponse{
+		return c.JSON(400, dto.ErrorResponse{
 			Error:   "Bad Request",
 			Message: "invalid request body",
 		})
@@ -157,7 +152,7 @@ func (h *algorithmBindingHandler) Delete(c echo.Context) error {
 	bindingIDStr := c.Param("bid")
 	bindingID, err := uuid.Parse(bindingIDStr)
 	if err != nil {
-		return c.JSON(400, api.ErrorResponse{
+		return c.JSON(400, dto.ErrorResponse{
 			Error:   "Bad Request",
 			Message: "invalid algorithm binding id",
 		})

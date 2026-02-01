@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"goyavision/internal/api"
 	"goyavision/internal/api/dto"
 	"goyavision/internal/app"
 
@@ -9,12 +8,9 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func RegisterAlgorithm(g *echo.Group, d api.Deps) {
+func RegisterAlgorithm(g *echo.Group, d Deps) {
 	svc := app.NewAlgorithmService(d.Repo)
-	h := algorithmHandler{
-		d:   d,
-		svc: svc,
-	}
+	h := algorithmHandler{svc: svc}
 	g.GET("/algorithms", h.List)
 	g.POST("/algorithms", h.Create)
 	g.GET("/algorithms/:id", h.Get)
@@ -23,7 +19,6 @@ func RegisterAlgorithm(g *echo.Group, d api.Deps) {
 }
 
 type algorithmHandler struct {
-	d   api.Deps
 	svc *app.AlgorithmService
 }
 
@@ -38,7 +33,7 @@ func (h *algorithmHandler) List(c echo.Context) error {
 func (h *algorithmHandler) Create(c echo.Context) error {
 	var req dto.AlgorithmCreateReq
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(400, api.ErrorResponse{
+		return c.JSON(400, dto.ErrorResponse{
 			Error:   "Bad Request",
 			Message: "invalid request body",
 		})
@@ -46,7 +41,7 @@ func (h *algorithmHandler) Create(c echo.Context) error {
 
 	alg, err := req.ToDomain()
 	if err != nil {
-		return c.JSON(400, api.ErrorResponse{
+		return c.JSON(400, dto.ErrorResponse{
 			Error:   "Bad Request",
 			Message: err.Error(),
 		})
@@ -64,7 +59,7 @@ func (h *algorithmHandler) Get(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		return c.JSON(400, api.ErrorResponse{
+		return c.JSON(400, dto.ErrorResponse{
 			Error:   "Bad Request",
 			Message: "invalid algorithm id",
 		})
@@ -82,7 +77,7 @@ func (h *algorithmHandler) Update(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		return c.JSON(400, api.ErrorResponse{
+		return c.JSON(400, dto.ErrorResponse{
 			Error:   "Bad Request",
 			Message: "invalid algorithm id",
 		})
@@ -90,7 +85,7 @@ func (h *algorithmHandler) Update(c echo.Context) error {
 
 	var req dto.AlgorithmUpdateReq
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(400, api.ErrorResponse{
+		return c.JSON(400, dto.ErrorResponse{
 			Error:   "Bad Request",
 			Message: "invalid request body",
 		})
@@ -112,7 +107,7 @@ func (h *algorithmHandler) Update(c echo.Context) error {
 
 	domainAlg, err := alg.ToDomain()
 	if err != nil {
-		return c.JSON(400, api.ErrorResponse{
+		return c.JSON(400, dto.ErrorResponse{
 			Error:   "Bad Request",
 			Message: err.Error(),
 		})
@@ -130,7 +125,7 @@ func (h *algorithmHandler) Delete(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		return c.JSON(400, api.ErrorResponse{
+		return c.JSON(400, dto.ErrorResponse{
 			Error:   "Bad Request",
 			Message: "invalid algorithm id",
 		})

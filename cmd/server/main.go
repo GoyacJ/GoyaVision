@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"goyavision"
 	"goyavision/config"
 	"goyavision/internal/adapter/ai"
 	"goyavision/internal/adapter/persistence"
@@ -64,7 +66,12 @@ func main() {
 	}
 
 	e := echo.New()
-	api.RegisterRouter(e, api.Deps{Repo: repo, Cfg: cfg})
+
+	var webDist fs.FS
+	if sub, err := goyavision.GetWebFS(); err == nil {
+		webDist = sub
+	}
+	api.RegisterRouter(e, repo, cfg, webDist)
 
 	srv := &http.Server{Addr: cfg.Server.Addr(), Handler: e}
 	go func() {

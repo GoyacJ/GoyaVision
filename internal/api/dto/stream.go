@@ -8,6 +8,11 @@ import (
 	"github.com/google/uuid"
 )
 
+type ErrorResponse struct {
+	Error   string `json:"error"`
+	Message string `json:"message,omitempty"`
+}
+
 type StreamListQuery struct {
 	Enabled *bool `query:"enabled"`
 }

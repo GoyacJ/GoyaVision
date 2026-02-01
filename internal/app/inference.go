@@ -2,13 +2,11 @@ package app
 
 import (
 	"context"
-	"errors"
 
 	"goyavision/internal/domain"
 	"goyavision/internal/port"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type InferenceService struct {

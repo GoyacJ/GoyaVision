@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"goyavision/internal/api"
 	"goyavision/internal/api/dto"
 	"goyavision/internal/app"
 
@@ -9,12 +8,9 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func RegisterStream(g *echo.Group, d api.Deps) {
+func RegisterStream(g *echo.Group, d Deps) {
 	svc := app.NewStreamService(d.Repo)
-	h := streamHandler{
-		d:   d,
-		svc: svc,
-	}
+	h := streamHandler{svc: svc}
 	g.GET("/streams", h.List)
 	g.POST("/streams", h.Create)
 	g.GET("/streams/:id", h.Get)
@@ -23,14 +19,13 @@ func RegisterStream(g *echo.Group, d api.Deps) {
 }
 
 type streamHandler struct {
-	d   api.Deps
 	svc *app.StreamService
 }
 
 func (h *streamHandler) List(c echo.Context) error {
 	var query dto.StreamListQuery
 	if err := c.Bind(&query); err != nil {
-		return c.JSON(400, api.ErrorResponse{
+		return c.JSON(400, dto.ErrorResponse{
 			Error:   "Bad Request",
 			Message: "invalid query parameters",
 		})
@@ -47,7 +42,7 @@ func (h *streamHandler) List(c echo.Context) error {
 func (h *streamHandler) Create(c echo.Context) error {
 	var req dto.StreamCreateReq
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(400, api.ErrorResponse{
+		return c.JSON(400, dto.ErrorResponse{
 			Error:   "Bad Request",
 			Message: "invalid request body",
 		})
@@ -71,7 +66,7 @@ func (h *streamHandler) Get(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		return c.JSON(400, api.ErrorResponse{
+		return c.JSON(400, dto.ErrorResponse{
 			Error:   "Bad Request",
 			Message: "invalid stream id",
 		})
@@ -89,7 +84,7 @@ func (h *streamHandler) Update(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		return c.JSON(400, api.ErrorResponse{
+		return c.JSON(400, dto.ErrorResponse{
 			Error:   "Bad Request",
 			Message: "invalid stream id",
 		})
@@ -97,7 +92,7 @@ func (h *streamHandler) Update(c echo.Context) error {
 
 	var req dto.StreamUpdateReq
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(400, api.ErrorResponse{
+		return c.JSON(400, dto.ErrorResponse{
 			Error:   "Bad Request",
 			Message: "invalid request body",
 		})
@@ -121,7 +116,7 @@ func (h *streamHandler) Delete(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		return c.JSON(400, api.ErrorResponse{
+		return c.JSON(400, dto.ErrorResponse{
 			Error:   "Bad Request",
 			Message: "invalid stream id",
 		})

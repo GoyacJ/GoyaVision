@@ -44,7 +44,7 @@ func InferenceResultToResponse(r *domain.InferenceResult) *InferenceResultRespon
 		StreamID:           r.StreamID,
 		Ts:                 r.Ts,
 		FrameRef:           r.FrameRef,
-		Output:             r.Output,
+		Output:             json.RawMessage(r.Output),
 		LatencyMs:          r.LatencyMs,
 		CreatedAt:          r.CreatedAt,
 	}

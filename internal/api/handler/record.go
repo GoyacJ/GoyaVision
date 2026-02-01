@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"goyavision/internal/api"
 	"goyavision/internal/api/dto"
 	"goyavision/internal/app"
 	"goyavision/pkg/ffmpeg"
@@ -10,21 +9,17 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func RegisterRecord(g *echo.Group, d api.Deps) {
+func RegisterRecord(g *echo.Group, d Deps) {
 	pool := ffmpeg.NewPool(d.Cfg.FFmpeg.Bin, d.Cfg.FFmpeg.MaxRecord, d.Cfg.FFmpeg.MaxFrame)
 	manager := ffmpeg.NewManager(pool, d.Cfg.Record.BasePath)
 	svc := app.NewRecordService(d.Repo, manager, d.Cfg.Record.BasePath, d.Cfg.Record.SegmentSec)
-	h := recordHandler{
-		d:   d,
-		svc: svc,
-	}
+	h := recordHandler{svc: svc}
 	g.POST("/streams/:id/record/start", h.Start)
 	g.POST("/streams/:id/record/stop", h.Stop)
 	g.GET("/streams/:id/record/sessions", h.ListSessions)
 }
 
 type recordHandler struct {
-	d   api.Deps
 	svc *app.RecordService
 }
 
@@ -32,7 +27,7 @@ func (h *recordHandler) Start(c echo.Context) error {
 	streamIDStr := c.Param("id")
 	streamID, err := uuid.Parse(streamIDStr)
 	if err != nil {
-		return c.JSON(400, api.ErrorResponse{
+		return c.JSON(400, dto.ErrorResponse{
 			Error:   "Bad Request",
 			Message: "invalid stream id",
 		})
@@ -52,7 +47,7 @@ func (h *recordHandler) Stop(c echo.Context) error {
 	streamIDStr := c.Param("id")
 	streamID, err := uuid.Parse(streamIDStr)
 	if err != nil {
-		return c.JSON(400, api.ErrorResponse{
+		return c.JSON(400, dto.ErrorResponse{
 			Error:   "Bad Request",
 			Message: "invalid stream id",
 		})
@@ -69,7 +64,7 @@ func (h *recordHandler) ListSessions(c echo.Context) error {
 	streamIDStr := c.Param("id")
 	streamID, err := uuid.Parse(streamIDStr)
 	if err != nil {
-		return c.JSON(400, api.ErrorResponse{
+		return c.JSON(400, dto.ErrorResponse{
 			Error:   "Bad Request",
 			Message: "invalid stream id",
 		})
