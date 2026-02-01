@@ -8,13 +8,26 @@ import (
 )
 
 type Config struct {
-	Server  Server
-	DB      DB
-	FFmpeg  FFmpeg
-	Preview Preview
-	Record  Record
-	AI      AI
-	JWT     JWT
+	Server   Server
+	DB       DB
+	FFmpeg   FFmpeg
+	Preview  Preview
+	Record   Record
+	AI       AI
+	JWT      JWT
+	MediaMTX MediaMTX
+}
+
+type MediaMTX struct {
+	APIAddress      string
+	RTSPAddress     string
+	RTMPAddress     string
+	HLSAddress      string
+	WebRTCAddress   string
+	PlaybackAddress string
+	RecordPath      string
+	RecordFormat    string
+	SegmentDuration string
 }
 
 type JWT struct {
@@ -100,6 +113,17 @@ func Load() (*Config, error) {
 			RefreshExp: v.GetDuration("jwt.refresh_exp"),
 			Issuer:     v.GetString("jwt.issuer"),
 		},
+		MediaMTX: MediaMTX{
+			APIAddress:      v.GetString("mediamtx.api_address"),
+			RTSPAddress:     v.GetString("mediamtx.rtsp_address"),
+			RTMPAddress:     v.GetString("mediamtx.rtmp_address"),
+			HLSAddress:      v.GetString("mediamtx.hls_address"),
+			WebRTCAddress:   v.GetString("mediamtx.webrtc_address"),
+			PlaybackAddress: v.GetString("mediamtx.playback_address"),
+			RecordPath:      v.GetString("mediamtx.record_path"),
+			RecordFormat:    v.GetString("mediamtx.record_format"),
+			SegmentDuration: v.GetString("mediamtx.segment_duration"),
+		},
 	}
 	if cfg.Server.Port == 0 {
 		cfg.Server.Port = 8080
@@ -115,6 +139,33 @@ func Load() (*Config, error) {
 	}
 	if cfg.JWT.Issuer == "" {
 		cfg.JWT.Issuer = "goyavision"
+	}
+	if cfg.MediaMTX.APIAddress == "" {
+		cfg.MediaMTX.APIAddress = "http://localhost:9997"
+	}
+	if cfg.MediaMTX.RTSPAddress == "" {
+		cfg.MediaMTX.RTSPAddress = "rtsp://localhost:8554"
+	}
+	if cfg.MediaMTX.RTMPAddress == "" {
+		cfg.MediaMTX.RTMPAddress = "rtmp://localhost:1935"
+	}
+	if cfg.MediaMTX.HLSAddress == "" {
+		cfg.MediaMTX.HLSAddress = "http://localhost:8888"
+	}
+	if cfg.MediaMTX.WebRTCAddress == "" {
+		cfg.MediaMTX.WebRTCAddress = "http://localhost:8889"
+	}
+	if cfg.MediaMTX.PlaybackAddress == "" {
+		cfg.MediaMTX.PlaybackAddress = "http://localhost:9996"
+	}
+	if cfg.MediaMTX.RecordPath == "" {
+		cfg.MediaMTX.RecordPath = "./data/recordings/%path/%Y-%m-%d_%H-%M-%S"
+	}
+	if cfg.MediaMTX.RecordFormat == "" {
+		cfg.MediaMTX.RecordFormat = "fmp4"
+	}
+	if cfg.MediaMTX.SegmentDuration == "" {
+		cfg.MediaMTX.SegmentDuration = "1h"
 	}
 	return cfg, nil
 }

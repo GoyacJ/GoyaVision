@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  goyavision:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - mediamtx
+    environment:
+      - GOYAVISION_DB_DSN=host=postgres user=goyavision password=goyavision dbname=goyavision port=5432 sslmode=disable
+      - GOYAVISION_MEDIAMTX_API_ADDRESS=http://mediamtx:9997
+      - GOYAVISION_MEDIAMTX_RTSP_ADDRESS=rtsp://mediamtx:8554
+      - GOYAVISION_MEDIAMTX_RTMP_ADDRESS=rtmp://mediamtx:1935
+      - GOYAVISION_MEDIAMTX_HLS_ADDRESS=http://mediamtx:8888
+      - GOYAVISION_MEDIAMTX_WEBRTC_ADDRESS=http://mediamtx:8889
+      - GOYAVISION_MEDIAMTX_PLAYBACK_ADDRESS=http://mediamtx:9996
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+
+  mediamtx:
+    image: bluenviron/mediamtx:latest
+    ports:
+      - "8554:8554"
+      - "1935:1935"
+      - "8888:8888"
+      - "8889:8889"
+      - "9996:9996"
+      - "9997:9997"
+    volumes:
+      - ./configs/mediamtx.yml:/mediamtx.yml
+      - ./data/recordings:/recordings
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=goyavision
+      - POSTGRES_PASSWORD=goyavision
+      - POSTGRES_DB=goyavision
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+volumes:
+  pgdata:

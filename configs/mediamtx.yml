@@ -1,0 +1,121 @@
+# MediaMTX 配置文件
+# GoyaVision 项目推荐配置
+
+###############################################
+# 全局配置
+
+logLevel: info
+logDestinations: [stdout]
+
+# 读取超时
+readTimeout: 10s
+# 写入超时
+writeTimeout: 10s
+# 读取缓冲区大小
+readBufferCount: 512
+# UDP 最大负载大小
+udpMaxPayloadSize: 1472
+
+###############################################
+# API 配置
+
+api: yes
+apiAddress: :9997
+
+###############################################
+# RTSP 配置
+
+rtsp: yes
+rtspAddress: :8554
+protocols: [udp, multicast, tcp]
+encryption: "no"
+rtspServerKey: ""
+rtspServerCert: ""
+
+###############################################
+# RTMP 配置
+
+rtmp: yes
+rtmpAddress: :1935
+rtmpEncryption: "no"
+rtmpServerKey: ""
+rtmpServerCert: ""
+
+###############################################
+# HLS 配置
+
+hls: yes
+hlsAddress: :8888
+hlsAlwaysRemux: no
+hlsVariant: mpegts
+hlsSegmentCount: 7
+hlsSegmentDuration: 1s
+hlsPartDuration: 200ms
+hlsSegmentMaxSize: 50M
+hlsAllowOrigin: '*'
+hlsTrustedProxies: []
+hlsDirectory: ''
+
+###############################################
+# WebRTC 配置
+
+webrtc: yes
+webrtcAddress: :8889
+webrtcEncryption: no
+webrtcServerKey: ""
+webrtcServerCert: ""
+webrtcAllowOrigin: '*'
+webrtcTrustedProxies: []
+webrtcLocalUDPAddress: :8189
+webrtcLocalTCPAddress: :8189
+webrtcIPsFromInterfaces: yes
+webrtcIPsFromInterfacesList: []
+webrtcAdditionalHosts: []
+webrtcICEServers2: []
+
+###############################################
+# SRT 配置
+
+srt: yes
+srtAddress: :8890
+
+###############################################
+# 录制配置 (全局默认)
+
+record: no
+recordPath: ./data/recordings/%path/%Y-%m-%d_%H-%M-%S
+recordFormat: fmp4
+recordPartDuration: 100ms
+recordSegmentDuration: 1h
+recordDeleteAfter: 0s
+
+###############################################
+# Playback 服务器 (用于点播)
+
+playback: yes
+playbackAddress: :9996
+
+###############################################
+# 路径配置
+
+# 默认配置应用于所有路径
+pathDefaults:
+  source: publisher
+  sourceOnDemand: no
+  sourceRedirect: ""
+  runOnInit: ""
+  runOnInitRestart: no
+  runOnDemand: ""
+  runOnDemandRestart: no
+  runOnReady: ""
+  runOnReadyRestart: no
+  runOnNotReady: ""
+  runOnRead: ""
+  runOnReadRestart: no
+  runOnUnread: ""
+  runOnRecordSegmentCreate: ""
+  runOnRecordSegmentComplete: ""
+
+# 具体路径配置
+# 可通过 GoyaVision API 动态添加
+paths:

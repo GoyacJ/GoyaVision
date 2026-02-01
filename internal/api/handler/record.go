@@ -3,20 +3,19 @@ package handler
 import (
 	"goyavision/internal/api/dto"
 	"goyavision/internal/app"
-	"goyavision/pkg/ffmpeg"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
 func RegisterRecord(g *echo.Group, d Deps) {
-	pool := ffmpeg.NewPool(d.Cfg.FFmpeg.Bin, d.Cfg.FFmpeg.MaxRecord, d.Cfg.FFmpeg.MaxFrame)
-	manager := ffmpeg.NewManager(pool, d.Cfg.Record.BasePath)
-	svc := app.NewRecordService(d.Repo, manager, d.Cfg.Record.BasePath, d.Cfg.Record.SegmentSec)
+	svc := app.NewRecordService(d.Repo, d.MtxCli, d.Cfg.MediaMTX)
 	h := recordHandler{svc: svc}
 	g.POST("/streams/:id/record/start", h.Start)
 	g.POST("/streams/:id/record/stop", h.Stop)
 	g.GET("/streams/:id/record/sessions", h.ListSessions)
+	g.GET("/streams/:id/record/files", h.GetRecordings)
+	g.GET("/streams/:id/record/status", h.Status)
 }
 
 type recordHandler struct {
@@ -76,4 +75,52 @@ func (h *recordHandler) ListSessions(c echo.Context) error {
 	}
 
 	return c.JSON(200, dto.RecordSessionsToResponse(sessions))
+}
+
+func (h *recordHandler) GetRecordings(c echo.Context) error {
+	streamIDStr := c.Param("id")
+	streamID, err := uuid.Parse(streamIDStr)
+	if err != nil {
+		return c.JSON(400, dto.ErrorResponse{
+			Error:   "Bad Request",
+			Message: "invalid stream id",
+		})
+	}
+
+	recordings, err := h.svc.GetRecordings(c.Request().Context(), streamID)
+	if err != nil {
+		return err
+	}
+
+	if recordings == nil {
+		return c.JSON(200, nil)
+	}
+
+	segments := make([]dto.RecordingSegmentResponse, len(recordings.Segments))
+	for i, seg := range recordings.Segments {
+		segments[i] = dto.RecordingSegmentResponse{Start: seg.Start}
+	}
+
+	return c.JSON(200, dto.RecordingsResponse{
+		Name:     recordings.Name,
+		Segments: segments,
+	})
+}
+
+func (h *recordHandler) Status(c echo.Context) error {
+	streamIDStr := c.Param("id")
+	streamID, err := uuid.Parse(streamIDStr)
+	if err != nil {
+		return c.JSON(400, dto.ErrorResponse{
+			Error:   "Bad Request",
+			Message: "invalid stream id",
+		})
+	}
+
+	isRecording, err := h.svc.IsRecording(c.Request().Context(), streamID)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(200, map[string]bool{"recording": isRecording})
 }

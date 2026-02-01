@@ -12,7 +12,8 @@
 | 6. 预览 | 已完成 | PreviewManager（MediaMTX/FFmpeg HLS）；/preview/start、/preview/stop；/live 或代理 |
 | 7. 前端 | 已完成 | Vue 3、流/算法绑定/录制/结果 CRUD、video.js 预览、构建与 embed |
 | 8. 认证授权 | 已完成 | RBAC 权限模型、JWT 认证、用户/角色/菜单管理、登录页面、动态菜单 |
-| 9. 联调与优化 | 待开始 | 10+ 路压测、FFmpeg/预览上限、DB 索引与分页 |
+| 9. MediaMTX 集成 | 已完成 | 多协议流媒体、录制重构、点播服务、前端适配 |
+| 10. 联调与优化 | 待开始 | 多路压测、性能调优、DB 索引与分页 |
 
 ---
 
@@ -388,10 +389,93 @@ jwt:
 
 ---
 
-## 9. 联调与优化（待开始）
+## 9. MediaMTX 集成（已完成）
 
-- 10+ 路压测
-- FFmpeg/预览上限验证
+### 完成项
+
+- [x] MediaMTX HTTP 客户端
+  - 路径配置管理（创建、更新、删除）
+  - 路径状态查询
+  - 录制管理（启用、禁用）
+  - 录制文件列表
+  - HLS/RTSP/RTMP 会话查询
+- [x] 流管理重构
+  - 支持 pull（拉流）和 push（推流）两种类型
+  - 流创建时自动注册到 MediaMTX
+  - 实时状态查询（ready、online、readers）
+  - 多协议地址生成（RTSP/RTMP/HLS/WebRTC）
+- [x] 录制功能重构
+  - 使用 MediaMTX 内置录制（fMP4/MPEG-TS）
+  - 录制启停控制
+  - 录制文件索引
+- [x] 预览功能重构
+  - 移除旧的 FFmpeg/MediaMTX 预览管理
+  - 直接返回 MediaMTX 协议 URL
+  - 支持多协议预览（HLS/RTSP/RTMP/WebRTC）
+- [x] 点播服务
+  - 集成 MediaMTX Playback Server
+  - 录制段列表查询
+  - HLS/MP4 点播 URL
+- [x] FFmpeg 简化
+  - 移除录制功能（由 MediaMTX 处理）
+  - 保留抽帧功能（用于 AI 推理）
+  - 从 MediaMTX RTSP 端点抽帧
+- [x] 前端适配
+  - 流类型选择（拉流/推流）
+  - 实时状态显示
+  - 多协议预览
+  - 协议地址复制
+  - 点播功能
+
+### 技术实现
+
+- **架构**：GoyaVision 作为控制平面，MediaMTX 作为数据平面
+- **通信**：通过 MediaMTX HTTP Control API（v3）
+- **流管理**：流名称映射为 MediaMTX 路径名
+- **录制**：MediaMTX 内置录制，支持 fMP4 和 MPEG-TS 格式
+- **点播**：MediaMTX Playback Server 提供 HTTP Range 支持
+
+### 配置项
+
+```yaml
+mediamtx:
+  api_address: "http://localhost:9997"        # MediaMTX API 地址
+  rtsp_address: "rtsp://localhost:8554"       # RTSP 服务地址
+  rtmp_address: "rtmp://localhost:1935"       # RTMP 服务地址
+  hls_address: "http://localhost:8888"        # HLS 服务地址
+  webrtc_address: "http://localhost:8889"     # WebRTC 服务地址
+  playback_address: "http://localhost:9996"   # Playback 服务地址
+  record_path: "./data/recordings/%path/%Y-%m-%d_%H-%M-%S"
+  record_format: "fmp4"                       # 录制格式：fmp4 或 mpegts
+  segment_duration: "1h"                      # 录制段时长
+```
+
+### 代码变更
+
+- 新增 `internal/adapter/mediamtx/`（客户端和数据模型）
+- 新增 `internal/app/playback.go`（点播服务）
+- 新增 `internal/api/handler/playback.go`（点播 API）
+- 重写 `internal/app/stream.go`（集成 MediaMTX）
+- 重写 `internal/app/record.go`（使用 MediaMTX API）
+- 重写 `internal/app/preview.go`（简化为 URL 生成）
+- 简化 `pkg/ffmpeg/manager.go`（仅保留抽帧）
+- 删除 `pkg/preview/`（不再需要）
+- 更新前端 `views/stream/index.vue`（多协议支持）
+- 新增 `docker-compose.yml`（容器化部署）
+- 新增 `configs/mediamtx.yml`（MediaMTX 配置模板）
+
+### 待后续
+
+- WebRTC 预览组件
+- 录制文件管理（删除、导出）
+- 流媒体监控仪表板
+
+---
+
+## 10. 联调与优化（待开始）
+
+- 多路压测
+- 性能调优
 - DB 索引与分页优化
 
 ---

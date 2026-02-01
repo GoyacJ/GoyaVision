@@ -4,64 +4,91 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
+	"goyavision/config"
+	"goyavision/internal/adapter/mediamtx"
+	"goyavision/internal/domain"
 	"goyavision/internal/port"
-	"goyavision/pkg/preview"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
-type PreviewService struct {
-	repo    port.Repository
-	manager *preview.Manager
+// PreviewURLs 预览 URL 集合
+type PreviewURLs struct {
+	HLS    string `json:"hls"`
+	RTSP   string `json:"rtsp"`
+	RTMP   string `json:"rtmp"`
+	WebRTC string `json:"webrtc"`
 }
 
-func NewPreviewService(repo port.Repository, manager *preview.Manager) *PreviewService {
+type PreviewService struct {
+	repo   port.Repository
+	mtxCli *mediamtx.Client
+	mtxCfg config.MediaMTX
+}
+
+func NewPreviewService(repo port.Repository, mtxCli *mediamtx.Client, mtxCfg config.MediaMTX) *PreviewService {
 	return &PreviewService{
-		repo:    repo,
-		manager: manager,
+		repo:   repo,
+		mtxCli: mtxCli,
+		mtxCfg: mtxCfg,
 	}
 }
 
-func (s *PreviewService) Start(ctx context.Context, streamID uuid.UUID) (string, error) {
+// GetPreviewURLs 获取流的预览 URL
+func (s *PreviewService) GetPreviewURLs(ctx context.Context, streamID uuid.UUID) (*PreviewURLs, error) {
 	stream, err := s.repo.GetStream(ctx, streamID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return "", errors.New("stream not found")
+			return nil, errors.New("stream not found")
 		}
-		return "", err
+		return nil, err
 	}
 
 	if !stream.Enabled {
-		return "", errors.New("stream is disabled")
+		return nil, errors.New("stream is disabled")
 	}
 
-	task, exists := s.manager.GetPreview(streamID.String())
-	if exists && task.IsRunning() {
-		return task.HLSURL, nil
+	pathName := s.pathName(stream)
+
+	urls := &PreviewURLs{
+		HLS:    fmt.Sprintf("%s/%s/index.m3u8", s.mtxCfg.HLSAddress, pathName),
+		RTSP:   fmt.Sprintf("%s/%s", s.mtxCfg.RTSPAddress, pathName),
+		RTMP:   fmt.Sprintf("%s/%s", s.mtxCfg.RTMPAddress, pathName),
+		WebRTC: fmt.Sprintf("%s/%s/whep", s.mtxCfg.WebRTCAddress, pathName),
 	}
 
-	task, err = s.manager.StartPreview(ctx, streamID.String(), stream.URL)
-	if err != nil {
-		return "", fmt.Errorf("start preview: %w", err)
-	}
-
-	return task.HLSURL, nil
+	return urls, nil
 }
 
-func (s *PreviewService) Stop(ctx context.Context, streamID uuid.UUID) error {
-	_, err := s.repo.GetStream(ctx, streamID)
+// Start 开始预览（返回所有协议 URL）
+func (s *PreviewService) Start(ctx context.Context, streamID uuid.UUID) (*PreviewURLs, error) {
+	return s.GetPreviewURLs(ctx, streamID)
+}
+
+// IsStreamReady 检查流是否就绪
+func (s *PreviewService) IsStreamReady(ctx context.Context, streamID uuid.UUID) (bool, error) {
+	stream, err := s.repo.GetStream(ctx, streamID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return errors.New("stream not found")
+			return false, errors.New("stream not found")
 		}
-		return err
+		return false, err
 	}
 
-	if err := s.manager.StopPreview(streamID.String()); err != nil {
-		return fmt.Errorf("stop preview: %w", err)
+	if !stream.Enabled {
+		return false, nil
 	}
 
-	return nil
+	pathName := s.pathName(stream)
+	return s.mtxCli.IsPathReady(ctx, pathName)
+}
+
+// pathName 生成 MediaMTX 路径名
+func (s *PreviewService) pathName(stream *domain.Stream) string {
+	name := strings.ReplaceAll(stream.Name, " ", "_")
+	name = strings.ToLower(name)
+	return name
 }

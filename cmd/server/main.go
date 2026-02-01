@@ -13,6 +13,7 @@ import (
 	"goyavision"
 	"goyavision/config"
 	"goyavision/internal/adapter/ai"
+	"goyavision/internal/adapter/mediamtx"
 	"goyavision/internal/adapter/persistence"
 	"goyavision/internal/api"
 	"goyavision/internal/app"
@@ -49,13 +50,20 @@ func main() {
 
 	repo := persistence.NewRepository(db)
 
+	mtxCli := mediamtx.NewClient(cfg.MediaMTX.APIAddress)
+	if err := mtxCli.Ping(context.Background()); err != nil {
+		log.Printf("warning: mediamtx not available: %v", err)
+	} else {
+		log.Printf("mediamtx connected: %s", cfg.MediaMTX.APIAddress)
+	}
+
 	var scheduler *app.Scheduler
 	if db != nil {
 		inferenceAdapter := ai.NewInferenceAdapter(cfg.AI.Timeout, cfg.AI.Retry)
 		pool := ffmpeg.NewPool(cfg.FFmpeg.Bin, cfg.FFmpeg.MaxRecord, cfg.FFmpeg.MaxFrame)
-		manager := ffmpeg.NewManager(pool, cfg.Record.BasePath)
-		frameBasePath := "./data/frames"
-		scheduler, err = app.NewScheduler(repo, inferenceAdapter, manager, frameBasePath)
+		manager := ffmpeg.NewManager(pool)
+		frameBasePath := "./data"
+		scheduler, err = app.NewScheduler(repo, inferenceAdapter, manager, mtxCli, cfg.MediaMTX, frameBasePath)
 		if err != nil {
 			log.Fatalf("create scheduler: %v", err)
 		}
@@ -74,7 +82,7 @@ func main() {
 	if sub, err := goyavision.GetWebFS(); err == nil {
 		webDist = sub
 	}
-	api.RegisterRouter(e, repo, cfg, webDist)
+	api.RegisterRouter(e, repo, cfg, mtxCli, webDist)
 
 	srv := &http.Server{Addr: cfg.Server.Addr(), Handler: e}
 	go func() {

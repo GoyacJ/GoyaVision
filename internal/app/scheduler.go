@@ -7,9 +7,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
+	"goyavision/config"
+	"goyavision/internal/adapter/mediamtx"
 	"goyavision/internal/domain"
 	"goyavision/internal/port"
 	"goyavision/pkg/ffmpeg"
@@ -29,12 +32,21 @@ type Scheduler struct {
 	repo      port.Repository
 	inference port.Inference
 	manager   *ffmpeg.Manager
+	mtxCli    *mediamtx.Client
+	mtxCfg    config.MediaMTX
 	basePath  string
 	jobs      map[uuid.UUID]gocron.Job
 	jobsMu    sync.RWMutex
 }
 
-func NewScheduler(repo port.Repository, inference port.Inference, manager *ffmpeg.Manager, basePath string) (*Scheduler, error) {
+func NewScheduler(
+	repo port.Repository,
+	inference port.Inference,
+	manager *ffmpeg.Manager,
+	mtxCli *mediamtx.Client,
+	mtxCfg config.MediaMTX,
+	basePath string,
+) (*Scheduler, error) {
 	s, err := gocron.NewScheduler()
 	if err != nil {
 		return nil, fmt.Errorf("create scheduler: %w", err)
@@ -45,6 +57,8 @@ func NewScheduler(repo port.Repository, inference port.Inference, manager *ffmpe
 		repo:      repo,
 		inference: inference,
 		manager:   manager,
+		mtxCli:    mtxCli,
+		mtxCfg:    mtxCfg,
 		basePath:  basePath,
 		jobs:      make(map[uuid.UUID]gocron.Job),
 	}, nil
@@ -242,10 +256,12 @@ func (s *Scheduler) executeInference(ctx context.Context, bindingID, streamID uu
 		return
 	}
 
+	rtspURL := s.getStreamRTSPURL(stream)
+
 	outputDir := filepath.Join(s.basePath, "frames", streamID.String())
 	outputPath := filepath.Join(outputDir, fmt.Sprintf("frame_%s.jpg", uuid.New().String()))
 
-	if err := s.manager.ExtractFrame(ctx, streamID.String(), stream.URL, outputPath); err != nil {
+	if err := s.manager.ExtractFrame(ctx, streamID.String(), rtspURL, outputPath); err != nil {
 		return
 	}
 
@@ -276,6 +292,19 @@ func (s *Scheduler) executeInference(ctx context.Context, bindingID, streamID uu
 	}
 
 	s.repo.CreateInferenceResult(ctx, result)
+}
+
+// getStreamRTSPURL 获取流的 MediaMTX RTSP URL
+func (s *Scheduler) getStreamRTSPURL(stream *domain.Stream) string {
+	pathName := s.pathName(stream)
+	return fmt.Sprintf("%s/%s", s.mtxCfg.RTSPAddress, pathName)
+}
+
+// pathName 生成 MediaMTX 路径名
+func (s *Scheduler) pathName(stream *domain.Stream) string {
+	name := strings.ReplaceAll(stream.Name, " ", "_")
+	name = strings.ToLower(name)
+	return name
 }
 
 func parseTime(timeStr string) (time.Duration, error) {

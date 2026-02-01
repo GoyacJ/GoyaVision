@@ -8,29 +8,19 @@ import (
 	"path/filepath"
 )
 
+// Manager FFmpeg 管理器（仅用于抽帧）
 type Manager struct {
-	pool     *Pool
-	basePath string
+	pool *Pool
 }
 
-func NewManager(pool *Pool, basePath string) *Manager {
+// NewManager 创建 FFmpeg 管理器
+func NewManager(pool *Pool) *Manager {
 	return &Manager{
-		pool:     pool,
-		basePath: basePath,
+		pool: pool,
 	}
 }
 
-type RecordTask struct {
-	StreamID   string
-	RTSPURL    string
-	OutputDir  string
-	SegmentSec int
-	cmd        *exec.Cmd
-	ctx        context.Context
-	cancel     context.CancelFunc
-	release    func()
-}
-
+// FrameTask 抽帧任务
 type FrameTask struct {
 	StreamID    string
 	RTSPURL     string
@@ -42,76 +32,7 @@ type FrameTask struct {
 	release     func()
 }
 
-func (m *Manager) StartRecord(ctx context.Context, streamID, rtspURL string, segmentSec int) (*RecordTask, error) {
-	release, err := m.pool.AcquireRecordSlot(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	outputDir := filepath.Join(m.basePath, streamID)
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		release()
-		return nil, fmt.Errorf("create output directory: %w", err)
-	}
-
-	taskCtx, cancel := context.WithCancel(ctx)
-	outputPattern := filepath.Join(outputDir, "segment_%03d.mp4")
-
-	args := []string{
-		"-rtsp_transport", "tcp",
-		"-i", rtspURL,
-		"-c", "copy",
-		"-f", "segment",
-		"-segment_time", fmt.Sprintf("%d", segmentSec),
-		"-segment_format", "mp4",
-		"-reset_timestamps", "1",
-		"-strftime", "1",
-		"-segment_atclocktime", "1",
-		outputPattern,
-	}
-
-	cmd := exec.CommandContext(taskCtx, m.pool.ffmpegBin, args...)
-	cmd.Stdout = os.Stderr
-	cmd.Stderr = os.Stderr
-
-	if err := cmd.Start(); err != nil {
-		cancel()
-		release()
-		return nil, fmt.Errorf("start ffmpeg: %w", err)
-	}
-
-	task := &RecordTask{
-		StreamID:   streamID,
-		RTSPURL:    rtspURL,
-		OutputDir:  outputDir,
-		SegmentSec: segmentSec,
-		cmd:        cmd,
-		ctx:        taskCtx,
-		cancel:     cancel,
-		release:    release,
-	}
-
-	go func() {
-		cmd.Wait()
-		release()
-	}()
-
-	return task, nil
-}
-
-func (t *RecordTask) Stop() error {
-	if t.cancel != nil {
-		t.cancel()
-	}
-	if t.cmd != nil && t.cmd.Process != nil {
-		t.cmd.Process.Kill()
-	}
-	if t.release != nil {
-		t.release()
-	}
-	return nil
-}
-
+// ExtractFrame 从视频流提取单帧
 func (m *Manager) ExtractFrame(ctx context.Context, streamID, rtspURL, outputPath string) error {
 	release, err := m.pool.AcquireFrameSlot(ctx)
 	if err != nil {
@@ -144,6 +65,7 @@ func (m *Manager) ExtractFrame(ctx context.Context, streamID, rtspURL, outputPat
 	return nil
 }
 
+// StartFrameExtraction 启动持续抽帧任务
 func (m *Manager) StartFrameExtraction(ctx context.Context, streamID, rtspURL, outputDir string, intervalSec int) (*FrameTask, error) {
 	release, err := m.pool.AcquireFrameSlot(ctx)
 	if err != nil {
@@ -196,6 +118,7 @@ func (m *Manager) StartFrameExtraction(ctx context.Context, streamID, rtspURL, o
 	return task, nil
 }
 
+// Stop 停止抽帧任务
 func (t *FrameTask) Stop() error {
 	if t.cancel != nil {
 		t.cancel()
@@ -209,16 +132,7 @@ func (t *FrameTask) Stop() error {
 	return nil
 }
 
-func (t *RecordTask) IsRunning() bool {
-	if t.cmd == nil || t.cmd.Process == nil {
-		return false
-	}
-	if t.cmd.ProcessState != nil {
-		return !t.cmd.ProcessState.Exited()
-	}
-	return t.ctx.Err() == nil
-}
-
+// IsRunning 检查任务是否正在运行
 func (t *FrameTask) IsRunning() bool {
 	if t.cmd == nil || t.cmd.Process == nil {
 		return false
@@ -229,6 +143,7 @@ func (t *FrameTask) IsRunning() bool {
 	return t.ctx.Err() == nil
 }
 
+// GetPool 获取资源池
 func (m *Manager) GetPool() *Pool {
 	return m.pool
 }

@@ -21,9 +21,11 @@ GoyaVision 是一个企业级、开源的 AI 视频流分析处理平台。支�
 ### 核心功能
 
 - **🎥 视频流管理**
-  - RTSP 流接入与多路并发支持（单实例 10+ 路）
+  - 多协议支持（RTSP/RTMP/HLS/WebRTC）
+  - 拉流与推流模式
   - 流的启停控制与状态管理
   - 实时流健康监控
+  - 协议互转
 
 - **🤖 AI 推理引擎**
   - 灵活的算法绑定机制（一流多算法）
@@ -33,14 +35,19 @@ GoyaVision 是一个企业级、开源的 AI 视频流分析处理平台。支�
   - 推理结果持久化与查询
 
 - **📹 视频录制**
-  - 独立于分析的录制功能
+  - MediaMTX 内置录制（高性能）
+  - 支持 fMP4/MPEG-TS 格式
   - 按流启停控制
   - 分段落盘（可配置段时长）
-  - 零重编码录制（`-c copy`）
+
+- **🎬 录像点播**
+  - 录制文件索引与管理
+  - HLS/MP4 点播播放
+  - 支持 Seek 跳转
 
 - **👁️ 实时预览**
-  - HLS 流式预览
-  - MediaMTX 或 FFmpeg 支持
+  - 多协议预览（HLS/RTSP/RTMP/WebRTC）
+  - MediaMTX 集成
   - 低延迟视频播放
 
 - **🖥️ Web 管理界面**
@@ -113,8 +120,8 @@ GoyaVision 是一个企业级、开源的 AI 视频流分析处理平台。支�
 
 - **Go** 1.22 或更高版本
 - **PostgreSQL** 12+ 
-- **FFmpeg**（PATH 或配置路径）
-- **可选**：MediaMTX（用于预览功能）
+- **FFmpeg**（PATH 或配置路径，用于 AI 抽帧）
+- **MediaMTX**（流媒体服务器，用于流分发和录制）
 
 ### 安装
 
@@ -166,12 +173,23 @@ make build      # 构建后端
 - **API 前缀**：`/api/v1`
 - **HLS 文件**：`/live/*`
 
-### Docker（规划中）
+### Docker 部署
 
 ```bash
-# 即将支持
-docker-compose up
+# 使用 Docker Compose 一键部署
+docker-compose up -d
+
+# 查看服务状态
+docker-compose ps
+
+# 查看日志
+docker-compose logs -f goyavision
 ```
+
+服务包含：
+- **goyavision**: 主应用服务（端口 8080）
+- **mediamtx**: 流媒体服务器（RTSP 8554, RTMP 1935, HLS 8888, WebRTC 8889）
+- **postgres**: PostgreSQL 数据库
 
 ## 📚 文档
 
@@ -193,13 +211,15 @@ docker-compose up
 | Auth            | POST | `/api/v1/auth/login`, `/refresh`, `/logout` |
 | Auth            | GET/PUT | `/api/v1/auth/profile`, `/password` |
 | Stream          | CRUD | `/api/v1/streams` |
+| Stream          | POST | `/api/v1/streams/:id/enable`, `/disable` |
+| Stream          | GET  | `/api/v1/streams/:id/status` |
 | Algorithm       | CRUD | `/api/v1/algorithms` |
 | AlgorithmBinding| CRUD | `/api/v1/streams/:id/algorithm-bindings` |
 | Record          | POST | `/api/v1/streams/:id/record/start`, `/stop` |
-| Record          | GET  | `/api/v1/streams/:id/record/sessions` |
+| Record          | GET  | `/api/v1/streams/:id/record/sessions`, `/files`, `/status` |
+| Preview         | GET  | `/api/v1/streams/:id/preview`, `/start`, `/ready` |
+| Playback        | GET  | `/api/v1/streams/:id/playback`, `/playback/segments` |
 | InferenceResult | GET  | `/api/v1/inference_results`（支持过滤和分页） |
-| Preview         | GET  | `/api/v1/streams/:id/preview/start` |
-| Preview         | POST | `/api/v1/streams/:id/preview/stop` |
 | User            | CRUD | `/api/v1/users` |
 | Role            | CRUD | `/api/v1/roles` |
 | Menu            | CRUD | `/api/v1/menus` |
@@ -216,8 +236,10 @@ docker-compose up
 | 后端     | Go 1.22, Echo v4, Viper, GORM |
 | 数据库   | PostgreSQL                    |
 | 调度     | gocron v2                     |
-| 视频处理 | FFmpeg CLI, MediaMTX          |
+| 流媒体   | MediaMTX（RTSP/RTMP/HLS/WebRTC）|
+| 视频处理 | FFmpeg CLI（AI 抽帧）          |
 | 前端     | Vue 3, TypeScript, Vite, Element Plus, video.js |
+| 部署     | Docker, Docker Compose        |
 
 ### 项目结构
 
@@ -225,20 +247,25 @@ docker-compose up
 goyavision/
 ├── cmd/server/          # 应用入口
 ├── config/              # 配置管理
-├── configs/             # 配置文件
+├── configs/             # 配置文件（config.yaml, mediamtx.yml）
 ├── internal/
 │   ├── domain/          # 领域实体（纯业务逻辑）
 │   ├── port/            # 端口接口定义
 │   ├── app/             # 应用服务（用例编排）
-│   ├── adapter/         # 适配器实现（persistence、ffmpeg、preview、ai）
+│   ├── adapter/         # 适配器实现
+│   │   ├── persistence/ # 数据库持久化
+│   │   ├── mediamtx/    # MediaMTX 客户端
+│   │   └── ai/          # AI 推理适配器
 │   └── api/             # HTTP 层（路由、handler、dto）
 ├── pkg/
-│   ├── ffmpeg/          # FFmpeg 进程池和管理器
-│   └── preview/         # 预览池和管理器
+│   └── ffmpeg/          # FFmpeg 进程池（AI 抽帧）
 ├── web/                 # Vue 3 前端（TypeScript + Vite）
 │   ├── src/             # 源代码
 │   └── dist/            # 构建产物（会被 embed）
-├── migrations/          # 数据库迁移
+├── data/                # 运行时数据目录
+│   ├── recordings/      # 录制文件
+│   └── frames/          # AI 抽帧临时文件
+├── docker-compose.yml   # Docker Compose 配置
 └── docs/                # 项目文档
 ```
 

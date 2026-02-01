@@ -21,6 +21,15 @@ type RecordStartResponse struct {
 	SessionID uuid.UUID `json:"session_id"`
 }
 
+type RecordingSegmentResponse struct {
+	Start time.Time `json:"start"`
+}
+
+type RecordingsResponse struct {
+	Name     string                     `json:"name"`
+	Segments []RecordingSegmentResponse `json:"segments"`
+}
+
 func RecordSessionToResponse(s *domain.RecordSession) *RecordSessionResponse {
 	if s == nil {
 		return nil

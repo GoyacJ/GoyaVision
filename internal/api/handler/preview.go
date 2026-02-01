@@ -3,32 +3,44 @@ package handler
 import (
 	"goyavision/internal/api/dto"
 	"goyavision/internal/app"
-	"goyavision/pkg/ffmpeg"
-	"goyavision/pkg/preview"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
 func RegisterPreview(g *echo.Group, d Deps) {
-	ffmpegPool := ffmpeg.NewPool(d.Cfg.FFmpeg.Bin, d.Cfg.FFmpeg.MaxRecord, d.Cfg.FFmpeg.MaxFrame)
-	previewPool := preview.NewPool(d.Cfg.Preview.MaxPreview)
-	manager := preview.NewManager(
-		d.Cfg.Preview.Provider,
-		d.Cfg.Preview.MediamtxBin,
-		ffmpegPool,
-		previewPool,
-		d.Cfg.Preview.HLSBase,
-		"./data/hls",
-	)
-	svc := app.NewPreviewService(d.Repo, manager)
+	svc := app.NewPreviewService(d.Repo, d.MtxCli, d.Cfg.MediaMTX)
 	h := previewHandler{svc: svc}
+	g.GET("/streams/:id/preview", h.GetURLs)
 	g.GET("/streams/:id/preview/start", h.Start)
-	g.POST("/streams/:id/preview/stop", h.Stop)
+	g.GET("/streams/:id/preview/ready", h.Ready)
 }
 
 type previewHandler struct {
 	svc *app.PreviewService
+}
+
+func (h *previewHandler) GetURLs(c echo.Context) error {
+	streamIDStr := c.Param("id")
+	streamID, err := uuid.Parse(streamIDStr)
+	if err != nil {
+		return c.JSON(400, dto.ErrorResponse{
+			Error:   "Bad Request",
+			Message: "invalid stream id",
+		})
+	}
+
+	urls, err := h.svc.GetPreviewURLs(c.Request().Context(), streamID)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(200, dto.PreviewStartResponse{
+		HLSURL:    urls.HLS,
+		RTSPUrl:   urls.RTSP,
+		RTMPUrl:   urls.RTMP,
+		WebRTCUrl: urls.WebRTC,
+	})
 }
 
 func (h *previewHandler) Start(c echo.Context) error {
@@ -41,17 +53,20 @@ func (h *previewHandler) Start(c echo.Context) error {
 		})
 	}
 
-	hlsURL, err := h.svc.Start(c.Request().Context(), streamID)
+	urls, err := h.svc.Start(c.Request().Context(), streamID)
 	if err != nil {
 		return err
 	}
 
 	return c.JSON(200, dto.PreviewStartResponse{
-		HLSURL: hlsURL,
+		HLSURL:    urls.HLS,
+		RTSPUrl:   urls.RTSP,
+		RTMPUrl:   urls.RTMP,
+		WebRTCUrl: urls.WebRTC,
 	})
 }
 
-func (h *previewHandler) Stop(c echo.Context) error {
+func (h *previewHandler) Ready(c echo.Context) error {
 	streamIDStr := c.Param("id")
 	streamID, err := uuid.Parse(streamIDStr)
 	if err != nil {
@@ -61,9 +76,10 @@ func (h *previewHandler) Stop(c echo.Context) error {
 		})
 	}
 
-	if err := h.svc.Stop(c.Request().Context(), streamID); err != nil {
+	ready, err := h.svc.IsStreamReady(c.Request().Context(), streamID)
+	if err != nil {
 		return err
 	}
 
-	return c.NoContent(204)
+	return c.JSON(200, map[string]bool{"ready": ready})
 }

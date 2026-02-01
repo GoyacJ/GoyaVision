@@ -28,3 +28,14 @@ jwt:
   expire: 2h
   refresh_exp: 168h
   issuer: "goyavision"
+
+mediamtx:
+  api_address: "http://localhost:9997"
+  rtsp_address: "rtsp://localhost:8554"
+  rtmp_address: "rtmp://localhost:1935"
+  hls_address: "http://localhost:8888"
+  webrtc_address: "http://localhost:8889"
+  playback_address: "http://localhost:9996"
+  record_path: "./data/recordings/%path/%Y-%m-%d_%H-%M-%S"
+  record_format: "fmp4"
+  segment_duration: "1h"

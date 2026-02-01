@@ -4,37 +4,33 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path/filepath"
-	"sync"
+	"strings"
 	"time"
 
+	"goyavision/config"
+	"goyavision/internal/adapter/mediamtx"
 	"goyavision/internal/domain"
 	"goyavision/internal/port"
-	"goyavision/pkg/ffmpeg"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type RecordService struct {
-	repo       port.Repository
-	manager    *ffmpeg.Manager
-	basePath   string
-	segmentSec int
-	tasks      map[uuid.UUID]*ffmpeg.RecordTask
-	tasksMu    sync.RWMutex
+	repo   port.Repository
+	mtxCli *mediamtx.Client
+	mtxCfg config.MediaMTX
 }
 
-func NewRecordService(repo port.Repository, manager *ffmpeg.Manager, basePath string, segmentSec int) *RecordService {
+func NewRecordService(repo port.Repository, mtxCli *mediamtx.Client, mtxCfg config.MediaMTX) *RecordService {
 	return &RecordService{
-		repo:       repo,
-		manager:    manager,
-		basePath:   basePath,
-		segmentSec: segmentSec,
-		tasks:      make(map[uuid.UUID]*ffmpeg.RecordTask),
+		repo:   repo,
+		mtxCli: mtxCli,
+		mtxCfg: mtxCfg,
 	}
 }
 
+// Start 开始录制
 func (s *RecordService) Start(ctx context.Context, streamID uuid.UUID) (*domain.RecordSession, error) {
 	stream, err := s.repo.GetStream(ctx, streamID)
 	if err != nil {
@@ -53,39 +49,33 @@ func (s *RecordService) Start(ctx context.Context, streamID uuid.UUID) (*domain.
 		return nil, errors.New("recording already in progress")
 	}
 
-	basePath := filepath.Join(s.basePath, streamID.String())
+	pathName := s.pathName(stream)
+
+	recordPath := fmt.Sprintf("%s/%s/%%Y-%%m-%%d_%%H-%%M-%%S", s.mtxCfg.RecordPath, pathName)
+	err = s.mtxCli.EnableRecording(ctx, pathName, recordPath, s.mtxCfg.RecordFormat, s.mtxCfg.SegmentDuration)
+	if err != nil {
+		return nil, fmt.Errorf("enable mediamtx recording: %w", err)
+	}
+
 	session := &domain.RecordSession{
 		ID:        uuid.New(),
 		StreamID:  streamID,
 		Status:    domain.RecordStatusRunning,
-		BasePath:  basePath,
+		BasePath:  fmt.Sprintf("%s/%s", s.mtxCfg.RecordPath, pathName),
 		StartedAt: time.Now(),
 	}
 
 	if err := s.repo.CreateRecordSession(ctx, session); err != nil {
+		s.mtxCli.DisableRecording(ctx, pathName)
 		return nil, fmt.Errorf("create record session: %w", err)
 	}
-
-	task, err := s.manager.StartRecord(ctx, streamID.String(), stream.URL, s.segmentSec)
-	if err != nil {
-		session.Status = domain.RecordStatusStopped
-		now := time.Now()
-		session.StoppedAt = &now
-		s.repo.UpdateRecordSession(ctx, session)
-		return nil, fmt.Errorf("start recording: %w", err)
-	}
-
-	s.tasksMu.Lock()
-	s.tasks[session.ID] = task
-	s.tasksMu.Unlock()
-
-	go s.monitorTask(ctx, session.ID, task)
 
 	return session, nil
 }
 
+// Stop 停止录制
 func (s *RecordService) Stop(ctx context.Context, streamID uuid.UUID) error {
-	_, err := s.repo.GetStream(ctx, streamID)
+	stream, err := s.repo.GetStream(ctx, streamID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.New("stream not found")
@@ -101,17 +91,9 @@ func (s *RecordService) Stop(ctx context.Context, streamID uuid.UUID) error {
 		return err
 	}
 
-	s.tasksMu.Lock()
-	task, exists := s.tasks[session.ID]
-	if exists {
-		delete(s.tasks, session.ID)
-	}
-	s.tasksMu.Unlock()
-
-	if task != nil {
-		if err := task.Stop(); err != nil {
-			return fmt.Errorf("stop recording task: %w", err)
-		}
+	pathName := s.pathName(stream)
+	if err := s.mtxCli.DisableRecording(ctx, pathName); err != nil {
+		return fmt.Errorf("disable mediamtx recording: %w", err)
 	}
 
 	now := time.Now()
@@ -125,6 +107,7 @@ func (s *RecordService) Stop(ctx context.Context, streamID uuid.UUID) error {
 	return nil
 }
 
+// ListSessions 列出录制会话
 func (s *RecordService) ListSessions(ctx context.Context, streamID uuid.UUID) ([]*domain.RecordSession, error) {
 	_, err := s.repo.GetStream(ctx, streamID)
 	if err != nil {
@@ -137,30 +120,65 @@ func (s *RecordService) ListSessions(ctx context.Context, streamID uuid.UUID) ([
 	return s.repo.ListRecordSessionsByStream(ctx, streamID)
 }
 
-func (s *RecordService) monitorTask(ctx context.Context, sessionID uuid.UUID, task *ffmpeg.RecordTask) {
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
+// GetRecordings 获取流的录制文件列表（从 MediaMTX 获取）
+func (s *RecordService) GetRecordings(ctx context.Context, streamID uuid.UUID) (*mediamtx.Recording, error) {
+	stream, err := s.repo.GetStream(ctx, streamID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("stream not found")
+		}
+		return nil, err
+	}
 
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			if !task.IsRunning() {
-				s.tasksMu.Lock()
-				delete(s.tasks, sessionID)
-				s.tasksMu.Unlock()
+	pathName := s.pathName(stream)
+	return s.mtxCli.GetRecordings(ctx, pathName)
+}
 
-				bgCtx := context.Background()
-				session, err := s.repo.GetRecordSession(bgCtx, sessionID)
-				if err == nil && session != nil && session.Status == domain.RecordStatusRunning {
-					now := time.Now()
-					session.Status = domain.RecordStatusStopped
-					session.StoppedAt = &now
-					s.repo.UpdateRecordSession(bgCtx, session)
-				}
-				return
-			}
+// IsRecording 检查流是否正在录制
+func (s *RecordService) IsRecording(ctx context.Context, streamID uuid.UUID) (bool, error) {
+	session, err := s.repo.GetRunningRecordSessionByStream(ctx, streamID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+	return session != nil && session.Status == domain.RecordStatusRunning, nil
+}
+
+// pathName 生成 MediaMTX 路径名
+func (s *RecordService) pathName(stream *domain.Stream) string {
+	name := strings.ReplaceAll(stream.Name, " ", "_")
+	name = strings.ToLower(name)
+	return name
+}
+
+// SyncRecordingStatus 同步录制状态（从 MediaMTX）
+func (s *RecordService) SyncRecordingStatus(ctx context.Context) error {
+	streams, err := s.repo.ListStreams(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	for _, stream := range streams {
+		session, err := s.repo.GetRunningRecordSessionByStream(ctx, stream.ID)
+		if err != nil || session == nil {
+			continue
+		}
+
+		pathName := s.pathName(stream)
+		cfg, err := s.mtxCli.GetPathConfig(ctx, pathName)
+		if err != nil {
+			continue
+		}
+
+		if cfg.Record == nil || !*cfg.Record {
+			now := time.Now()
+			session.Status = domain.RecordStatusStopped
+			session.StoppedAt = &now
+			s.repo.UpdateRecordSession(ctx, session)
 		}
 	}
+
+	return nil
 }
