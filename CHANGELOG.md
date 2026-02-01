@@ -10,10 +10,42 @@
 ### 计划中
 - 健康检查端点（/health、/ready）
 - Prometheus 指标（/metrics）
-- 认证与鉴权
 - Docker 支持
 - 算法绑定管理页面完善
 - 录制会话管理页面
+- 登录失败次数限制
+- 审计日志
+
+## [0.3.0] - 2025-01-26
+
+### 新增
+- **RBAC 认证授权**（阶段 8）
+  - User/Role/Permission/Menu 领域实体
+  - JWT 认证（Access Token + Refresh Token）
+  - 认证中间件和权限校验中间件
+  - 登录/登出/刷新 Token/修改密码 API
+  - 用户管理 API（CRUD、角色分配、重置密码）
+  - 角色管理 API（CRUD、权限分配、菜单分配）
+  - 菜单管理 API（CRUD、树形结构）
+  - 权限列表 API
+  - 初始化数据（默认权限、菜单、超级管理员角色、admin 账号）
+- **前端认证集成**
+  - Pinia 状态管理（用户、Token、权限）
+  - 登录页面
+  - 路由守卫（未登录跳转登录页）
+  - 权限指令（v-permission）
+  - 动态菜单布局
+  - 系统管理页面（用户、角色、菜单管理）
+
+### 变更
+- 所有业务 API 现在需要认证才能访问
+- 前端布局改为动态菜单侧边栏
+- 添加 @element-plus/icons-vue 依赖
+
+### 依赖
+- 新增 golang-jwt/jwt/v5
+- 新增 golang.org/x/crypto（bcrypt）
+- 新增 pinia、pinia-plugin-persistedstate
 
 ## [0.2.0] - 2025-01-26
 

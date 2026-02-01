@@ -1,4 +1,6 @@
 import axios from 'axios'
+import { getToken, clearTokens } from '../utils/auth'
+import router from '../router'
 
 const apiClient = axios.create({
   baseURL: '/api/v1',
@@ -8,12 +10,28 @@ const apiClient = axios.create({
   }
 })
 
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = getToken()
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
+  }
+)
+
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response) {
-      const message = error.response.data?.message || error.response.data?.error || '请求失败'
-      return Promise.reject(new Error(message))
+      if (error.response.status === 401) {
+        clearTokens()
+        router.push('/login')
+      }
+      return Promise.reject(error)
     }
     return Promise.reject(error)
   }

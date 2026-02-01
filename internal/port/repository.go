@@ -27,6 +27,7 @@ type Repository interface {
 	CreateAlgorithmBinding(ctx context.Context, b *domain.AlgorithmBinding) error
 	GetAlgorithmBinding(ctx context.Context, id uuid.UUID) (*domain.AlgorithmBinding, error)
 	ListAlgorithmBindingsByStream(ctx context.Context, streamID uuid.UUID) ([]*domain.AlgorithmBinding, error)
+	ListEnabledAlgorithmBindings(ctx context.Context) ([]*domain.AlgorithmBinding, error)
 	UpdateAlgorithmBinding(ctx context.Context, b *domain.AlgorithmBinding) error
 	DeleteAlgorithmBinding(ctx context.Context, id uuid.UUID) error
 
@@ -40,4 +41,43 @@ type Repository interface {
 	// InferenceResult
 	CreateInferenceResult(ctx context.Context, ir *domain.InferenceResult) error
 	ListInferenceResults(ctx context.Context, streamID, bindingID *uuid.UUID, from, to *int64, limit, offset int) ([]*domain.InferenceResult, int64, error)
+
+	// User
+	CreateUser(ctx context.Context, u *domain.User) error
+	GetUser(ctx context.Context, id uuid.UUID) (*domain.User, error)
+	GetUserByUsername(ctx context.Context, username string) (*domain.User, error)
+	GetUserWithRoles(ctx context.Context, id uuid.UUID) (*domain.User, error)
+	ListUsers(ctx context.Context, status *int, limit, offset int) ([]*domain.User, int64, error)
+	UpdateUser(ctx context.Context, u *domain.User) error
+	DeleteUser(ctx context.Context, id uuid.UUID) error
+	SetUserRoles(ctx context.Context, userID uuid.UUID, roleIDs []uuid.UUID) error
+
+	// Role
+	CreateRole(ctx context.Context, r *domain.Role) error
+	GetRole(ctx context.Context, id uuid.UUID) (*domain.Role, error)
+	GetRoleByCode(ctx context.Context, code string) (*domain.Role, error)
+	GetRoleWithPermissions(ctx context.Context, id uuid.UUID) (*domain.Role, error)
+	ListRoles(ctx context.Context, status *int) ([]*domain.Role, error)
+	UpdateRole(ctx context.Context, r *domain.Role) error
+	DeleteRole(ctx context.Context, id uuid.UUID) error
+	SetRolePermissions(ctx context.Context, roleID uuid.UUID, permissionIDs []uuid.UUID) error
+	SetRoleMenus(ctx context.Context, roleID uuid.UUID, menuIDs []uuid.UUID) error
+
+	// Permission
+	CreatePermission(ctx context.Context, p *domain.Permission) error
+	GetPermission(ctx context.Context, id uuid.UUID) (*domain.Permission, error)
+	GetPermissionByCode(ctx context.Context, code string) (*domain.Permission, error)
+	ListPermissions(ctx context.Context) ([]*domain.Permission, error)
+	UpdatePermission(ctx context.Context, p *domain.Permission) error
+	DeletePermission(ctx context.Context, id uuid.UUID) error
+	GetPermissionsByRoleIDs(ctx context.Context, roleIDs []uuid.UUID) ([]*domain.Permission, error)
+
+	// Menu
+	CreateMenu(ctx context.Context, m *domain.Menu) error
+	GetMenu(ctx context.Context, id uuid.UUID) (*domain.Menu, error)
+	GetMenuByCode(ctx context.Context, code string) (*domain.Menu, error)
+	ListMenus(ctx context.Context, status *int) ([]*domain.Menu, error)
+	UpdateMenu(ctx context.Context, m *domain.Menu) error
+	DeleteMenu(ctx context.Context, id uuid.UUID) error
+	GetMenusByRoleIDs(ctx context.Context, roleIDs []uuid.UUID) ([]*domain.Menu, error)
 }

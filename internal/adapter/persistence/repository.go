@@ -37,6 +37,10 @@ func AutoMigrate(db *gorm.DB) error {
 		&domain.AlgorithmBinding{},
 		&domain.RecordSession{},
 		&domain.InferenceResult{},
+		&domain.User{},
+		&domain.Role{},
+		&domain.Permission{},
+		&domain.Menu{},
 	); err != nil {
 		return err
 	}
@@ -302,4 +306,371 @@ func (r *repository) ListInferenceResults(ctx context.Context, streamID, binding
 		return nil, 0, err
 	}
 	return list, total, nil
+}
+
+func (r *repository) ListEnabledAlgorithmBindings(ctx context.Context) ([]*domain.AlgorithmBinding, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var list []*domain.AlgorithmBinding
+	if err := r.db.WithContext(ctx).Where("enabled = ?", true).Find(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+// User methods
+
+func (r *repository) CreateUser(ctx context.Context, u *domain.User) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	ensureID(&u.ID)
+	return r.db.WithContext(ctx).Create(u).Error
+}
+
+func (r *repository) GetUser(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var u domain.User
+	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&u).Error; err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
+func (r *repository) GetUserByUsername(ctx context.Context, username string) (*domain.User, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var u domain.User
+	if err := r.db.WithContext(ctx).Where("username = ?", username).First(&u).Error; err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
+func (r *repository) GetUserWithRoles(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var u domain.User
+	if err := r.db.WithContext(ctx).Preload("Roles").Where("id = ?", id).First(&u).Error; err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
+func (r *repository) ListUsers(ctx context.Context, status *int, limit, offset int) ([]*domain.User, int64, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, 0, err
+	}
+	q := r.db.WithContext(ctx).Model(&domain.User{})
+	if status != nil {
+		q = q.Where("status = ?", *status)
+	}
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var list []*domain.User
+	if err := q.Limit(limit).Offset(offset).Order("created_at DESC").Find(&list).Error; err != nil {
+		return nil, 0, err
+	}
+	return list, total, nil
+}
+
+func (r *repository) UpdateUser(ctx context.Context, u *domain.User) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Save(u).Error
+}
+
+func (r *repository) DeleteUser(ctx context.Context, id uuid.UUID) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.User{}).Error
+}
+
+func (r *repository) SetUserRoles(ctx context.Context, userID uuid.UUID, roleIDs []uuid.UUID) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	var user domain.User
+	if err := r.db.WithContext(ctx).First(&user, userID).Error; err != nil {
+		return err
+	}
+	var roles []domain.Role
+	if len(roleIDs) > 0 {
+		if err := r.db.WithContext(ctx).Where("id IN ?", roleIDs).Find(&roles).Error; err != nil {
+			return err
+		}
+	}
+	return r.db.WithContext(ctx).Model(&user).Association("Roles").Replace(roles)
+}
+
+// Role methods
+
+func (r *repository) CreateRole(ctx context.Context, role *domain.Role) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	ensureID(&role.ID)
+	return r.db.WithContext(ctx).Create(role).Error
+}
+
+func (r *repository) GetRole(ctx context.Context, id uuid.UUID) (*domain.Role, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var role domain.Role
+	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&role).Error; err != nil {
+		return nil, err
+	}
+	return &role, nil
+}
+
+func (r *repository) GetRoleByCode(ctx context.Context, code string) (*domain.Role, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var role domain.Role
+	if err := r.db.WithContext(ctx).Where("code = ?", code).First(&role).Error; err != nil {
+		return nil, err
+	}
+	return &role, nil
+}
+
+func (r *repository) GetRoleWithPermissions(ctx context.Context, id uuid.UUID) (*domain.Role, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var role domain.Role
+	if err := r.db.WithContext(ctx).Preload("Permissions").Preload("Menus").Where("id = ?", id).First(&role).Error; err != nil {
+		return nil, err
+	}
+	return &role, nil
+}
+
+func (r *repository) ListRoles(ctx context.Context, status *int) ([]*domain.Role, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	q := r.db.WithContext(ctx)
+	if status != nil {
+		q = q.Where("status = ?", *status)
+	}
+	var list []*domain.Role
+	if err := q.Order("created_at DESC").Find(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+func (r *repository) UpdateRole(ctx context.Context, role *domain.Role) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Save(role).Error
+}
+
+func (r *repository) DeleteRole(ctx context.Context, id uuid.UUID) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.Role{}).Error
+}
+
+func (r *repository) SetRolePermissions(ctx context.Context, roleID uuid.UUID, permissionIDs []uuid.UUID) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	var role domain.Role
+	if err := r.db.WithContext(ctx).First(&role, roleID).Error; err != nil {
+		return err
+	}
+	var permissions []domain.Permission
+	if len(permissionIDs) > 0 {
+		if err := r.db.WithContext(ctx).Where("id IN ?", permissionIDs).Find(&permissions).Error; err != nil {
+			return err
+		}
+	}
+	return r.db.WithContext(ctx).Model(&role).Association("Permissions").Replace(permissions)
+}
+
+func (r *repository) SetRoleMenus(ctx context.Context, roleID uuid.UUID, menuIDs []uuid.UUID) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	var role domain.Role
+	if err := r.db.WithContext(ctx).First(&role, roleID).Error; err != nil {
+		return err
+	}
+	var menus []domain.Menu
+	if len(menuIDs) > 0 {
+		if err := r.db.WithContext(ctx).Where("id IN ?", menuIDs).Find(&menus).Error; err != nil {
+			return err
+		}
+	}
+	return r.db.WithContext(ctx).Model(&role).Association("Menus").Replace(menus)
+}
+
+// Permission methods
+
+func (r *repository) CreatePermission(ctx context.Context, p *domain.Permission) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	ensureID(&p.ID)
+	return r.db.WithContext(ctx).Create(p).Error
+}
+
+func (r *repository) GetPermission(ctx context.Context, id uuid.UUID) (*domain.Permission, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var p domain.Permission
+	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&p).Error; err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
+func (r *repository) GetPermissionByCode(ctx context.Context, code string) (*domain.Permission, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var p domain.Permission
+	if err := r.db.WithContext(ctx).Where("code = ?", code).First(&p).Error; err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
+func (r *repository) ListPermissions(ctx context.Context) ([]*domain.Permission, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var list []*domain.Permission
+	if err := r.db.WithContext(ctx).Order("code").Find(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+func (r *repository) UpdatePermission(ctx context.Context, p *domain.Permission) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Save(p).Error
+}
+
+func (r *repository) DeletePermission(ctx context.Context, id uuid.UUID) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.Permission{}).Error
+}
+
+func (r *repository) GetPermissionsByRoleIDs(ctx context.Context, roleIDs []uuid.UUID) ([]*domain.Permission, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	if len(roleIDs) == 0 {
+		return []*domain.Permission{}, nil
+	}
+	var permissions []*domain.Permission
+	err := r.db.WithContext(ctx).
+		Distinct().
+		Joins("JOIN role_permissions ON role_permissions.permission_id = permissions.id").
+		Where("role_permissions.role_id IN ?", roleIDs).
+		Find(&permissions).Error
+	if err != nil {
+		return nil, err
+	}
+	return permissions, nil
+}
+
+// Menu methods
+
+func (r *repository) CreateMenu(ctx context.Context, m *domain.Menu) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	ensureID(&m.ID)
+	return r.db.WithContext(ctx).Create(m).Error
+}
+
+func (r *repository) GetMenu(ctx context.Context, id uuid.UUID) (*domain.Menu, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var m domain.Menu
+	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&m).Error; err != nil {
+		return nil, err
+	}
+	return &m, nil
+}
+
+func (r *repository) GetMenuByCode(ctx context.Context, code string) (*domain.Menu, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var m domain.Menu
+	if err := r.db.WithContext(ctx).Where("code = ?", code).First(&m).Error; err != nil {
+		return nil, err
+	}
+	return &m, nil
+}
+
+func (r *repository) ListMenus(ctx context.Context, status *int) ([]*domain.Menu, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	q := r.db.WithContext(ctx)
+	if status != nil {
+		q = q.Where("status = ?", *status)
+	}
+	var list []*domain.Menu
+	if err := q.Order("sort, created_at").Find(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+func (r *repository) UpdateMenu(ctx context.Context, m *domain.Menu) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Save(m).Error
+}
+
+func (r *repository) DeleteMenu(ctx context.Context, id uuid.UUID) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.Menu{}).Error
+}
+
+func (r *repository) GetMenusByRoleIDs(ctx context.Context, roleIDs []uuid.UUID) ([]*domain.Menu, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	if len(roleIDs) == 0 {
+		return []*domain.Menu{}, nil
+	}
+	var menus []*domain.Menu
+	err := r.db.WithContext(ctx).
+		Distinct().
+		Joins("JOIN role_menus ON role_menus.menu_id = menus.id").
+		Where("role_menus.role_id IN ?", roleIDs).
+		Order("menus.sort, menus.created_at").
+		Find(&menus).Error
+	if err != nil {
+		return nil, err
+	}
+	return menus, nil
 }

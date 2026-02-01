@@ -11,7 +11,8 @@
 | 5. 抽帧与推理 | 已完成 | gocron Job（interval_sec、schedule、initial_delay_sec）；取帧→AI→InferenceResult；/inference_results |
 | 6. 预览 | 已完成 | PreviewManager（MediaMTX/FFmpeg HLS）；/preview/start、/preview/stop；/live 或代理 |
 | 7. 前端 | 已完成 | Vue 3、流/算法绑定/录制/结果 CRUD、video.js 预览、构建与 embed |
-| 8. 联调与优化 | 待开始 | 10+ 路压测、FFmpeg/预览上限、DB 索引与分页 |
+| 8. 认证授权 | 已完成 | RBAC 权限模型、JWT 认证、用户/角色/菜单管理、登录页面、动态菜单 |
+| 9. 联调与优化 | 待开始 | 10+ 路压测、FFmpeg/预览上限、DB 索引与分页 |
 
 ---
 
@@ -306,7 +307,88 @@
 
 ---
 
-## 8. 联调与优化（待开始）
+## 8. 认证授权（已完成）
+
+### 完成项
+
+- [x] 实现 RBAC 权限模型
+  - User（用户）、Role（角色）、Permission（权限）、Menu（菜单）实体
+  - 用户-角色多对多关系
+  - 角色-权限、角色-菜单多对多关系
+- [x] 实现 JWT 认证
+  - Access Token / Refresh Token 双 Token 机制
+  - Token 生成、解析、验证
+  - 可配置的过期时间（默认 Access 2h，Refresh 7d）
+- [x] 实现认证中间件
+  - JWT 认证中间件（Authorization: Bearer xxx）
+  - 权限校验中间件
+  - 用户权限加载中间件
+- [x] 实现认证服务
+  - 登录（/api/v1/auth/login）
+  - 登出（/api/v1/auth/logout）
+  - Token 刷新（/api/v1/auth/refresh）
+  - 获取当前用户信息（/api/v1/auth/profile）
+  - 修改密码（/api/v1/auth/password）
+- [x] 实现用户管理
+  - 用户 CRUD（/api/v1/users）
+  - 用户角色分配
+  - 重置密码
+- [x] 实现角色管理
+  - 角色 CRUD（/api/v1/roles）
+  - 角色权限分配
+  - 角色菜单分配
+- [x] 实现菜单管理
+  - 菜单 CRUD（/api/v1/menus）
+  - 树形菜单结构
+  - 菜单类型（目录、菜单、按钮）
+- [x] 实现初始化数据
+  - 默认权限（30+ 个 API 权限）
+  - 默认菜单（系统管理、视频流管理等）
+  - 超级管理员角色（super_admin）
+  - 默认管理员账号（admin/admin123）
+- [x] 前端认证集成
+  - Pinia 状态管理（用户、Token、权限）
+  - 登录页面
+  - 路由守卫（未登录跳转登录页）
+  - 权限指令（v-permission）
+  - 动态菜单布局
+  - 系统管理页面（用户、角色、菜单）
+
+### 技术实现
+
+- **JWT 认证**：使用 golang-jwt/jwt/v5，HS256 签名
+- **密码加密**：使用 bcrypt 加密存储
+- **权限校验**：支持超级管理员（super_admin）跳过权限检查
+- **前端状态**：Pinia + 持久化插件
+- **路由守卫**：Vue Router beforeEach 拦截
+- **权限指令**：自定义 v-permission 指令控制按钮显示
+
+### 配置项
+
+```yaml
+jwt:
+  secret: "your-secret-key"       # JWT 签名密钥
+  expire: 2h                      # Access Token 过期时间
+  refresh_exp: 168h               # Refresh Token 过期时间（7天）
+  issuer: "goyavision"            # 签发者
+```
+
+### 默认账号
+
+- **用户名**：admin
+- **密码**：admin123
+- **角色**：超级管理员（拥有所有权限）
+
+### 待后续
+
+- 登录失败次数限制
+- 审计日志
+- Token 黑名单（登出后立即失效）
+- 多设备登录管理
+
+---
+
+## 9. 联调与优化（待开始）
 
 - 10+ 路压测
 - FFmpeg/预览上限验证

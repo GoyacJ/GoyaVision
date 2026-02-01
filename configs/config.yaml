@@ -22,3 +22,9 @@ record:
 ai:
   timeout: 10s
   retry: 2
+
+jwt:
+  secret: "goyavision-secret-change-in-production"
+  expire: 2h
+  refresh_exp: 168h
+  issuer: "goyavision"

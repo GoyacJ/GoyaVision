@@ -14,6 +14,14 @@ type Config struct {
 	Preview Preview
 	Record  Record
 	AI      AI
+	JWT     JWT
+}
+
+type JWT struct {
+	Secret     string
+	Expire     time.Duration
+	RefreshExp time.Duration
+	Issuer     string
 }
 
 type Server struct {
@@ -86,9 +94,27 @@ func Load() (*Config, error) {
 			Timeout: v.GetDuration("ai.timeout"),
 			Retry:   v.GetInt("ai.retry"),
 		},
+		JWT: JWT{
+			Secret:     v.GetString("jwt.secret"),
+			Expire:     v.GetDuration("jwt.expire"),
+			RefreshExp: v.GetDuration("jwt.refresh_exp"),
+			Issuer:     v.GetString("jwt.issuer"),
+		},
 	}
 	if cfg.Server.Port == 0 {
 		cfg.Server.Port = 8080
+	}
+	if cfg.JWT.Secret == "" {
+		cfg.JWT.Secret = "goyavision-secret-key"
+	}
+	if cfg.JWT.Expire == 0 {
+		cfg.JWT.Expire = 2 * time.Hour
+	}
+	if cfg.JWT.RefreshExp == 0 {
+		cfg.JWT.RefreshExp = 7 * 24 * time.Hour
+	}
+	if cfg.JWT.Issuer == "" {
+		cfg.JWT.Issuer = "goyavision"
 	}
 	return cfg, nil
 }

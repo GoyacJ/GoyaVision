@@ -21,6 +21,10 @@ GoyaVision 采用分层架构（Clean Architecture / Hexagonal Architecture）�
 - `AlgorithmBinding`: 流与算法的绑定关系
 - `RecordSession`: 录制会话
 - `InferenceResult`: 推理结果
+- `User`: 用户实体
+- `Role`: 角色实体
+- `Permission`: 权限实体
+- `Menu`: 菜单实体
 
 **原则**:
 - 实体为纯 Go struct，包含业务字段
@@ -62,6 +66,10 @@ GoyaVision 采用分层架构（Clean Architecture / Hexagonal Architecture）�
 - `InferenceService`: 推理结果查询用例（过滤、分页）
 - `PreviewService`: 预览用例（启停、HLS URL 管理）
 - `Scheduler`: 调度器（gocron，管理推理任务）
+- `AuthService`: 认证服务（登录、登出、Token 刷新、密码修改）
+- `UserService`: 用户管理（CRUD、角色分配、密码重置）
+- `RoleService`: 角色管理（CRUD、权限分配、菜单分配）
+- `MenuService`: 菜单管理（CRUD、树形结构）
 
 **原则**:
 - 通过 port 接口操作，而非直接调用 adapter
@@ -97,10 +105,10 @@ GoyaVision 采用分层架构（Clean Architecture / Hexagonal Architecture）�
 - 中间件
 
 **组件**:
-- `router.go`: 路由注册
-- `handler/`: 请求处理器
+- `router.go`: 路由注册（认证路由、受保护路由、管理路由）
+- `handler/`: 请求处理器（auth、user、role、menu、stream 等）
 - `dto/`: 数据传输对象
-- `middleware.go`: 中间件
+- `middleware/auth.go`: 认证中间件（JWT 验证、权限校验）
 
 **原则**:
 - Handler 调用 app 服务或 port 接口
@@ -228,8 +236,10 @@ GoyaVision 采用分层架构（Clean Architecture / Hexagonal Architecture）�
 - 输入验证（API 层和 Service 层）
 - SQL 注入防护（使用 GORM 参数化查询）
 - 错误处理不泄露敏感信息
-- 认证与鉴权（规划中）
-- 敏感信息加密（规划中）
+- **JWT 认证**：Access Token + Refresh Token 双 Token 机制
+- **RBAC 权限模型**：用户-角色-权限三级授权
+- **密码加密**：使用 bcrypt 算法加密存储
+- **权限中间件**：API 级别权限校验
 
 ## 已实现的关键组件
 
@@ -241,11 +251,26 @@ GoyaVision 采用分层架构（Clean Architecture / Hexagonal Architecture）�
 ### 数据库约束
 - RecordSession 唯一约束（部分唯一索引，确保一个流只有一个 running 状态）
 - InferenceResult 查询索引（stream_id + ts, algorithm_binding_id + ts）
+- User、Role、Permission、Menu 唯一索引（username、code）
 
 ### 任务管理
 - RecordService：内存中存储活跃录制任务，后台监控
 - PreviewManager：内存中存储活跃预览任务
 - Scheduler：内存中存储活跃调度任务
+
+### 认证授权
+- **JWT 认证**：`internal/api/middleware/auth.go`
+  - Token 生成和解析（HS256 签名）
+  - JWTAuth 中间件（Authorization: Bearer xxx）
+  - 支持 Access Token 和 Refresh Token
+- **权限校验**：RequirePermission 中间件
+  - 基于角色-权限关系校验
+  - 超级管理员（super_admin）跳过校验
+- **初始化数据**：`internal/adapter/persistence/init_data.go`
+  - 默认权限（30+ API 权限）
+  - 默认菜单（系统管理、视频流管理等）
+  - 超级管理员角色
+  - 默认管理员账号（admin/admin123）
 
 ---
 

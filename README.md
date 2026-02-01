@@ -49,6 +49,12 @@ GoyaVision 是一个企业级、开源的 AI 视频流分析处理平台。支�
   - 推理结果可视化
   - 内嵌式部署（Go embed）
 
+- **🔐 认证授权**
+  - JWT Token 认证（Access Token + Refresh Token）
+  - 基于 RBAC 的权限模型
+  - 用户、角色、权限、菜单管理
+  - 动态菜单与按钮级权限控制
+
 ### 企业级特性
 
 - **🏗️ 分层架构**：清晰的领域驱动设计（DDD），易于维护与扩展
@@ -59,11 +65,17 @@ GoyaVision 是一个企业级、开源的 AI 视频流分析处理平台。支�
 
 ## 📸 界面预览
 
+### 登录页面
+
+安全的用户认证，支持 JWT Token 登录。
+
+![登录页面](docs/image/login.png)
+
 ### 视频流管理
 
 管理 RTSP 视频流，支持启用/禁用、预览、录制和算法绑定。
 
-![视频流管理](docs/image/stream.png)
+![视频流管理](docs/image/streams.png)
 
 ### 算法管理
 
@@ -75,7 +87,25 @@ GoyaVision 是一个企业级、开源的 AI 视频流分析处理平台。支�
 
 查询和浏览 AI 推理结果，支持按流、时间范围过滤。
 
-![推理结果](docs/image/result.png)
+![推理结果](docs/image/inference-results.png)
+
+### 用户管理
+
+管理系统用户，支持角色分配和状态控制。
+
+![用户管理](docs/image/user.png)
+
+### 角色管理
+
+基于 RBAC 的角色权限管理，灵活配置菜单和操作权限。
+
+![角色管理](docs/image/role.png)
+
+### 菜单管理
+
+动态菜单配置，支持目录、菜单、按钮三级权限控制。
+
+![菜单管理](docs/image/menu.png)
 
 ## 🚀 快速开始
 
@@ -160,6 +190,8 @@ docker-compose up
 
 | 资源            | 方法 | 路径 |
 |-----------------|------|------|
+| Auth            | POST | `/api/v1/auth/login`, `/refresh`, `/logout` |
+| Auth            | GET/PUT | `/api/v1/auth/profile`, `/password` |
 | Stream          | CRUD | `/api/v1/streams` |
 | Algorithm       | CRUD | `/api/v1/algorithms` |
 | AlgorithmBinding| CRUD | `/api/v1/streams/:id/algorithm-bindings` |
@@ -168,8 +200,12 @@ docker-compose up
 | InferenceResult | GET  | `/api/v1/inference_results`（支持过滤和分页） |
 | Preview         | GET  | `/api/v1/streams/:id/preview/start` |
 | Preview         | POST | `/api/v1/streams/:id/preview/stop` |
+| User            | CRUD | `/api/v1/users` |
+| Role            | CRUD | `/api/v1/roles` |
+| Menu            | CRUD | `/api/v1/menus` |
+| Permission      | GET  | `/api/v1/permissions` |
 
-详细 API 文档见 [API 文档](docs/api.md)（规划中）。
+详细 API 文档见 [API 文档](docs/api.md)。
 
 ## 🏗️ 技术架构
 

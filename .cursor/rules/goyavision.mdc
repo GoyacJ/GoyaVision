@@ -8,10 +8,11 @@ alwaysApply: true
 ## 分层与依赖
 
 - **domain**：仅实体与纯领域逻辑，不导入 `internal/adapter`、`internal/api`、`config` 等 infra。
-  - 实体：`Stream`、`Algorithm`、`AlgorithmBinding`、`RecordSession`、`InferenceResult`
-  - 常量：`RecordStatusRunning`、`RecordStatusStopped`
+  - 业务实体：`Stream`、`Algorithm`、`AlgorithmBinding`、`RecordSession`、`InferenceResult`
+  - 认证实体：`User`、`Role`、`Permission`、`Menu`
+  - 常量：`RecordStatusRunning`、`RecordStatusStopped`、`UserStatusEnabled`、`MenuType*`
 - **port**：接口定义（如 `Repository`、`Inference`）；可被 `app`、`api` 依赖；实现放在 `adapter`。
-  - `Repository`：数据持久化接口（Stream、Algorithm、AlgorithmBinding、RecordSession、InferenceResult）
+  - `Repository`：数据持久化接口（含业务实体和认证实体的 CRUD）
   - `Inference`：AI 推理服务接口（HTTP + JSON）
 - **app**：编排 domain 与 port，实现用例；不直接依赖 `adapter` 具体实现，通过 `port` 注入。
   - `StreamService`：流管理用例
@@ -21,12 +22,18 @@ alwaysApply: true
   - `InferenceService`：推理结果查询用例
   - `PreviewService`：预览用例（集成 PreviewManager）
   - `Scheduler`：调度器（gocron，管理推理任务）
+  - `AuthService`：认证服务（登录、登出、Token 刷新、密码修改）
+  - `UserService`：用户管理（CRUD、角色分配）
+  - `RoleService`：角色管理（CRUD、权限/菜单分配）
+  - `MenuService`：菜单管理（CRUD、树形结构）
 - **adapter**：实现 `port`，可依赖 `domain`；如 `persistence` 实现 `port.Repository`。
   - `persistence`：实现 `port.Repository`（GORM + PostgreSQL）
+  - `persistence/init_data.go`：初始化默认数据（权限、菜单、角色、管理员）
   - `ai`：实现 `port.Inference`（HTTP 客户端）
 - **api**：HTTP 路由、middleware、handler、dto；handler 调用 `app` 或 `port`，不直接写 GORM/SQL。
-  - `handler/`：请求处理器（stream、algorithm、algorithm_binding、record、inference、preview）
+  - `handler/`：请求处理器（stream、algorithm、algorithm_binding、record、inference、preview、auth、user、role、menu）
   - `dto/`：数据传输对象（请求与响应）
+  - `middleware/auth.go`：JWT 认证中间件、权限校验中间件
   - `errors.go`：统一错误处理
   - `static.go`：前端静态文件服务（embed）
 
@@ -55,10 +62,22 @@ alwaysApply: true
 
 ## 前端
 
-- **位置**：`web/`，Vue 3 + TypeScript + Vite + Element Plus + video.js
+- **位置**：`web/`，Vue 3 + TypeScript + Vite + Element Plus + video.js + Pinia
 - **构建**：`npm run build` 输出到 `web/dist/`
 - **嵌入**：使用 Go `embed.FS` 嵌入构建产物
 - **路由**：SPA 路由，所有非 API 路由返回 `index.html`
+- **状态管理**：Pinia（用户信息、Token、权限）
+- **路由守卫**：`router/guard.ts`，未登录跳转登录页
+- **权限指令**：`v-permission`，按钮级权限控制
+- **布局**：`layout/`，动态菜单侧边栏
+
+## 认证授权
+
+- **JWT 认证**：Access Token + Refresh Token 双 Token 机制
+- **密码加密**：bcrypt 算法
+- **权限模型**：RBAC（用户-角色-权限三级）
+- **超级管理员**：`super_admin` 角色跳过权限检查
+- **默认账号**：admin / admin123
 
 ## 文档与进度
 

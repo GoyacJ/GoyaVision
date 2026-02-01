@@ -40,6 +40,9 @@ func main() {
 		if err := persistence.AutoMigrate(db); err != nil {
 			log.Fatalf("migrate: %v", err)
 		}
+		if err := persistence.InitializeData(db); err != nil {
+			log.Printf("init data: %v", err)
+		}
 	} else {
 		log.Print("db.dsn empty, skip database")
 	}
