@@ -13,7 +13,10 @@ import (
 
 func RegisterWorkflow(g *echo.Group, d Deps) {
 	svc := app.NewWorkflowService(d.Repo)
-	h := workflowHandler{svc: svc}
+	h := workflowHandler{
+		svc:       svc,
+		scheduler: d.WorkflowScheduler,
+	}
 	g.GET("/workflows", h.List)
 	g.POST("/workflows", h.Create)
 	g.GET("/workflows/:id", h.Get)
@@ -21,10 +24,12 @@ func RegisterWorkflow(g *echo.Group, d Deps) {
 	g.DELETE("/workflows/:id", h.Delete)
 	g.POST("/workflows/:id/enable", h.Enable)
 	g.POST("/workflows/:id/disable", h.Disable)
+	g.POST("/workflows/:id/trigger", h.Trigger)
 }
 
 type workflowHandler struct {
-	svc *app.WorkflowService
+	svc       *app.WorkflowService
+	scheduler *app.WorkflowScheduler
 }
 
 func (h *workflowHandler) List(c echo.Context) error {
@@ -263,4 +268,39 @@ func (h *workflowHandler) Disable(c echo.Context) error {
 	}
 
 	return c.JSON(200, dto.WorkflowToResponse(workflow))
+}
+
+func (h *workflowHandler) Trigger(c echo.Context) error {
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		return c.JSON(400, dto.ErrorResponse{
+			Error:   "Bad Request",
+			Message: "invalid workflow id",
+		})
+	}
+
+	var req struct {
+		AssetID *uuid.UUID `json:"asset_id,omitempty"`
+	}
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(400, dto.ErrorResponse{
+			Error:   "Bad Request",
+			Message: "invalid request body",
+		})
+	}
+
+	if h.scheduler == nil {
+		return c.JSON(500, dto.ErrorResponse{
+			Error:   "Internal Server Error",
+			Message: "scheduler not available",
+		})
+	}
+
+	task, err := h.scheduler.TriggerWorkflow(c.Request().Context(), id, req.AssetID)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(202, dto.TaskToResponse(task))
 }

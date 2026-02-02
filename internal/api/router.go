@@ -3,31 +3,29 @@ package api
 import (
 	"io/fs"
 
-	"goyavision/config"
-	"goyavision/internal/adapter/mediamtx"
 	"goyavision/internal/api/handler"
 	authMiddleware "goyavision/internal/api/middleware"
-	"goyavision/internal/port"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
-func RegisterRouter(e *echo.Echo, repo port.Repository, cfg *config.Config, mtxCli *mediamtx.Client, webFS fs.FS) {
+// HandlerDeps 处理器依赖
+type HandlerDeps = handler.Deps
+
+func RegisterRouter(e *echo.Echo, d HandlerDeps, webFS fs.FS) {
 	e.HTTPErrorHandler = ErrorHandler
 	e.Use(middleware.Logger(), middleware.Recover())
-
-	d := handler.Deps{Repo: repo, Cfg: cfg, MtxCli: mtxCli}
 
 	authGroup := e.Group("/api/v1/auth")
 	handler.RegisterAuth(authGroup, d)
 
-	api := e.Group("/api/v1", authMiddleware.JWTAuth(cfg.JWT))
+	api := e.Group("/api/v1", authMiddleware.JWTAuth(d.Cfg.JWT))
 
 	authProtected := api.Group("/auth")
 	handler.RegisterAuthProtected(authProtected, d)
 
-	api.Use(authMiddleware.LoadUserPermissions(repo))
+	api.Use(authMiddleware.LoadUserPermissions(d.Repo))
 
 	handler.RegisterStream(api, d)
 	handler.RegisterAsset(api, d)

@@ -155,6 +155,35 @@
 - 总端点：36 个
 - 总数据表：7 个
 
+- **工作流引擎与调度器**（V1.0 迭代 2）
+  - 添加 OperatorExecutor 接口（internal/port/engine.go）
+    - Execute：执行算子
+  - 添加 WorkflowEngine 接口（internal/port/engine.go）
+    - Execute：执行工作流
+    - Cancel：取消执行
+    - GetProgress：获取进度
+  - 实现 HTTPOperatorExecutor（internal/adapter/engine/http_executor.go）
+    - 通过 HTTP 调用外部算子服务
+    - 支持自定义 HTTP 方法
+    - 支持超时控制（5 分钟）
+    - 标准化输入输出协议
+  - 实现 SimpleWorkflowEngine（internal/adapter/engine/simple_engine.go）
+    - 支持单算子顺序执行
+    - 支持进度跟踪和取消
+    - 自动保存产物（Assets、Results、Timeline）
+    - 完整的任务状态管理
+    - 并发安全
+  - 实现 WorkflowScheduler（internal/app/workflow_scheduler.go）
+    - 支持定时调度（Cron、Interval）
+    - 支持手动触发
+    - 自动加载启用的工作流
+    - 异步执行工作流
+  - 集成工作流引擎（cmd/server/main.go）
+    - 初始化引擎和调度器
+    - 启动时自动加载工作流
+  - 添加手动触发 API
+    - POST /api/v1/workflows/:id/trigger（手动触发工作流，支持指定资产）
+
 - **项目规范**
   - 添加文档更新强制要求（每次功能开发或修改后必须更新文档）
   - 添加 Git 提交规范（遵循 Conventional Commits）

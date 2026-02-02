@@ -303,17 +303,54 @@
 
 全部 5 个核心实体已完成实现！
 
-**待实现（迭代 2）**:
+---
 
-- [ ] **端口层（Port）**
-  - [ ] OperatorPort 接口（算子执行）
-  - [ ] WorkflowEngine 接口（工作流引擎）
+### 迭代 2：工作流引擎与调度器（当前）
 
-- [ ] **应用层（App）**
-  - [ ] Scheduler 重构（适配新架构）
+**目标**: 实现工作流执行引擎和任务调度系统
 
-- [ ] **适配器层（Adapter）**
-  - [ ] SimpleWorkflowEngine 实现（单算子）
+**已完成**:
+
+- [x] **端口层（Port）**
+  - [x] OperatorExecutor 接口（engine.go）
+    - Execute：执行算子
+  - [x] WorkflowEngine 接口（engine.go）
+    - Execute：执行工作流
+    - Cancel：取消执行
+    - GetProgress：获取进度
+
+- [x] **适配器层（Adapter）**
+  - [x] HTTPOperatorExecutor 实现（engine/http_executor.go）
+    - 通过 HTTP 调用外部算子服务
+    - 支持自定义 HTTP 方法（POST/GET）
+    - 支持超时控制（5 分钟）
+    - 标准化输入输出协议
+    - 完整的错误处理
+  - [x] SimpleWorkflowEngine 实现（engine/simple_engine.go）
+    - 支持单算子顺序执行
+    - 支持进度跟踪（按节点数计算）
+    - 支持取消执行（Context 取消）
+    - 自动保存产物（Assets、Results、Timeline）
+    - 完整的任务状态管理
+    - 并发安全（sync.RWMutex）
+
+- [x] **应用层（App）**
+  - [x] WorkflowScheduler 实现（workflow_scheduler.go）
+    - 支持定时调度（Cron、Interval）
+    - 支持手动触发（TriggerWorkflow）
+    - 自动加载启用的工作流
+    - 支持取消调度
+    - 异步执行工作流（goroutine）
+    - 完整的错误处理
+
+- [x] **集成与 API**
+  - [x] 更新 main.go 集成工作流引擎和调度器
+  - [x] 更新 handler.Deps 传递 WorkflowScheduler
+  - [x] 更新 Router 签名适配新 Deps
+  - [x] 添加手动触发 API
+    - POST /api/v1/workflows/:id/trigger（手动触发工作流）
+
+**待实现**:
 
 - [ ] **数据库迁移**
   - [x] 创建 media_assets 表（AutoMigrate）
@@ -326,7 +363,9 @@
   - [ ] 数据迁移脚本（streams → media_sources、algorithms → operators）
   - [ ] 删除旧表（algorithm_bindings、inference_results）
 
-### 迭代 2：前端适配
+---
+
+### 迭代 3：前端适配（待开始）
 
 **目标**: 前端适配新 API 和概念
 

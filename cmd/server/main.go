@@ -13,6 +13,7 @@ import (
 	"goyavision"
 	"goyavision/config"
 	"goyavision/internal/adapter/ai"
+	"goyavision/internal/adapter/engine"
 	"goyavision/internal/adapter/mediamtx"
 	"goyavision/internal/adapter/persistence"
 	"goyavision/internal/api"
@@ -58,6 +59,7 @@ func main() {
 	}
 
 	var scheduler *app.Scheduler
+	var workflowScheduler *app.WorkflowScheduler
 	if db != nil {
 		inferenceAdapter := ai.NewInferenceAdapter(cfg.AI.Timeout, cfg.AI.Retry)
 		pool := ffmpeg.NewPool(cfg.FFmpeg.Bin, cfg.FFmpeg.MaxRecord, cfg.FFmpeg.MaxFrame)
@@ -72,8 +74,21 @@ func main() {
 		if err := scheduler.Start(ctx); err != nil {
 			log.Fatalf("start scheduler: %v", err)
 		}
-		log.Print("scheduler started")
+		log.Print("old scheduler started")
 		defer scheduler.Stop()
+
+		executor := engine.NewHTTPOperatorExecutor()
+		workflowEngine := engine.NewSimpleWorkflowEngine(repo, executor)
+		workflowScheduler, err = app.NewWorkflowScheduler(repo, workflowEngine)
+		if err != nil {
+			log.Fatalf("create workflow scheduler: %v", err)
+		}
+
+		if err := workflowScheduler.Start(ctx); err != nil {
+			log.Fatalf("start workflow scheduler: %v", err)
+		}
+		log.Print("workflow scheduler started")
+		defer workflowScheduler.Stop()
 	}
 
 	e := echo.New()
@@ -82,7 +97,14 @@ func main() {
 	if sub, err := goyavision.GetWebFS(); err == nil {
 		webDist = sub
 	}
-	api.RegisterRouter(e, repo, cfg, mtxCli, webDist)
+
+	deps := api.HandlerDeps{
+		Repo:              repo,
+		Cfg:               cfg,
+		MtxCli:            mtxCli,
+		WorkflowScheduler: workflowScheduler,
+	}
+	api.RegisterRouter(e, deps, webDist)
 
 	srv := &http.Server{Addr: cfg.Server.Addr(), Handler: e}
 	go func() {
