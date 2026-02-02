@@ -46,6 +46,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&domain.Workflow{},
 		&domain.WorkflowNode{},
 		&domain.WorkflowEdge{},
+		&domain.Task{},
 	); err != nil {
 		return err
 	}
@@ -1058,4 +1059,153 @@ func (r *repository) DeleteWorkflowEdges(ctx context.Context, workflowID uuid.UU
 		return err
 	}
 	return r.db.WithContext(ctx).Where("workflow_id = ?", workflowID).Delete(&domain.WorkflowEdge{}).Error
+}
+
+// Task methods
+
+func (r *repository) CreateTask(ctx context.Context, t *domain.Task) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	ensureID(&t.ID)
+	return r.db.WithContext(ctx).Create(t).Error
+}
+
+func (r *repository) GetTask(ctx context.Context, id uuid.UUID) (*domain.Task, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var t domain.Task
+	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&t).Error; err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+func (r *repository) GetTaskWithRelations(ctx context.Context, id uuid.UUID) (*domain.Task, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var t domain.Task
+	if err := r.db.WithContext(ctx).
+		Preload("Workflow").
+		Preload("Asset").
+		Preload("Artifacts").
+		Where("id = ?", id).
+		First(&t).Error; err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+func (r *repository) ListTasks(ctx context.Context, filter domain.TaskFilter) ([]*domain.Task, int64, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, 0, err
+	}
+
+	q := r.db.WithContext(ctx).Model(&domain.Task{})
+
+	if filter.WorkflowID != nil {
+		q = q.Where("workflow_id = ?", *filter.WorkflowID)
+	}
+	if filter.AssetID != nil {
+		q = q.Where("asset_id = ?", *filter.AssetID)
+	}
+	if filter.Status != nil {
+		q = q.Where("status = ?", *filter.Status)
+	}
+	if filter.From != nil {
+		q = q.Where("created_at >= ?", *filter.From)
+	}
+	if filter.To != nil {
+		q = q.Where("created_at <= ?", *filter.To)
+	}
+
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var list []*domain.Task
+	if err := q.Limit(filter.Limit).Offset(filter.Offset).Order("created_at DESC").Find(&list).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return list, total, nil
+}
+
+func (r *repository) UpdateTask(ctx context.Context, t *domain.Task) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Save(t).Error
+}
+
+func (r *repository) DeleteTask(ctx context.Context, id uuid.UUID) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.Task{}).Error
+}
+
+func (r *repository) GetTaskStats(ctx context.Context, workflowID *uuid.UUID) (*domain.TaskStats, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+
+	q := r.db.WithContext(ctx).Model(&domain.Task{})
+	if workflowID != nil {
+		q = q.Where("workflow_id = ?", *workflowID)
+	}
+
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	stats := &domain.TaskStats{Total: total}
+
+	statusCounts := []struct {
+		Status domain.TaskStatus
+		Count  int64
+	}{}
+	if err := r.db.WithContext(ctx).Model(&domain.Task{}).
+		Select("status, COUNT(*) as count").
+		Group("status").
+		Find(&statusCounts).Error; err != nil {
+		return nil, err
+	}
+
+	for _, sc := range statusCounts {
+		switch sc.Status {
+		case domain.TaskStatusPending:
+			stats.Pending = sc.Count
+		case domain.TaskStatusRunning:
+			stats.Running = sc.Count
+		case domain.TaskStatusSuccess:
+			stats.Success = sc.Count
+		case domain.TaskStatusFailed:
+			stats.Failed = sc.Count
+		case domain.TaskStatusCancelled:
+			stats.Cancelled = sc.Count
+		}
+	}
+
+	return stats, nil
+}
+
+func (r *repository) ListRunningTasks(ctx context.Context) ([]*domain.Task, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var list []*domain.Task
+	if err := r.db.WithContext(ctx).
+		Preload("Workflow").
+		Preload("Asset").
+		Where("status = ?", domain.TaskStatusRunning).
+		Order("created_at ASC").
+		Find(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
 }

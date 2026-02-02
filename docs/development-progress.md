@@ -116,7 +116,7 @@
 
 **目标**: 实现新架构的核心实体和服务
 
-**已完成（MediaAsset + Operator + Workflow 完整功能）**:
+**已完成（MediaAsset + Operator + Workflow + Task 完整功能）**:
 
 - [x] **实体层（Domain）**
   - [x] MediaAsset 实体定义（media_asset.go）
@@ -137,6 +137,13 @@
     - 支持节点配置和位置信息
     - 支持边条件和路由
     - 支持版本管理和状态控制（enabled、disabled、draft）
+  - [x] Task 实体定义（task.go）
+    - 支持五种状态（pending、running、success、failed、cancelled）
+    - 关联工作流和资产
+    - 支持进度跟踪（0-100%）
+    - 记录当前执行节点
+    - 记录执行时间（开始、完成）
+    - 支持错误信息记录
 
 - [x] **端口层（Port）**
   - [x] MediaAssetRepository 接口（7个方法）
@@ -151,6 +158,9 @@
   - [x] WorkflowNode/Edge Repository 接口（6个方法）
     - CreateNode、ListNodes、DeleteNodes
     - CreateEdge、ListEdges、DeleteEdges
+  - [x] TaskRepository 接口（8个方法）
+    - Create、Get、GetWithRelations、List、Update、Delete
+    - GetStats、ListRunning
 
 - [x] **适配器层（Adapter）**
   - [x] MediaAssetRepository 实现（GORM + PostgreSQL）
@@ -168,6 +178,12 @@
     - 支持复杂过滤（状态、触发类型、标签、关键词搜索）
     - 支持预加载节点和边（Preload）
     - 级联删除支持（CASCADE）
+    - AutoMigrate 集成
+  - [x] TaskRepository 实现（GORM + PostgreSQL）
+    - 完整的 CRUD 实现
+    - 支持复杂过滤（工作流、资产、状态、时间范围）
+    - 支持预加载关联数据（Workflow、Asset、Artifacts）
+    - 支持统计查询（按状态分组）
     - AutoMigrate 集成
 
 - [x] **应用层（App）**
@@ -189,6 +205,14 @@
     - 节点和边的级联管理
     - 启用前验证工作流完整性
     - 代码唯一性检查
+  - [x] TaskService 实现（task.go）
+    - Create、Get、GetWithRelations、List、Update、Delete
+    - Start、Complete、Fail、Cancel
+    - GetStats、ListRunning
+    - 完整的业务验证逻辑
+    - 状态转换管理（自动记录开始/完成时间）
+    - 进度范围验证（0-100%）
+    - 防止删除运行中的任务
 
 - [x] **API 层（API）**
   - [x] MediaAsset DTO（asset.go）
@@ -227,32 +251,42 @@
     - DELETE /workflows/:id（删除）
     - POST /workflows/:id/enable（启用）
     - POST /workflows/:id/disable（禁用）
+  - [x] Task DTO（task.go）
+    - Request：TaskCreateReq、TaskUpdateReq、TaskListQuery
+    - Response：TaskResponse、TaskWithRelationsResponse、TaskStatsResponse
+    - 转换函数：TaskToResponse、TaskToResponseWithRelations、TasksToResponse、TaskStatsToResponse
+  - [x] Task Handler（task.go）
+    - GET /tasks（列表，支持过滤）
+    - POST /tasks（创建）
+    - GET /tasks/:id（详情，支持 with_relations 参数）
+    - PUT /tasks/:id（更新）
+    - DELETE /tasks/:id（删除）
+    - POST /tasks/:id/start（启动）
+    - POST /tasks/:id/complete（完成）
+    - POST /tasks/:id/fail（失败）
+    - POST /tasks/:id/cancel（取消）
+    - GET /tasks/stats（统计）
   - [x] 路由注册（router.go）
 
 **待实现**:
 
 - [ ] **实体层（Domain）**
-  - [ ] Task 实体定义
   - [ ] Artifact 实体定义
 
 - [ ] **端口层（Port）**
-  - [ ] TaskRepository 接口
   - [ ] ArtifactRepository 接口
   - [ ] OperatorPort 接口（算子执行）
   - [ ] WorkflowEngine 接口（工作流引擎）
 
 - [ ] **应用层（App）**
-  - [ ] TaskService 实现
   - [ ] ArtifactService 实现
   - [ ] Scheduler 重构（适配新架构）
 
 - [ ] **适配器层（Adapter）**
-  - [ ] TaskRepository 实现（GORM）
   - [ ] ArtifactRepository 实现（GORM）
   - [ ] SimpleWorkflowEngine 实现（单算子）
 
 - [ ] **API 层（API）**
-  - [ ] Task Handler + DTO
   - [ ] Artifact Handler + DTO
 
 - [ ] **数据库迁移**
@@ -261,7 +295,7 @@
   - [x] 创建 workflows 表（AutoMigrate）
   - [x] 创建 workflow_nodes 表（AutoMigrate）
   - [x] 创建 workflow_edges 表（AutoMigrate）
-  - [ ] 创建 tasks 表
+  - [x] 创建 tasks 表（AutoMigrate）
   - [ ] 创建 artifacts 表
   - [ ] 数据迁移脚本（streams → media_sources、algorithms → operators）
   - [ ] 删除旧表（algorithm_bindings、inference_results）

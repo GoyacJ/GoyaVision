@@ -88,6 +88,42 @@
     - POST /api/v1/workflows/:id/disable（禁用）
   - 数据库迁移：自动创建 workflows、workflow_nodes、workflow_edges 表
 
+- **Task 完整功能**（V1.0 迭代 1）
+  - 添加 Task 实体（internal/domain/task.go）
+    - 支持五种状态（pending、running、success、failed、cancelled）
+    - 关联工作流和资产
+    - 支持进度跟踪（0-100%）
+    - 记录当前执行节点
+    - 记录执行时间（started_at、completed_at）
+    - 支持错误信息记录
+    - 支持执行时长计算
+  - 添加 TaskRepository 接口和实现
+    - 完整的 CRUD 操作
+    - 支持预加载关联数据（Workflow、Asset、Artifacts）
+    - 支持复杂过滤（工作流、资产、状态、时间范围）
+    - 支持统计查询（按状态分组）
+    - 支持查询运行中的任务
+  - 添加 TaskService（internal/app/task.go）
+    - Create、Get、GetWithRelations、List、Update、Delete
+    - Start、Complete、Fail、Cancel
+    - GetStats、ListRunning
+    - 完整的业务验证逻辑
+    - 状态转换管理（自动记录开始/完成时间）
+    - 进度范围验证（0-100%）
+    - 防止删除运行中的任务
+  - 添加 Task API（internal/api/handler/task.go）
+    - GET /api/v1/tasks（列表，支持过滤）
+    - POST /api/v1/tasks（创建）
+    - GET /api/v1/tasks/:id（详情，支持 with_relations 参数）
+    - PUT /api/v1/tasks/:id（更新）
+    - DELETE /api/v1/tasks/:id（删除）
+    - POST /api/v1/tasks/:id/start（启动）
+    - POST /api/v1/tasks/:id/complete（完成）
+    - POST /api/v1/tasks/:id/fail（失败）
+    - POST /api/v1/tasks/:id/cancel（取消）
+    - GET /api/v1/tasks/stats（统计）
+  - 数据库迁移：自动创建 tasks 表
+
 - **项目规范**
   - 添加文档更新强制要求（每次功能开发或修改后必须更新文档）
   - 添加 Git 提交规范（遵循 Conventional Commits）

@@ -119,4 +119,14 @@ type Repository interface {
 	CreateWorkflowEdge(ctx context.Context, e *domain.WorkflowEdge) error
 	ListWorkflowEdges(ctx context.Context, workflowID uuid.UUID) ([]*domain.WorkflowEdge, error)
 	DeleteWorkflowEdges(ctx context.Context, workflowID uuid.UUID) error
+
+	// Task
+	CreateTask(ctx context.Context, t *domain.Task) error
+	GetTask(ctx context.Context, id uuid.UUID) (*domain.Task, error)
+	GetTaskWithRelations(ctx context.Context, id uuid.UUID) (*domain.Task, error)
+	ListTasks(ctx context.Context, filter domain.TaskFilter) ([]*domain.Task, int64, error)
+	UpdateTask(ctx context.Context, t *domain.Task) error
+	DeleteTask(ctx context.Context, id uuid.UUID) error
+	GetTaskStats(ctx context.Context, workflowID *uuid.UUID) (*domain.TaskStats, error)
+	ListRunningTasks(ctx context.Context) ([]*domain.Task, error)
 }
