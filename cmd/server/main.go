@@ -12,13 +12,11 @@ import (
 
 	"goyavision"
 	"goyavision/config"
-	"goyavision/internal/adapter/ai"
 	"goyavision/internal/adapter/engine"
 	"goyavision/internal/adapter/mediamtx"
 	"goyavision/internal/adapter/persistence"
 	"goyavision/internal/api"
 	"goyavision/internal/app"
-	"goyavision/pkg/ffmpeg"
 
 	"github.com/labstack/echo/v4"
 	"gorm.io/driver/postgres"
@@ -58,24 +56,9 @@ func main() {
 		log.Printf("mediamtx connected: %s", cfg.MediaMTX.APIAddress)
 	}
 
-	var scheduler *app.Scheduler
 	var workflowScheduler *app.WorkflowScheduler
 	if db != nil {
-		inferenceAdapter := ai.NewInferenceAdapter(cfg.AI.Timeout, cfg.AI.Retry)
-		pool := ffmpeg.NewPool(cfg.FFmpeg.Bin, cfg.FFmpeg.MaxRecord, cfg.FFmpeg.MaxFrame)
-		manager := ffmpeg.NewManager(pool)
-		frameBasePath := "./data"
-		scheduler, err = app.NewScheduler(repo, inferenceAdapter, manager, mtxCli, cfg.MediaMTX, frameBasePath)
-		if err != nil {
-			log.Fatalf("create scheduler: %v", err)
-		}
-
 		ctx := context.Background()
-		if err := scheduler.Start(ctx); err != nil {
-			log.Fatalf("start scheduler: %v", err)
-		}
-		log.Print("old scheduler started")
-		defer scheduler.Stop()
 
 		executor := engine.NewHTTPOperatorExecutor()
 		workflowEngine := engine.NewSimpleWorkflowEngine(repo, executor)

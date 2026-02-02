@@ -350,18 +350,52 @@
   - [x] 添加手动触发 API
     - POST /api/v1/workflows/:id/trigger（手动触发工作流）
 
-**待实现**:
+---
 
-- [ ] **数据库迁移**
-  - [x] 创建 media_assets 表（AutoMigrate）
-  - [x] 创建 operators 表（AutoMigrate）
-  - [x] 创建 workflows 表（AutoMigrate）
-  - [x] 创建 workflow_nodes 表（AutoMigrate）
-  - [x] 创建 workflow_edges 表（AutoMigrate）
-  - [x] 创建 tasks 表（AutoMigrate）
-  - [x] 创建 artifacts 表（AutoMigrate）
-  - [ ] 数据迁移脚本（streams → media_sources、algorithms → operators）
-  - [ ] 删除旧表（algorithm_bindings、inference_results）
+### 迭代 4：数据迁移与清理（当前）
+
+**目标**: 清理废弃代码，创建数据迁移工具
+
+**已完成**:
+
+- [x] **数据迁移工具**
+  - [x] 创建迁移命令（cmd/migrate/main.go）
+    - 支持 dry-run 模式
+    - Streams → MediaAssets 迁移（作为媒体源）
+    - Algorithms → Operators 迁移
+    - 清理旧表（algorithm_bindings、inference_results）
+    - 确认提示和详细日志
+
+- [x] **删除废弃代码**
+  - [x] Domain 层（3 个文件）
+    - algorithm.go
+    - algorithm_binding.go
+    - inference_result.go
+  - [x] Handler 层（3 个文件）
+    - algorithm.go
+    - algorithm_binding.go
+    - inference.go
+  - [x] App 层（4 个文件）
+    - algorithm.go
+    - algorithm_binding.go
+    - inference.go
+    - scheduler.go（旧调度器）
+  - [x] DTO 层（3 个文件）
+    - algorithm.go
+    - algorithm_binding.go
+    - inference.go
+  - [x] Adapter 层（1 个文件）
+    - ai/inference.go
+  - [x] Port 层（1 个文件）
+    - inference.go
+
+- [x] **更新核心文件**
+  - [x] internal/port/repository.go（删除 13 个旧方法）
+  - [x] internal/adapter/persistence/repository.go（删除实现，更新 AutoMigrate）
+  - [x] internal/api/router.go（删除 3 个旧路由）
+  - [x] cmd/server/main.go（移除旧 Scheduler，简化导入）
+
+**待实现**:
 
 ---
 

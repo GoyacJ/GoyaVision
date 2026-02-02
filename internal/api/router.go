@@ -33,10 +33,7 @@ func RegisterRouter(e *echo.Echo, d HandlerDeps, webFS fs.FS) {
 	handler.RegisterWorkflow(api, d)
 	handler.RegisterTask(api, d)
 	handler.RegisterArtifact(api, d)
-	handler.RegisterAlgorithm(api, d)
-	handler.RegisterAlgorithmBinding(api, d)
 	handler.RegisterRecord(api, d)
-	handler.RegisterInference(api, d)
 	handler.RegisterPreview(api, d)
 	handler.RegisterPlayback(api, d)
 

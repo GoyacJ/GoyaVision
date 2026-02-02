@@ -8,6 +8,27 @@
 ## [未发布]
 
 ### 新增
+
+- **数据迁移与代码清理**（V1.0 迭代 4）
+  - 创建数据迁移工具（cmd/migrate/main.go）
+    - 支持 dry-run 模式测试迁移（--dry-run）
+    - Streams → MediaAssets 迁移（保留为媒体源）
+    - Algorithms → Operators 迁移（转换分类和类型）
+    - 自动清理旧表（algorithm_bindings、inference_results）
+    - 交互式确认和详细日志输出
+  - 删除废弃代码（共 15 个文件，约 25KB）
+    - Domain 层 3 个：algorithm.go, algorithm_binding.go, inference_result.go
+    - Handler 层 3 个：algorithm.go, algorithm_binding.go, inference.go
+    - App 层 4 个：algorithm.go, algorithm_binding.go, inference.go, scheduler.go
+    - DTO 层 3 个：algorithm.go, algorithm_binding.go, inference.go
+    - Adapter 层 1 个：ai/inference.go
+    - Port 层 1 个：inference.go
+  - 更新核心接口
+    - Repository 接口：删除 13 个旧方法
+    - Repository 实现：删除实现，更新 AutoMigrate
+    - Router：删除 3 个旧路由注册
+    - main.go：移除旧 Scheduler，简化启动流程
+
 - **MediaAsset 完整功能**（V1.0 迭代 1）
   - 添加 MediaAsset 实体（internal/domain/media_asset.go）
     - 支持视频、图片、音频三种类型
