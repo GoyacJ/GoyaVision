@@ -155,6 +155,48 @@
 - 总端点：36 个
 - 总数据表：7 个
 
+- **前端适配与布局升级**（V1.0 迭代 3）
+  - 布局改造为顶部菜单栏设计（web/src/layout/index.vue）
+    - 移除侧边栏，改为顶部横向菜单
+    - Logo 移至顶部左侧，渐变色设计
+    - 菜单横向显示（mode="horizontal"）
+    - 响应式悬停效果
+    - 保留用户下拉菜单和修改密码功能
+  - 创建新 API 客户端（web/src/api/）
+    - asset.ts：媒体资产 API（6 个方法）
+    - operator.ts：算子 API（8 个方法）
+    - workflow.ts：工作流 API（8 个方法）
+    - task.ts：任务 API（9 个方法）
+    - artifact.ts：产物 API（5 个方法）
+    - 完整的 TypeScript 类型定义
+    - 统一的错误处理
+  - 创建新页面（web/src/views/）
+    - views/asset/index.vue：媒体资产库页面
+      - 搜索、过滤、分页功能
+      - 支持按类型、来源、状态过滤
+      - CRUD 操作（创建、查看、编辑、删除）
+      - 格式化显示文件大小和时长
+    - views/operator/index.vue：算子中心页面
+      - 搜索、过滤、分页功能
+      - 支持按分类、状态过滤
+      - 启用/禁用功能
+      - 保护内置算子（不可编辑/删除）
+    - views/workflow/index.vue：工作流管理页面
+      - 搜索、过滤、分页功能
+      - 支持按触发方式、状态过滤
+      - 手动触发功能（支持指定资产）
+      - 启用/禁用功能
+    - views/task/index.vue：任务中心页面
+      - 实时统计卡片（6 种状态统计）
+      - 任务列表（进度条、状态标签）
+      - 取消运行中的任务
+      - 查看任务详情和产物
+      - 耗时计算和格式化显示
+  - 更新路由配置（web/src/router/index.ts）
+    - 注册新页面路由（/assets、/operators、/workflows、/tasks）
+    - 保留旧页面路由（标记为"旧"）
+    - 默认重定向到 /assets
+
 - **工作流引擎与调度器**（V1.0 迭代 2）
   - 添加 OperatorExecutor 接口（internal/port/engine.go）
     - Execute：执行算子

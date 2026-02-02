@@ -365,22 +365,71 @@
 
 ---
 
-### 迭代 3：前端适配（待开始）
+### 迭代 3：前端适配（当前）
 
-**目标**: 前端适配新 API 和概念
+**目标**: 前端适配新 API 和概念，升级为顶部菜单栏布局
 
-**任务清单**:
+**已完成**:
 
-- [ ] **页面重构**
-  - [ ] 媒体源页面（保持现有功能）
-  - [ ] 媒体资产页面（新增）
-  - [ ] 算子中心页面（替代算法管理）
-  - [ ] 工作流页面（替代算法绑定）
-  - [ ] 任务页面（新增）
-  - [ ] 产物页面（替代推理结果）
+- [x] **布局改造**
+  - [x] 将侧边栏布局改为顶部菜单栏布局（layout/index.vue）
+    - 移除侧边栏（el-aside）
+    - Logo 移至顶部左侧
+    - 菜单横向显示（mode="horizontal"）
+    - 现代化视觉设计（渐变 Logo、悬停效果）
+    - 保留用户下拉菜单功能
 
-- [ ] **API 客户端**
-  - [ ] 更新 API 定义（TypeScript）
+- [x] **API 客户端（TypeScript）**
+  - [x] asset.ts（媒体资产 API）
+    - 类型定义：MediaAsset、AssetListQuery、AssetCreateReq、AssetUpdateReq
+    - 6 个 API 方法：list、get、create、update、delete、listChildren
+  - [x] operator.ts（算子 API）
+    - 类型定义：Operator、OperatorListQuery、OperatorCreateReq、OperatorUpdateReq
+    - 8 个 API 方法：list、get、create、update、delete、enable、disable、listByCategory
+  - [x] workflow.ts（工作流 API）
+    - 类型定义：Workflow、WorkflowNode、WorkflowEdge、WorkflowListQuery、WorkflowCreateReq、WorkflowUpdateReq
+    - 8 个 API 方法：list、get、create、update、delete、enable、disable、trigger
+  - [x] task.ts（任务 API）
+    - 类型定义：Task、TaskListQuery、TaskCreateReq、TaskUpdateReq、TaskStats
+    - 9 个 API 方法：list、get、create、update、delete、start、complete、fail、cancel、getStats
+  - [x] artifact.ts（产物 API）
+    - 类型定义：Artifact、ArtifactListQuery、ArtifactCreateReq
+    - 5 个 API 方法：list、get、create、delete、listByTask
+
+- [x] **页面实现**
+  - [x] 媒体资产页面（views/asset/index.vue）
+    - 列表展示（类型、来源、格式、大小、时长、状态）
+    - 搜索过滤（名称、类型、来源类型、状态）
+    - CRUD 操作（创建、查看、编辑、删除）
+    - 分页支持
+  - [x] 算子中心页面（views/operator/index.vue）
+    - 列表展示（代码、名称、分类、类型、版本、状态、内置标识）
+    - 搜索过滤（关键词、分类、状态、内置算子）
+    - CRUD 操作（创建、查看、编辑、删除）
+    - 启用/禁用功能
+    - 保护内置算子（不可编辑/删除）
+  - [x] 工作流页面（views/workflow/index.vue）
+    - 列表展示（代码、名称、触发方式、版本、状态）
+    - 搜索过滤（关键词、触发方式、状态）
+    - CRUD 操作（创建、查看、编辑、删除）
+    - 启用/禁用功能
+    - 手动触发功能（支持指定资产）
+  - [x] 任务中心页面（views/task/index.vue）
+    - 统计卡片（总数、待执行、执行中、已成功、已失败、已取消）
+    - 列表展示（任务 ID、工作流、状态、进度、当前节点、时间、耗时）
+    - 状态过滤
+    - 查看任务详情
+    - 取消运行中的任务
+    - 删除已完成/失败的任务
+    - 查看任务产物（入口）
+
+- [x] **路由配置**
+  - [x] 更新路由定义（router/index.ts）
+    - 注册新页面：/assets、/operators、/workflows、/tasks
+    - 保留旧页面（标记为"旧"）：/streams、/algorithms、/inference-results
+    - 默认重定向到 /assets
+
+**待实现**:
   - [ ] 适配新端点
 
 - [ ] **路由与菜单**

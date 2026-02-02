@@ -1,65 +1,48 @@
 <template>
   <el-container class="layout-container">
-    <el-aside :width="isCollapse ? '64px' : '220px'" class="layout-aside">
-      <div class="logo">
-        <span v-if="!isCollapse">GoyaVision</span>
-        <span v-else>GV</span>
+    <el-header class="layout-header">
+      <div class="header-left">
+        <div class="logo">
+          <span class="logo-text">GoyaVision</span>
+        </div>
+        <el-menu
+          :default-active="activeMenu"
+          mode="horizontal"
+          router
+          class="layout-menu"
+          :ellipsis="false"
+        >
+          <sidebar-item
+            v-for="menu in menuRoutes"
+            :key="menu.id"
+            :item="menu"
+          />
+        </el-menu>
       </div>
-      <el-menu
-        :default-active="activeMenu"
-        :collapse="isCollapse"
-        :unique-opened="true"
-        router
-        class="layout-menu"
-        background-color="#304156"
-        text-color="#bfcbd9"
-        active-text-color="#409EFF"
-      >
-        <sidebar-item
-          v-for="menu in menuRoutes"
-          :key="menu.id"
-          :item="menu"
-        />
-      </el-menu>
-    </el-aside>
-    <el-container>
-      <el-header class="layout-header">
-        <div class="header-left">
-          <el-icon class="collapse-btn" @click="toggleCollapse">
-            <Fold v-if="!isCollapse" />
-            <Expand v-else />
-          </el-icon>
-          <el-breadcrumb separator="/">
-            <el-breadcrumb-item v-for="item in breadcrumbs" :key="item.path">
-              {{ item.meta?.title || item.name }}
-            </el-breadcrumb-item>
-          </el-breadcrumb>
-        </div>
-        <div class="header-right">
-          <el-dropdown @command="handleCommand">
-            <span class="user-info">
-              <el-avatar :size="32" icon="UserFilled" />
-              <span class="username">{{ userStore.nickname }}</span>
-              <el-icon><ArrowDown /></el-icon>
-            </span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="profile">个人信息</el-dropdown-item>
-                <el-dropdown-item command="password">修改密码</el-dropdown-item>
-                <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-        </div>
-      </el-header>
-      <el-main class="layout-main">
-        <router-view v-slot="{ Component }">
-          <transition name="fade" mode="out-in">
-            <component :is="Component" />
-          </transition>
-        </router-view>
-      </el-main>
-    </el-container>
+      <div class="header-right">
+        <el-dropdown @command="handleCommand">
+          <span class="user-info">
+            <el-avatar :size="32" icon="UserFilled" />
+            <span class="username">{{ userStore.nickname }}</span>
+            <el-icon><ArrowDown /></el-icon>
+          </span>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="profile">个人信息</el-dropdown-item>
+              <el-dropdown-item command="password">修改密码</el-dropdown-item>
+              <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </div>
+    </el-header>
+    <el-main class="layout-main">
+      <router-view v-slot="{ Component }">
+        <transition name="fade" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
+    </el-main>
 
     <el-dialog v-model="passwordDialogVisible" title="修改密码" width="400px">
       <el-form ref="passwordFormRef" :model="passwordForm" :rules="passwordRules" label-width="80px">
@@ -95,7 +78,6 @@ const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
-const isCollapse = ref(false)
 const passwordDialogVisible = ref(false)
 const passwordLoading = ref(false)
 const passwordFormRef = ref<FormInstance>()
@@ -135,14 +117,6 @@ const menuRoutes = computed(() => {
 const activeMenu = computed(() => {
   return route.path
 })
-
-const breadcrumbs = computed(() => {
-  return route.matched.filter(item => item.meta?.title)
-})
-
-function toggleCollapse() {
-  isCollapse.value = !isCollapse.value
-}
 
 function handleCommand(command: string) {
   switch (command) {
@@ -199,75 +173,101 @@ async function handleChangePassword() {
 <style scoped>
 .layout-container {
   height: 100vh;
-}
-
-.layout-aside {
-  background-color: #304156;
-  transition: width 0.3s;
-  overflow: hidden;
-}
-
-.logo {
-  height: 60px;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 20px;
-  font-weight: bold;
-  background-color: #263445;
-}
-
-.layout-menu {
-  border-right: none;
-  height: calc(100vh - 60px);
-  overflow-y: auto;
-}
-
-.layout-menu:not(.el-menu--collapse) {
-  width: 220px;
+  flex-direction: column;
 }
 
 .layout-header {
+  height: 60px;
   background: #fff;
-  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 0;
+  flex: 1;
+  overflow: hidden;
 }
 
-.collapse-btn {
-  font-size: 20px;
-  cursor: pointer;
-  color: #333;
+.logo {
+  display: flex;
+  align-items: center;
+  margin-right: 40px;
+  flex-shrink: 0;
+}
+
+.logo-text {
+  font-size: 22px;
+  font-weight: bold;
+  background: linear-gradient(135deg, #409EFF 0%, #67C23A 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 1px;
+}
+
+.layout-menu {
+  flex: 1;
+  border: none;
+  background-color: transparent;
+}
+
+.layout-menu :deep(.el-menu-item),
+.layout-menu :deep(.el-sub-menu__title) {
+  border-bottom: none;
+  height: 60px;
+  line-height: 60px;
+}
+
+.layout-menu :deep(.el-menu-item.is-active) {
+  color: #409EFF;
+  border-bottom: 2px solid #409EFF;
+}
+
+.layout-menu :deep(.el-menu-item:hover),
+.layout-menu :deep(.el-sub-menu__title:hover) {
+  background-color: rgba(64, 158, 255, 0.08);
 }
 
 .header-right {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .user-info {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
+
+.user-info:hover {
+  background-color: #f5f7fa;
 }
 
 .username {
   color: #333;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .layout-main {
+  flex: 1;
   background: #f0f2f5;
-  padding: 20px;
+  padding: 24px;
   overflow-y: auto;
 }
 
