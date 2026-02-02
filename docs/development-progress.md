@@ -1,486 +1,296 @@
-# GoyaVision 开发进度
+# GoyaVision V1.0 开发进度
 
-## 阶段与状态
+## 版本说明
 
-| 阶段 | 状态 | 说明 |
-|------|------|------|
-| 1. 项目初始化、骨架搭建 | 已完成 | 目录、go.mod、cmd/server、config、domain/port/adapter/app/api 骨架、README、需求、本文档 |
-| 2. 基础与持久化 | 已完成 | GORM 迁表、Repository 实现与接入、Stream/Algorithm/AlgorithmBinding CRUD |
-| 3. FFmpeg 与池 | 已完成 | FFmpegManager（录制 segment、抽帧 fps+image2）、进程池与限流 |
-| 4. 录制 | 已完成 | RecordService、RecordSession 启停；/record/start、/record/stop、/record/sessions |
-| 5. 抽帧与推理 | 已完成 | gocron Job（interval_sec、schedule、initial_delay_sec）；取帧→AI→InferenceResult；/inference_results |
-| 6. 预览 | 已完成 | PreviewManager（MediaMTX/FFmpeg HLS）；/preview/start、/preview/stop；/live 或代理 |
-| 7. 前端 | 已完成 | Vue 3、流/算法绑定/录制/结果 CRUD、video.js 预览、构建与 embed |
-| 8. 认证授权 | 已完成 | RBAC 权限模型、JWT 认证、用户/角色/菜单管理、登录页面、动态菜单 |
-| 9. MediaMTX 集成 | 已完成 | 多协议流媒体、录制重构、点播服务、前端适配 |
-| 10. 联调与优化 | 待开始 | 多路压测、性能调优、DB 索引与分页 |
+**当前版本**: V1.0（架构重构版本）
 
----
+**核心变更**:
+- 引入全新核心概念：MediaAsset、MediaSource、Operator、Workflow、Task、Artifact
+- 废弃 AlgorithmBinding，由 Workflow 替代
+- 模块重命名：资产库、算子中心、任务中心、控制台
+- 不向后兼容，全新架构
 
-## 1. 项目初始化、骨架搭建（已完成）
+## 开发路线
 
-### 完成项
+### Phase 1：核心闭环（V1.0）
 
-- [x] 项目目录按方案搭建：`cmd/server`、`config`、`configs`、`internal/domain|port|app|adapter|api`、`pkg/ffmpeg`、`migrations`、`docs`
-- [x] `go.mod`：Echo、Viper、GORM、PostgreSQL、gocron、uuid、gorm.io/datatypes
-- [x] `config`：Viper 加载 `configs/config.yaml` 与 `GOYAVISION_*` 环境变量
-- [x] `cmd/server/main.go`：加载配置、GORM 连接与 AutoMigrate、Echo、Router、优雅退出
-- [x] `internal/domain`：Stream、Algorithm、AlgorithmBinding、RecordSession、InferenceResult 实体
-- [x] `internal/port`：Repository、Inference 接口
-- [x] `internal/adapter/persistence`：Repository 实现与 AutoMigrate
-- [x] `internal/api`：Deps、Router、Middleware、Handler 占位（stream、algorithm、algorithm_binding、record、inference、preview）、dto（stream）
-- [x] `internal/app`：StreamService、RecordService、InferenceService、PreviewService 占位
-- [x] `pkg/ffmpeg/pool.go`：Pool 占位
-- [x] `README.md`：功能概览、技术栈、结构、运行方式、文档索引
-- [x] `docs/requirements.md`：需求文档
-- [x] `docs/development-progress.md`：本文档
+基础能力建设，实现最小可用系统。
 
-### 待后续
+| 模块 | 功能 | 状态 | 说明 |
+|------|------|------|------|
+| **资产库** | | | |
+| 媒体源管理 | CRUD、状态查询 | ✅ 已完成 | 基于 MediaMTX，支持拉流/推流 |
+| 媒体资产管理 | CRUD、搜索过滤 | 🚧 进行中 | 需要实现 MediaAsset 实体和服务 |
+| 录制管理 | 启停录制、文件索引 | ✅ 已完成 | 集成 MediaMTX 录制 API |
+| 点播服务 | 录制段查询、URL 生成 | ✅ 已完成 | 集成 MediaMTX Playback |
+| 存储配置 | 存储路径配置 | ⏸️ 待开始 | 支持本地存储 |
+| **算子中心** | | | |
+| 算子管理 | CRUD、分类 | 🚧 进行中 | 需要实现 Operator 实体和服务 |
+| 内置算子 | 抽帧、目标检测 | ✅ 部分完成 | 已有抽帧和推理，需要重构为算子 |
+| 算子监控 | 调用统计、性能 | ⏸️ 待开始 | |
+| **任务中心** | | | |
+| 工作流管理 | CRUD | 🚧 进行中 | 需要实现 Workflow 实体和服务 |
+| 简化工作流 | 单算子任务 | 🚧 进行中 | 先支持单算子，不支持 DAG |
+| 任务管理 | 创建、查询、控制 | 🚧 进行中 | 需要实现 Task 实体和服务 |
+| 任务调度 | 定时调度、事件触发 | 🚧 进行中 | 基于 gocron，需要适配新架构 |
+| 产物管理 | 查询、关联 | 🚧 进行中 | 需要实现 Artifact 实体和服务 |
+| **控制台** | | | |
+| 认证服务 | 登录、Token 刷新 | ✅ 已完成 | JWT 双 Token 机制 |
+| 用户管理 | CRUD、角色分配 | ✅ 已完成 | RBAC 权限模型 |
+| 角色管理 | CRUD、权限分配 | ✅ 已完成 | |
+| 菜单管理 | CRUD、树形结构 | ✅ 已完成 | 动态菜单 |
+| 仪表盘 | 系统概览 | ⏸️ 待开始 | |
+| 审计日志 | 操作日志 | ⏸️ 待开始 | |
+| **前端** | | | |
+| 媒体源页面 | 流管理、预览 | ✅ 已完成 | 支持多协议预览 |
+| 媒体资产页面 | 资产列表、搜索 | ⏸️ 待开始 | |
+| 算子中心页面 | 算子市场 | ⏸️ 待开始 | |
+| 工作流页面 | 工作流列表 | ⏸️ 待开始 | |
+| 任务页面 | 任务列表、详情 | ⏸️ 待开始 | |
+| 产物页面 | 产物列表 | ⏸️ 待开始 | |
+| 系统管理页面 | 用户、角色、菜单 | ✅ 已完成 | |
 
-- 健康检查：`/health`、`/ready`
-- 指标：`/metrics`（Prometheus）
+### Phase 2：能力扩展
 
----
+扩展媒体类型和算子能力。
 
-## 2. 基础与持久化（已完成）
+| 模块 | 功能 | 状态 | 说明 |
+|------|------|------|------|
+| **资产库** | | | |
+| 图片资产 | 图片上传、管理 | ⏸️ 待开始 | |
+| 音频资产 | 音频上传、管理 | ⏸️ 待开始 | |
+| 资产标签 | 标签系统 | ⏸️ 待开始 | |
+| 生命周期管理 | 自动清理策略 | ⏸️ 待开始 | |
+| **算子中心** | | | |
+| 编辑类算子 | 剪辑、打码、水印 | ⏸️ 待开始 | |
+| 生成类算子 | TTS、高光摘要 | ⏸️ 待开始 | |
+| 转换类算子 | 转码、压缩、增强 | ⏸️ 待开始 | |
+| 算子版本 | 多版本管理 | ⏸️ 待开始 | |
+| **任务中心** | | | |
+| 复杂工作流 | DAG 编排 | ⏸️ 待开始 | 支持并行、条件分支 |
+| 可视化设计器 | 拖拽式 DAG 设计 | ⏸️ 待开始 | |
+| 工作流模板 | 预定义模板 | ⏸️ 待开始 | |
+| 任务优先级 | 优先级队列 | ⏸️ 待开始 | |
 
-### 完成项
+### Phase 3：平台化
 
-- [x] 实现 StreamService（App 层）- Stream CRUD 业务逻辑
-- [x] 实现 AlgorithmService（App 层）- Algorithm CRUD 业务逻辑
-- [x] 实现 AlgorithmBindingService（App 层）- AlgorithmBinding CRUD 业务逻辑
-- [x] 完善 Stream DTO（请求与响应 DTO）
-- [x] 完善 Algorithm DTO（请求与响应 DTO）
-- [x] 完善 AlgorithmBinding DTO（请求与响应 DTO）
-- [x] 实现 Stream Handler 完整 CRUD 与错误处理
-- [x] 实现 Algorithm Handler 完整 CRUD 与错误处理
-- [x] 实现 AlgorithmBinding Handler 完整 CRUD 与错误处理
-- [x] 统一错误处理机制（`internal/api/errors.go`）
-- [x] 数据库索引与约束：
-  - RecordSession 唯一约束（一个流只能有一个 running 状态的录制会话）
-  - InferenceResult 查询索引（stream_id + ts, algorithm_binding_id + ts）
+开放能力，支持自定义扩展。
 
-### 技术实现
+| 模块 | 功能 | 状态 | 说明 |
+|------|------|------|------|
+| **算子中心** | | | |
+| 自定义算子 | Docker 镜像上传 | ⏸️ 待开始 | |
+| 算子市场 | 第三方算子 | ⏸️ 待开始 | |
+| 算子沙箱 | 隔离执行 | ⏸️ 待开始 | |
+| **开放平台** | | | |
+| API 文档 | OpenAPI 规范 | ⏸️ 待开始 | |
+| SDK | Go/Python/JS SDK | ⏸️ 待开始 | |
+| Webhook | 事件通知 | ⏸️ 待开始 | |
+| **多租户** | | | |
+| 租户隔离 | tenant_id 隔离 | ⏸️ 待开始 | |
+| 资源配额 | 存储、计算配额 | ⏸️ 待开始 | |
+| **监控告警** | | | |
+| Prometheus | 指标暴露 | ⏸️ 待开始 | |
+| Grafana | 可视化看板 | ⏸️ 待开始 | |
+| 告警规则 | 告警配置 | ⏸️ 待开始 | |
 
-- **错误处理**：统一的错误响应格式，区分业务错误（4xx）与基础设施错误（5xx）
-- **输入验证**：在 Service 层进行业务规则验证
-- **DTO 转换**：Domain 模型与 API DTO 分离，提供转换函数
-- **数据库约束**：使用 PostgreSQL 部分唯一索引确保 RecordSession 唯一性
+## 当前迭代重点（V1.0）
 
-### 待后续
+### 迭代 0：文档与规范（已完成）
 
-- 输入验证可以使用 validator 库增强
-- 分页支持（当前 List 接口返回全部数据）
+**目标**: 更新所有项目文档，建立开发规范
 
----
+**已完成**:
+- [x] 更新需求文档（`docs/requirements.md`）
+- [x] 更新架构文档（`docs/architecture.md`）
+- [x] 更新 API 文档（`docs/api.md`）
+- [x] 更新开发进度文档（`docs/development-progress.md`）
+- [x] 更新 README.md
+- [x] 更新 CHANGELOG.md
+- [x] 更新项目规则（`.cursor/rules/goyavision.mdc`）
+- [x] 更新项目技能（`.cursor/skills/goyavision-context/SKILL.md`）
+- [x] 建立文档更新规范
+- [x] 建立 Git 提交规范（Conventional Commits）
 
-## 3. FFmpeg 与池（已完成）
+### 迭代 1：核心实体与服务（当前）
 
-### 完成项
+**目标**: 实现新架构的核心实体和服务
 
-- [x] 实现 FFmpeg Pool（进程池与限流）
-  - 支持最大录制数限制（max_record）
-  - 支持最大抽帧数限制（max_frame）
-  - 使用互斥锁保证线程安全
-  - 支持上下文取消自动释放资源
-- [x] 实现 FFmpegManager
-  - 录制功能：RTSP -> 分段 MP4（使用 `-c copy` 不重编码）
-  - 单帧提取：RTSP -> 单张图片（用于推理）
-  - 连续抽帧：RTSP -> 按间隔抽帧（fps + image2）
-  - 进程生命周期管理（启动、停止、监控）
-- [x] 进程管理
-  - RecordTask：录制任务管理
-  - FrameTask：抽帧任务管理
-  - 支持优雅停止和强制终止
+**任务清单**:
 
-### 技术实现
+- [ ] **实体层（Domain）**
+  - [ ] MediaAsset 实体定义
+  - [ ] Operator 实体定义（重构 Algorithm）
+  - [ ] Workflow 实体定义（替代 AlgorithmBinding）
+  - [ ] Task 实体定义
+  - [ ] Artifact 实体定义
+  - [ ] WorkflowNode、WorkflowEdge 定义
 
-- **进程池**：使用互斥锁和计数器实现资源限流
-- **录制**：使用 FFmpeg segment muxer，支持分段落盘
-- **抽帧**：支持单帧提取和连续抽帧两种模式
-- **错误处理**：完善的错误处理和资源清理
+- [ ] **端口层（Port）**
+  - [ ] MediaAssetRepository 接口
+  - [ ] OperatorRepository 接口
+  - [ ] WorkflowRepository 接口
+  - [ ] TaskRepository 接口
+  - [ ] ArtifactRepository 接口
+  - [ ] OperatorPort 接口（算子执行）
+  - [ ] WorkflowEngine 接口（工作流引擎）
 
-### 待后续
+- [ ] **应用层（App）**
+  - [ ] MediaAssetService 实现
+  - [ ] OperatorService 实现
+  - [ ] WorkflowService 实现
+  - [ ] TaskService 实现
+  - [ ] ArtifactService 实现
+  - [ ] Scheduler 重构（适配新架构）
 
-- 进程健康检查与自动重启
-- 录制文件完整性验证
-- 抽帧任务支持 schedule 和 initial_delay_sec
+- [ ] **适配器层（Adapter）**
+  - [ ] MediaAssetRepository 实现（GORM）
+  - [ ] OperatorRepository 实现（GORM）
+  - [ ] WorkflowRepository 实现（GORM）
+  - [ ] TaskRepository 实现（GORM）
+  - [ ] ArtifactRepository 实现（GORM）
+  - [ ] SimpleWorkflowEngine 实现（单算子）
 
----
+- [ ] **API 层（API）**
+  - [ ] MediaAsset Handler + DTO
+  - [ ] Operator Handler + DTO
+  - [ ] Workflow Handler + DTO
+  - [ ] Task Handler + DTO
+  - [ ] Artifact Handler + DTO
+  - [ ] 路由注册
 
-## 4. 录制（已完成）
+- [ ] **数据库迁移**
+  - [ ] 创建新表（media_assets、operators、workflows、tasks、artifacts）
+  - [ ] 数据迁移脚本（streams → media_sources、algorithms → operators）
+  - [ ] 删除旧表（algorithm_bindings、inference_results）
 
-### 完成项
+### 迭代 2：前端适配
 
-- [x] 实现 RecordService（App 层）
-  - Start：启动录制，创建 RecordSession，启动 FFmpeg 录制任务
-  - Stop：停止录制，更新 RecordSession 状态
-  - ListSessions：列出流的录制会话历史
-- [x] 集成 FFmpegManager
-  - 使用 FFmpeg Pool 进行资源限流
-  - 启动录制任务（RTSP -> 分段 MP4）
-  - 任务生命周期管理
-- [x] 实现 Record Handler
-  - POST `/streams/:id/record/start`：启动录制
-  - POST `/streams/:id/record/stop`：停止录制
-  - GET `/streams/:id/record/sessions`：查询录制会话列表
-- [x] 创建 Record DTO
-  - RecordSessionResponse：录制会话响应
-  - RecordStartResponse：启动录制响应
-- [x] 录制任务管理
-  - 内存中存储活跃任务
-  - 任务监控（自动检测进程退出）
-  - 线程安全的任务管理
+**目标**: 前端适配新 API 和概念
 
-### 技术实现
+**任务清单**:
 
-- **业务逻辑**：检查流状态、确保唯一运行中的录制会话
-- **资源管理**：使用 FFmpeg Pool 限制并发录制数
-- **任务监控**：后台监控任务状态，自动更新数据库
-- **错误处理**：完善的错误处理和资源清理
+- [ ] **页面重构**
+  - [ ] 媒体源页面（保持现有功能）
+  - [ ] 媒体资产页面（新增）
+  - [ ] 算子中心页面（替代算法管理）
+  - [ ] 工作流页面（替代算法绑定）
+  - [ ] 任务页面（新增）
+  - [ ] 产物页面（替代推理结果）
 
-### 待后续
+- [ ] **API 客户端**
+  - [ ] 更新 API 定义（TypeScript）
+  - [ ] 适配新端点
 
-- 录制文件完整性验证
-- 录制文件大小和时长统计
-- 支持录制质量配置
+- [ ] **路由与菜单**
+  - [ ] 更新路由配置
+  - [ ] 更新菜单配置
+  - [ ] 更新权限配置
 
----
+### 迭代 3：测试与优化
 
-## 5. 抽帧与推理（已完成）
+**目标**: 确保新架构稳定可用
 
-### 完成项
+**任务清单**:
 
-- [x] 实现 AI 推理适配器（adapter/ai）
-  - HTTP + JSON 调用推理服务
-  - 支持超时和重试机制
-  - 错误处理和响应解析
-- [x] 实现 Scheduler（调度器）
-  - 使用 gocron 管理定时任务
-  - 支持 interval_sec（固定间隔）
-  - 支持 schedule（定时调度：start、end、days_of_week）
-  - 支持 initial_delay_sec（首次延迟）
-  - 自动加载启用的绑定并创建任务
-- [x] 实现 InferenceService（App 层）
-  - ListResults：查询推理结果（支持过滤、分页）
-  - 支持按流、绑定、时间范围查询
-- [x] 实现推理流程
-  - 抽帧：使用 FFmpegManager 提取单帧
-  - 编码：将图片编码为 base64
-  - 调用：通过 Inference 接口调用 AI 服务
-  - 落库：保存 InferenceResult 到数据库
-- [x] 实现 Inference Handler
-  - GET `/api/v1/inference_results`：查询推理结果列表
-- [x] 创建 Inference DTO
-  - InferenceResultListQuery：查询参数
-  - InferenceResultResponse：响应格式
-  - InferenceResultListResponse：列表响应（含总数）
-- [x] 集成调度器到主程序
-  - 启动时自动加载并调度所有启用的绑定
-  - 优雅关闭时停止调度器
+- [ ] **单元测试**
+  - [ ] Domain 层测试
+  - [ ] App 层测试
 
-### 技术实现
+- [ ] **集成测试**
+  - [ ] Adapter 层测试
+  - [ ] API 层测试
 
-- **调度策略**：
-  - 固定间隔：按 `interval_sec` 定期执行
-  - 定时调度：仅在 `schedule` 指定的时间段内执行
-  - 首次延迟：支持 `initial_delay_sec` 延迟首次执行
-- **抽帧**：使用 FFmpeg 提取单帧，保存为图片文件
-- **AI 调用**：HTTP POST 请求，支持 base64 图片输入
-- **结果持久化**：保存推理结果、延迟时间、帧引用等信息
+- [ ] **端到端测试**
+  - [ ] 创建媒体源 → 录制 → 创建资产
+  - [ ] 创建工作流 → 触发任务 → 生成产物
+  - [ ] 完整业务流程测试
 
-### 待后续
+- [ ] **文档更新**
+  - [ ] API 文档
+  - [ ] 用户手册
+  - [ ] 部署文档
 
-- 支持更灵活的 schedule 配置（cron 表达式）
-- 推理结果缓存机制
-- 批量推理优化
-- 推理失败重试策略优化
+## 技术债务
 
----
+| 问题 | 优先级 | 状态 | 说明 |
+|------|--------|------|------|
+| AlgorithmBinding 迁移 | 高 | 待处理 | 需要迁移到 Workflow |
+| InferenceResult 迁移 | 高 | 待处理 | 需要迁移到 Artifact |
+| FFmpeg Pool 优化 | 中 | 待处理 | 资源泄漏检查 |
+| 数据库索引优化 | 中 | 待处理 | 添加缺失索引 |
+| 前端性能优化 | 低 | 待处理 | 大列表虚拟滚动 |
 
-## 6. 预览（已完成）
+## 已完成功能（从旧版本保留）
 
-### 完成项
+### 流媒体基础
+- ✅ MediaMTX 集成（多协议支持）
+- ✅ 流管理（拉流/推流）
+- ✅ 实时状态查询
+- ✅ 多协议预览（HLS/RTSP/RTMP/WebRTC）
+- ✅ 录制与点播
+- ✅ 录制文件索引
 
-- [x] 实现 PreviewManager
-  - 支持 MediaMTX 和 FFmpeg 两种提供者
-  - MediaMTX：使用 MediaMTX 服务（需外部运行）
-  - FFmpeg：使用 FFmpeg 将 RTSP 转 HLS
-  - HLS 输出管理（index.m3u8、segment.ts）
-- [x] 实现预览池（Preview Pool）
-  - 支持最大预览数限制（max_preview）
-  - 使用互斥锁保证线程安全
-  - 支持上下文取消自动释放资源
-- [x] 实现 PreviewService（App 层）
-  - Start：启动预览，返回 HLS URL
-  - Stop：停止预览
-  - 检查流状态和启用状态
-- [x] 实现 Preview Handler
-  - GET `/api/v1/streams/:id/preview/start`：启动预览
-  - POST `/api/v1/streams/:id/preview/stop`：停止预览
-- [x] 创建 Preview DTO
-  - PreviewStartResponse：启动预览响应（包含 HLS URL）
-- [x] 预览任务管理
-  - 内存中存储活跃任务
-  - 任务生命周期管理
-  - 线程安全的任务管理
+### 认证授权
+- ✅ JWT 认证（双 Token 机制）
+- ✅ RBAC 权限模型
+- ✅ 用户管理
+- ✅ 角色管理
+- ✅ 菜单管理
+- ✅ 权限中间件
+- ✅ 前端权限指令
 
-### 技术实现
+### 基础设施
+- ✅ 分层架构
+- ✅ 配置管理（Viper）
+- ✅ 数据库持久化（GORM + PostgreSQL）
+- ✅ 统一错误处理
+- ✅ FFmpeg 抽帧管理
+- ✅ Docker Compose 部署
 
-- **提供者支持**：
-  - MediaMTX：使用外部 MediaMTX 服务
-  - FFmpeg：使用 FFmpeg 直接转换 RTSP 到 HLS
-- **HLS 配置**：
-  - 段时长：2 秒
-  - 播放列表大小：3 段
-  - 自动删除旧段
-- **资源管理**：使用预览池限制并发预览数
+## 风险与阻塞
 
-### 待后续
+| 风险 | 影响 | 应对措施 | 状态 |
+|------|------|----------|------|
+| 数据迁移复杂性 | 高 | 编写迁移脚本，充分测试 | 待处理 |
+| 前端重构工作量 | 中 | 分阶段迭代，保持核心功能可用 | 待处理 |
+| 工作流引擎复杂度 | 中 | Phase 1 先实现简化版（单算子） | 待处理 |
+| 算子标准化 | 中 | 定义清晰的 I/O 协议文档 | 进行中 |
 
-- HLS 文件服务（/live 路由）
-- MediaMTX 集成优化
-- 预览质量配置
-- 预览状态持久化
+## 下一步行动
 
----
+### 本周（Week 1）
 
-## 7. 前端（已完成）
+1. 完成核心实体定义（MediaAsset、Operator、Workflow、Task、Artifact）
+2. 实现 Repository 接口和 GORM 持久化
+3. 数据库迁移方案设计
 
-### 完成项
+### 下周（Week 2）
 
-- [x] 创建 Vue 3 项目基础结构
-  - package.json：依赖管理（Vue 3、TypeScript、Vite、Element Plus、video.js）
-  - vite.config.ts：Vite 构建配置
-  - tsconfig.json：TypeScript 配置
-- [x] 配置 Element Plus 和 video.js
-  - Element Plus UI 组件库
-  - video.js HLS 播放器
-- [x] 实现流列表页面（StreamList）
-  - 流的 CRUD 操作
-  - 流状态显示（启用/禁用）
-  - 预览功能（启动预览、HLS 播放）
-  - 录制功能（启动录制）
-  - 算法绑定入口
-- [x] 实现算法管理页面（AlgorithmList）
-  - 算法的 CRUD 操作
-- [x] 实现推理结果查询页面（InferenceResultList）
-  - 按流、绑定、时间范围查询
-  - 分页支持
-  - 推理输出查看
-- [x] 实现 HLS 预览组件（HLSPreview）
-  - 使用 video.js 播放 HLS 流
-  - 支持动态 URL 切换
-- [x] API 客户端封装
-  - axios 封装
-  - 统一错误处理
-  - TypeScript 类型定义
-- [x] 路由配置
-  - Vue Router 配置
-  - 页面路由（流列表、算法管理、推理结果）
-- [x] Go embed 集成
-  - 使用 embed.FS 嵌入前端构建产物
-  - SPA 路由处理（所有非 API 路由返回 index.html）
-  - 静态文件服务
-- [x] 构建脚本
-  - Makefile 支持（build-web、build-all）
-  - 前端构建流程
+1. 实现 App 层服务（MediaAssetService、OperatorService、WorkflowService）
+2. 实现简化版 WorkflowEngine（单算子任务）
+3. 实现 API Handler 和 DTO
 
-### 技术实现
+### 两周后（Week 3）
 
-- **前端技术栈**：
-  - Vue 3 Composition API
-  - TypeScript
-  - Vite 构建工具
-  - Element Plus UI 组件
-  - video.js HLS 播放
-- **API 集成**：使用 axios 封装 API 调用，支持类型安全
-- **SPA 路由**：Vue Router 管理前端路由
-- **嵌入方式**：Go embed 将构建产物嵌入二进制文件
+1. 前端页面重构
+2. 集成测试
+3. 文档更新
 
-### 待后续
+### 一个月后（Week 4）
 
-- 算法绑定管理页面（完整的 CRUD 和 schedule 配置）
-- 录制会话管理页面
-- 更完善的错误处理和用户提示
-- 响应式设计优化
-- 国际化支持
+1. 端到端测试
+2. 性能优化
+3. V1.0 版本发布
+
+## 变更记录
+
+| 日期 | 版本 | 变更内容 |
+|------|------|----------|
+| 2025-02 | V1.0 | 架构重构：引入 MediaAsset、Operator、Workflow、Task、Artifact；废弃 AlgorithmBinding；模块重命名；不向后兼容 |
+| 2025-01 | V0.9 | MediaMTX 集成、录制重构、点播服务、认证授权完成 |
+| 2024-12 | V0.1 | 项目初始化、基础骨架搭建 |
 
 ---
 
-## 8. 认证授权（已完成）
-
-### 完成项
-
-- [x] 实现 RBAC 权限模型
-  - User（用户）、Role（角色）、Permission（权限）、Menu（菜单）实体
-  - 用户-角色多对多关系
-  - 角色-权限、角色-菜单多对多关系
-- [x] 实现 JWT 认证
-  - Access Token / Refresh Token 双 Token 机制
-  - Token 生成、解析、验证
-  - 可配置的过期时间（默认 Access 2h，Refresh 7d）
-- [x] 实现认证中间件
-  - JWT 认证中间件（Authorization: Bearer xxx）
-  - 权限校验中间件
-  - 用户权限加载中间件
-- [x] 实现认证服务
-  - 登录（/api/v1/auth/login）
-  - 登出（/api/v1/auth/logout）
-  - Token 刷新（/api/v1/auth/refresh）
-  - 获取当前用户信息（/api/v1/auth/profile）
-  - 修改密码（/api/v1/auth/password）
-- [x] 实现用户管理
-  - 用户 CRUD（/api/v1/users）
-  - 用户角色分配
-  - 重置密码
-- [x] 实现角色管理
-  - 角色 CRUD（/api/v1/roles）
-  - 角色权限分配
-  - 角色菜单分配
-- [x] 实现菜单管理
-  - 菜单 CRUD（/api/v1/menus）
-  - 树形菜单结构
-  - 菜单类型（目录、菜单、按钮）
-- [x] 实现初始化数据
-  - 默认权限（30+ 个 API 权限）
-  - 默认菜单（系统管理、视频流管理等）
-  - 超级管理员角色（super_admin）
-  - 默认管理员账号（admin/admin123）
-- [x] 前端认证集成
-  - Pinia 状态管理（用户、Token、权限）
-  - 登录页面
-  - 路由守卫（未登录跳转登录页）
-  - 权限指令（v-permission）
-  - 动态菜单布局
-  - 系统管理页面（用户、角色、菜单）
-
-### 技术实现
-
-- **JWT 认证**：使用 golang-jwt/jwt/v5，HS256 签名
-- **密码加密**：使用 bcrypt 加密存储
-- **权限校验**：支持超级管理员（super_admin）跳过权限检查
-- **前端状态**：Pinia + 持久化插件
-- **路由守卫**：Vue Router beforeEach 拦截
-- **权限指令**：自定义 v-permission 指令控制按钮显示
-
-### 配置项
-
-```yaml
-jwt:
-  secret: "your-secret-key"       # JWT 签名密钥
-  expire: 2h                      # Access Token 过期时间
-  refresh_exp: 168h               # Refresh Token 过期时间（7天）
-  issuer: "goyavision"            # 签发者
-```
-
-### 默认账号
-
-- **用户名**：admin
-- **密码**：admin123
-- **角色**：超级管理员（拥有所有权限）
-
-### 待后续
-
-- 登录失败次数限制
-- 审计日志
-- Token 黑名单（登出后立即失效）
-- 多设备登录管理
-
----
-
-## 9. MediaMTX 集成（已完成）
-
-### 完成项
-
-- [x] MediaMTX HTTP 客户端
-  - 路径配置管理（创建、更新、删除）
-  - 路径状态查询
-  - 录制管理（启用、禁用）
-  - 录制文件列表
-  - HLS/RTSP/RTMP 会话查询
-- [x] 流管理重构
-  - 支持 pull（拉流）和 push（推流）两种类型
-  - 流创建时自动注册到 MediaMTX
-  - 实时状态查询（ready、online、readers）
-  - 多协议地址生成（RTSP/RTMP/HLS/WebRTC）
-- [x] 录制功能重构
-  - 使用 MediaMTX 内置录制（fMP4/MPEG-TS）
-  - 录制启停控制
-  - 录制文件索引
-- [x] 预览功能重构
-  - 移除旧的 FFmpeg/MediaMTX 预览管理
-  - 直接返回 MediaMTX 协议 URL
-  - 支持多协议预览（HLS/RTSP/RTMP/WebRTC）
-- [x] 点播服务
-  - 集成 MediaMTX Playback Server
-  - 录制段列表查询
-  - HLS/MP4 点播 URL
-- [x] FFmpeg 简化
-  - 移除录制功能（由 MediaMTX 处理）
-  - 保留抽帧功能（用于 AI 推理）
-  - 从 MediaMTX RTSP 端点抽帧
-- [x] 前端适配
-  - 流类型选择（拉流/推流）
-  - 实时状态显示
-  - 多协议预览
-  - 协议地址复制
-  - 点播功能
-
-### 技术实现
-
-- **架构**：GoyaVision 作为控制平面，MediaMTX 作为数据平面
-- **通信**：通过 MediaMTX HTTP Control API（v3）
-- **流管理**：流名称映射为 MediaMTX 路径名
-- **录制**：MediaMTX 内置录制，支持 fMP4 和 MPEG-TS 格式
-- **点播**：MediaMTX Playback Server 提供 HTTP Range 支持
-
-### 配置项
-
-```yaml
-mediamtx:
-  api_address: "http://localhost:9997"        # MediaMTX API 地址
-  rtsp_address: "rtsp://localhost:8554"       # RTSP 服务地址
-  rtmp_address: "rtmp://localhost:1935"       # RTMP 服务地址
-  hls_address: "http://localhost:8888"        # HLS 服务地址
-  webrtc_address: "http://localhost:8889"     # WebRTC 服务地址
-  playback_address: "http://localhost:9996"   # Playback 服务地址
-  record_path: "./data/recordings/%path/%Y-%m-%d_%H-%M-%S"
-  record_format: "fmp4"                       # 录制格式：fmp4 或 mpegts
-  segment_duration: "1h"                      # 录制段时长
-```
-
-### 代码变更
-
-- 新增 `internal/adapter/mediamtx/`（客户端和数据模型）
-- 新增 `internal/app/playback.go`（点播服务）
-- 新增 `internal/api/handler/playback.go`（点播 API）
-- 重写 `internal/app/stream.go`（集成 MediaMTX）
-- 重写 `internal/app/record.go`（使用 MediaMTX API）
-- 重写 `internal/app/preview.go`（简化为 URL 生成）
-- 简化 `pkg/ffmpeg/manager.go`（仅保留抽帧）
-- 删除 `pkg/preview/`（不再需要）
-- 更新前端 `views/stream/index.vue`（多协议支持）
-- 新增 `docker-compose.yml`（容器化部署）
-- 新增 `configs/mediamtx.yml`（MediaMTX 配置模板）
-
-### 待后续
-
-- WebRTC 预览组件
-- 录制文件管理（删除、导出）
-- 流媒体监控仪表板
-
----
-
-## 10. 联调与优化（待开始）
-
-- 多路压测
-- 性能调优
-- DB 索引与分页优化
-
----
-
-## 维护说明
-
-- 每完成一个阶段或重要功能，更新本表及对应阶段的清单。
-- 需求变更时，同步更新 `docs/requirements.md`。
+**注意**: 本文档会随着项目演进持续更新。每周更新迭代进度。

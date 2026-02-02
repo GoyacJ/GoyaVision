@@ -1,87 +1,699 @@
 ---
-description: GoyaVision 项目分层、端口适配器与 Go 约定
+description: GoyaVision V1.0 项目规则：分层架构、核心概念、算子协议与工作流引擎
 alwaysApply: true
 ---
 
-# GoyaVision 项目规则
+# GoyaVision V1.0 项目规则
+
+## 核心设计理念
+
+- **业务 = 配置**：工作流通过 JSON/YAML 配置定义，无需编码
+- **能力 = 插件**：算子作为可插拔的能力单元，支持自定义扩展
+- **执行 = 引擎**：统一的任务执行引擎，负责工作流编排和调度
+- **资产驱动**：媒体资产是系统的核心"事实"，所有处理围绕资产展开
+
+## 核心概念（V1.0）
+
+### 领域实体
+
+#### 资产类
+- **MediaSource**：媒体源（拉流、推流、上传）
+  - 属性：`type`（pull/push/upload）、`protocol`（rtsp/rtmp/hls/webrtc/file）、`url`、`enabled`
+- **MediaAsset**：媒体资产（视频、图片、音频）
+  - 属性：`type`（video/image/audio）、`source_type`（live/vod/upload/generated）、`source_id`、`parent_id`、`tags`
+  - 支持资产派生追踪（parent-child 关系）
+
+#### 算子与工作流类
+- **Operator**：算子（AI/媒体处理能力单元）
+  - 属性：`code`（唯一编码）、`category`（analyze/edit/generate/transform）、`version`、`input_spec`、`output_spec`、`endpoint`
+  - 分类：分析类、编辑类、生成类、转换类
+- **Workflow**：工作流（DAG 编排）
+  - 属性：`name`、`trigger`（manual/schedule/event）、`nodes`（DAG 节点）、`edges`（节点连接）
+  - 节点：`WorkflowNode`（operator_id、params、retry、timeout）
+  - 边：`WorkflowEdge`（from、to、condition）
+- **Task**：任务（工作流执行实例）
+  - 属性：`workflow_id`、`trigger_type`、`input_assets`、`status`（pending/running/completed/failed）、`progress`
+- **Artifact**：产物（算子输出）
+  - 类型：asset（新资产）、result（结构化结果）、timeline（时间轴）、diagnostic（诊断信息）
+
+#### 认证授权类
+- **User**：用户
+- **Role**：角色
+- **Permission**：权限
+- **Menu**：菜单
+
+### 废弃概念（不再使用）
+- ❌ **AlgorithmBinding**：由 Workflow 替代
+- ❌ **InferenceResult**：由 Artifact 替代
+- ❌ 旧的 `Stream`：升级为 MediaSource
+- ❌ 旧的 `Algorithm`：升级为 Operator
 
 ## 分层与依赖
 
-- **domain**：仅实体与纯领域逻辑，不导入 `internal/adapter`、`internal/api`、`config` 等 infra。
-  - 业务实体：`Stream`、`Algorithm`、`AlgorithmBinding`、`RecordSession`、`InferenceResult`
-  - 认证实体：`User`、`Role`、`Permission`、`Menu`
-  - 常量：`RecordStatusRunning`、`RecordStatusStopped`、`UserStatusEnabled`、`MenuType*`
-- **port**：接口定义（如 `Repository`、`Inference`）；可被 `app`、`api` 依赖；实现放在 `adapter`。
-  - `Repository`：数据持久化接口（含业务实体和认证实体的 CRUD）
-  - `Inference`：AI 推理服务接口（HTTP + JSON）
-- **app**：编排 domain 与 port，实现用例；不直接依赖 `adapter` 具体实现，通过 `port` 注入。
-  - `StreamService`：流管理用例
-  - `AlgorithmService`：算法管理用例
-  - `AlgorithmBindingService`：算法绑定管理用例
-  - `RecordService`：录制用例（集成 FFmpegManager）
-  - `InferenceService`：推理结果查询用例
-  - `PreviewService`：预览用例（集成 PreviewManager）
-  - `Scheduler`：调度器（gocron，管理推理任务）
-  - `AuthService`：认证服务（登录、登出、Token 刷新、密码修改）
-  - `UserService`：用户管理（CRUD、角色分配）
-  - `RoleService`：角色管理（CRUD、权限/菜单分配）
-  - `MenuService`：菜单管理（CRUD、树形结构）
-- **adapter**：实现 `port`，可依赖 `domain`；如 `persistence` 实现 `port.Repository`。
-  - `persistence`：实现 `port.Repository`（GORM + PostgreSQL）
-  - `persistence/init_data.go`：初始化默认数据（权限、菜单、角色、管理员）
-  - `ai`：实现 `port.Inference`（HTTP 客户端）
-- **api**：HTTP 路由、middleware、handler、dto；handler 调用 `app` 或 `port`，不直接写 GORM/SQL。
-  - `handler/`：请求处理器（stream、algorithm、algorithm_binding、record、inference、preview、auth、user、role、menu）
-  - `dto/`：数据传输对象（请求与响应）
-  - `middleware/auth.go`：JWT 认证中间件、权限校验中间件
-  - `errors.go`：统一错误处理
-  - `static.go`：前端静态文件服务（embed）
+### 1. Domain Layer（领域层）
+**位置**：`internal/domain/`
 
-## Go 与风格
+**职责**：
+- 定义核心业务实体
+- 包含纯业务逻辑
+- 无外部依赖（不导入 `adapter`、`api`、`config`）
 
-- 使用 `gofmt`/`goimports` 风格；不写行尾注释。
-- 错误：不吞掉；业务错误与基础设施错误区分返回（如 4xx 与 5xx）。
-  - 使用 `internal/api/errors.go` 统一错误处理
-  - 区分 `ErrNotFound`、`ErrInvalidInput`、`ErrAlreadyExists`
-- 配置：统一经 `config` 包与 Viper；敏感信息不写死，可用 `GOYAVISION_*` 环境变量覆盖。
-- 上下文：所有需要取消的操作使用 `context.Context`。
-- 并发：使用 `sync.RWMutex` 保护共享资源（如任务映射）。
+**实体**：
+- 资产类：`MediaSource`、`MediaAsset`
+- 算子类：`Operator`
+- 工作流类：`Workflow`、`WorkflowNode`、`WorkflowEdge`、`Task`、`Artifact`
+- 认证类：`User`、`Role`、`Permission`、`Menu`
+
+### 2. Port Layer（端口层）
+**位置**：`internal/port/`
+
+**职责**：
+- 定义应用边界接口
+- 可被 `app`、`api` 依赖
+- 实现放在 `adapter`
+
+**接口**：
+- `Repository`：数据持久化（含 MediaSource、MediaAsset、Operator、Workflow、Task、Artifact、User 等）
+- `OperatorPort`：算子执行接口（标准化 I/O 协议）
+- `WorkflowEngine`：工作流引擎接口（DAG 执行、节点编排）
+- `MediaMTXClient`：MediaMTX HTTP API 客户端接口
+
+### 3. App Layer（应用层）
+**位置**：`internal/app/`
+
+**职责**：
+- 编排 domain 与 port，实现用例
+- 不直接依赖 `adapter` 具体实现，通过 `port` 注入
+
+**服务**：
+
+#### 资产库（Asset Library）
+- `MediaSourceService`：媒体源管理（CRUD、状态查询、流控制）
+- `MediaAssetService`：媒体资产管理（CRUD、搜索、派生追踪）
+- `RecordService`：录制管理（启停、会话管理、集成 MediaMTX）
+- `PlaybackService`：点播服务（录制段查询、URL 生成）
+
+#### 算子中心（Operator Hub）
+- `OperatorService`：算子管理（CRUD、分类、版本管理）
+
+#### 任务中心（Task Center）
+- `WorkflowService`：工作流管理（CRUD、DAG 验证）
+- `TaskService`：任务管理（创建、执行、查询、控制）
+- `ArtifactService`：产物管理（查询、关联）
+- `Scheduler`：调度器（定时任务、事件触发，使用 gocron/v2）
+
+#### 控制台（Console）
+- `AuthService`：认证服务（登录、登出、Token 刷新、密码修改）
+- `UserService`：用户管理（CRUD、角色分配）
+- `RoleService`：角色管理（CRUD、权限/菜单分配）
+- `MenuService`：菜单管理（CRUD、树形结构）
+
+### 4. Adapter Layer（适配器层）
+**位置**：`internal/adapter/`
+
+**职责**：
+- 实现 `port` 接口
+- 可依赖 `domain`
+- 处理基础设施细节
+
+**适配器**：
+- `persistence/`：实现 `Repository`（GORM + PostgreSQL）
+  - `init_data.go`：初始化默认数据（权限、菜单、角色、管理员）
+- `mediamtx/`：实现 `MediaMTXClient`（HTTP 客户端）
+- `ai/`：实现 `OperatorPort`（HTTP 客户端，算子调用）
+- `workflow/`：实现 `WorkflowEngine`（DAG 执行引擎）
+
+### 5. API Layer（接口层）
+**位置**：`internal/api/`
+
+**职责**：
+- HTTP 路由、Handler、DTO、中间件
+- Handler 调用 `app` 服务或 `port` 接口，不直接写 GORM/SQL
+
+**组件**：
+- `handler/`：请求处理器
+  - 资产库：`source.go`、`asset.go`、`record.go`、`playback.go`
+  - 算子中心：`operator.go`
+  - 任务中心：`workflow.go`、`task.go`、`artifact.go`
+  - 控制台：`auth.go`、`user.go`、`role.go`、`menu.go`
+- `dto/`：数据传输对象（请求与响应）
+- `middleware/auth.go`：JWT 认证中间件、权限校验中间件
+- `errors.go`：统一错误处理
+- `static.go`：前端静态文件服务（embed）
+- `router.go`：路由注册（公开路由、认证路由、管理路由）
+
+### 依赖规则
+
+```
+API Layer       → App Layer
+     ↓               ↓
+  Domain ← Port → Adapter
+```
+
+1. **Domain** 不依赖任何其他层
+2. **Port** 可依赖 Domain
+3. **App** 可依赖 Domain 和 Port
+4. **Adapter** 可依赖 Domain 和 Port（实现接口）
+5. **API** 可依赖 App、Port、Domain
+
+## 算子标准协议
+
+所有算子必须遵循统一的输入输出协议，确保互操作性。
+
+### 输入格式
+
+```json
+{
+  "asset_id": "资产 ID",
+  "params": {
+    "key": "value"
+  }
+}
+```
+
+### 输出格式
+
+```json
+{
+  "output_assets": [
+    {
+      "type": "video|image|audio",
+      "path": "存储路径",
+      "format": "格式",
+      "metadata": {}
+    }
+  ],
+  "results": [
+    {
+      "type": "detection|classification|ocr|...",
+      "data": {},
+      "confidence": 0.95
+    }
+  ],
+  "timeline": [
+    {
+      "start": 0.0,
+      "end": 5.0,
+      "event_type": "事件类型",
+      "confidence": 0.95,
+      "data": {}
+    }
+  ],
+  "diagnostics": {
+    "latency_ms": 150,
+    "model_version": "v1.0",
+    "device": "gpu"
+  }
+}
+```
+
+### 产物类型
+
+- **output_assets**：新生成的媒体资产（剪辑后的视频、检测结果图片）
+- **results**：结构化结果（检测框、分类标签、OCR 文本）
+- **timeline**：时间轴片段（事件、高光、镜头切分）
+- **diagnostics**：诊断信息（性能指标、模型版本）
+
+## 工作流引擎
+
+### DAG 工作流
+
+工作流通过 DAG（有向无环图）定义算子的执行顺序和数据流转。
+
+**节点定义**：
+```json
+{
+  "id": "node1",
+  "operator_id": "uuid",
+  "params": {
+    "key": "value"
+  },
+  "retry": 3,
+  "timeout": 300
+}
+```
+
+**边定义**：
+```json
+{
+  "from": "node1",
+  "to": "node2",
+  "condition": "node1.output.confidence > 0.8"
+}
+```
+
+### 触发器
+
+- **manual**：手动触发
+- **schedule**：定时触发（cron 表达式）
+- **event**：事件触发（新资产、录制完成、流上线）
+
+### 执行流程
+
+1. 触发器激活 → 创建 Task
+2. Scheduler 调度任务 → WorkflowEngine 执行
+3. 解析 DAG → 拓扑排序
+4. 按顺序执行节点：
+   - 获取输入资产
+   - 调用 Operator
+   - 保存 Artifact
+   - 传递给下游节点
+5. 所有节点完成 → 任务成功
+6. 任何节点失败 → 重试或标记失败
+
+## Go 代码风格
+
+### 基本规范
+
+- 使用 `gofmt`/`goimports` 风格
+- **不写行尾注释**（用户明确要求）
+- 函数命名：驼峰式（`GetByID`、`CreateMediaAsset`）
+- 常量命名：驼峰式或下划线（`AssetTypeVideo`、`ASSET_TYPE_VIDEO`）
+
+### 错误处理
+
+- **不吞掉错误**：所有错误必须返回或记录
+- **区分错误类型**：业务错误（4xx）与基础设施错误（5xx）
+- **统一错误处理**：使用 `internal/api/errors.go`
+  - `ErrNotFound`：资源不存在（404）
+  - `ErrInvalidInput`：输入错误（400）
+  - `ErrAlreadyExists`：资源冲突（409）
+  - `ErrUnauthorized`：未认证（401）
+  - `ErrForbidden`：无权限（403）
+
+### 配置管理
+
+- 统一经 `config` 包与 Viper
+- 敏感信息不写死，使用环境变量覆盖（`GOYAVISION_*` 前缀）
+- 配置文件：`configs/config.yaml`
+
+### 并发控制
+
+- 所有需要取消的操作使用 `context.Context`
+- 使用 `sync.RWMutex` 保护共享资源（如任务映射）
+- 进程池限流（FFmpeg Pool、算子并发）
 
 ## 进程管理
 
-- **FFmpeg Pool**：`pkg/ffmpeg/pool.go`，限制并发录制数和抽帧数。
-- **Preview Pool**：`pkg/preview/pool.go`，限制并发预览数。
-- **FFmpegManager**：`pkg/ffmpeg/manager.go`，管理录制和抽帧任务。
-- **PreviewManager**：`pkg/preview/manager.go`，管理预览任务（MediaMTX/FFmpeg）。
+### FFmpeg 管理
+**位置**：`pkg/ffmpeg/`
+
+- **Pool**：`pool.go`，限制并发抽帧数（`max_frame`）
+- **Manager**：`manager.go`，管理抽帧任务（用于 AI 推理）
+- 录制功能已迁移到 MediaMTX
+
+### 存储管理
+**位置**：`pkg/storage/`
+
+- **Manager**：文件上传、下载、删除
+- **Lifecycle**：生命周期管理（自动清理）
+
+### MediaMTX 集成
+**位置**：`internal/adapter/mediamtx/`
+
+- 流媒体服务器（RTSP/RTMP/HLS/WebRTC）
+- 录制功能（由 MediaMTX 处理）
+- 点播服务（Playback Server）
 
 ## 调度器
 
-- **Scheduler**：`internal/app/scheduler.go`，使用 gocron 管理推理任务。
-- 支持 `interval_sec`（固定间隔）、`schedule`（定时调度）、`initial_delay_sec`（首次延迟）。
-- 启动时自动加载所有启用的算法绑定并创建任务。
+**位置**：`internal/app/scheduler.go`
+
+- 使用 **gocron/v2** 管理定时任务
+- 支持触发器类型：
+  - **schedule**：定时调度（cron 表达式）
+  - **event**：事件触发（新资产、录制完成）
+- 启动时自动加载启用的工作流并创建任务
+- 支持并发控制、优先级队列
 
 ## 前端
 
-- **位置**：`web/`，Vue 3 + TypeScript + Vite + Element Plus + video.js + Pinia
+**位置**：`web/`
+
+### 技术栈
+- **框架**：Vue 3 + TypeScript + Vite
+- **UI**：Element Plus
+- **播放器**：video.js（HLS 播放）
+- **状态管理**：Pinia（用户、Token、权限）
+- **路由**：Vue Router
+
+### 构建与部署
 - **构建**：`npm run build` 输出到 `web/dist/`
 - **嵌入**：使用 Go `embed.FS` 嵌入构建产物
 - **路由**：SPA 路由，所有非 API 路由返回 `index.html`
-- **状态管理**：Pinia（用户信息、Token、权限）
+
+### 权限控制
 - **路由守卫**：`router/guard.ts`，未登录跳转登录页
 - **权限指令**：`v-permission`，按钮级权限控制
-- **布局**：`layout/`，动态菜单侧边栏
+- **动态菜单**：`layout/`，根据用户权限动态生成菜单
 
 ## 认证授权
 
-- **JWT 认证**：Access Token + Refresh Token 双 Token 机制
-- **密码加密**：bcrypt 算法
-- **权限模型**：RBAC（用户-角色-权限三级）
+### JWT 认证
+- **双 Token 机制**：Access Token + Refresh Token
+- **Access Token**：有效期 2 小时（可配置）
+- **Refresh Token**：有效期 7 天（可配置）
+- **签名算法**：HS256
+
+### 密码加密
+- 使用 **bcrypt** 算法
+- 成本因子：默认 10
+
+### 权限模型
+- **RBAC**：用户-角色-权限三级授权
 - **超级管理员**：`super_admin` 角色跳过权限检查
-- **默认账号**：admin / admin123
+- **权限粒度**：API 级别 + 按钮级别
 
-## 文档与进度
+### 默认账号
+- **用户名**：admin
+- **密码**：admin123
+- **角色**：超级管理员
 
-- 需求与范围见 `docs/requirements.md`
-- 开发阶段与状态见 `docs/development-progress.md`
-- 架构说明见 `docs/architecture.md`
-- 实现时同步更新相关文档
+## 数据库
+
+### 技术栈
+- **数据库**：PostgreSQL 12+
+- **ORM**：GORM
+
+### 核心表（V1.0）
+
+#### 资产库
+- `media_sources`：媒体源
+- `media_assets`：媒体资产
+- `recording_sessions`：录制会话（保留）
+
+#### 算子与工作流
+- `operators`：算子
+- `workflows`：工作流
+- `workflow_nodes`：工作流节点
+- `workflow_edges`：工作流边
+- `tasks`：任务
+- `artifacts`：产物
+
+#### 认证授权
+- `users`：用户
+- `roles`：角色
+- `permissions`：权限
+- `menus`：菜单
+- `user_roles`：用户-角色关联
+- `role_permissions`：角色-权限关联
+- `role_menus`：角色-菜单关联
+
+### 废弃表（V1.0）
+- ❌ `streams`（升级为 `media_sources`）
+- ❌ `algorithms`（升级为 `operators`）
+- ❌ `algorithm_bindings`（由 `workflows` 替代）
+- ❌ `inference_results`（由 `artifacts` 替代）
+
+## 文档与版本控制规范
+
+### 文档同步要求
+
+**每次完成功能开发或修改后，必须同步更新相关文档：**
+
+#### 必须更新的文档
+
+1. **开发进度文档**（`docs/development-progress.md`）
+   - 更新功能完成状态（✅ 已完成、🚧 进行中、⏸️ 待开始）
+   - 更新当前迭代进度
+   - 记录技术债务或阻塞问题
+
+2. **API 文档**（`docs/api.md`）
+   - 新增 API 端点时，添加完整的请求/响应示例
+   - 修改 API 时，更新相关端点文档
+   - 添加查询参数、错误响应说明
+
+3. **变更日志**（`CHANGELOG.md`）
+   - 在 `[未发布]` 章节记录变更
+   - 按类型分类：新增、变更、修复、弃用、移除、安全
+   - 描述清晰，便于理解
+
+#### 可能需要更新的文档
+
+根据变更内容，判断是否需要更新：
+
+- **需求文档**（`docs/requirements.md`）：功能需求变更时
+- **架构文档**（`docs/architecture.md`）：架构设计变更时
+- **README.md**：影响用户使用时（新功能、配置变更）
+
+### Git 提交规范
+
+**每次完成功能开发或修改后，必须进行 Git 提交：**
+
+#### 提交时机
+
+1. **功能开发完成后**：实现、测试、文档更新全部完成
+2. **Bug 修复后**：问题解决、测试通过、文档更新
+3. **文档更新后**：重要文档变更（如架构调整）
+
+#### 提交信息格式
+
+遵循 [Conventional Commits](https://www.conventionalcommits.org/) 规范：
+
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+**Type 类型**：
+- `feat`：新功能
+- `fix`：Bug 修复
+- `docs`：文档变更
+- `refactor`：代码重构（不影响功能）
+- `test`：测试相关
+- `chore`：构建、配置、依赖等
+- `perf`：性能优化
+- `style`：代码格式（不影响逻辑）
+
+**Scope 范围**（可选）：
+- `asset`：资产库
+- `operator`：算子中心
+- `workflow`：工作流
+- `task`：任务管理
+- `auth`：认证授权
+- `api`：API 层
+- `ui`：前端界面
+
+**示例**：
+
+```bash
+# 新功能
+feat(asset): 实现媒体资产管理功能
+
+- 添加 MediaAsset 实体和 Repository
+- 实现 MediaAssetService（CRUD、搜索、派生追踪）
+- 添加 API 端点和 Handler
+- 更新 API 文档和开发进度
+
+# Bug 修复
+fix(workflow): 修复 DAG 验证时的死循环问题
+
+修复了在验证包含自环的 DAG 时导致的死循环。
+现在会在检测到自环时立即返回错误。
+
+Closes #123
+
+# 文档更新
+docs: 更新 V1.0 架构文档
+
+- 添加工作流引擎设计
+- 更新数据模型说明
+- 补充算子标准协议示例
+```
+
+#### 提交检查清单
+
+在提交前确认：
+
+- [ ] 代码已测试（单元测试 / 手动测试）
+- [ ] 相关文档已更新
+- [ ] 代码通过 `gofmt` / `goimports` 格式化
+- [ ] 没有调试代码（console.log、临时注释等）
+- [ ] Commit message 符合规范
+- [ ] 如果有 linter 错误，已修复
+
+#### 提交流程
+
+```bash
+# 1. 查看变更
+git status
+git diff
+
+# 2. 添加文件
+git add <files>
+
+# 3. 提交（使用规范的 commit message）
+git commit -m "feat(asset): 实现媒体资产管理功能"
+
+# 4. 推送（如果需要）
+git push origin <branch>
+```
+
+### 文档更新示例
+
+#### 示例 1：实现新功能
+
+**功能**：实现媒体资产管理
+
+**需要更新的文档**：
+
+1. `docs/development-progress.md`：
+   ```markdown
+   - [x] 媒体资产管理（CRUD、搜索、派生追踪）
+   ```
+
+2. `docs/api.md`：
+   ```markdown
+   ### 媒体资产（Assets）
+   
+   #### 列出媒体资产
+   GET /api/v1/assets?type=video&tags=tag1,tag2
+   ...
+   ```
+
+3. `CHANGELOG.md`：
+   ```markdown
+   ## [未发布]
+   
+   ### 新增
+   - **媒体资产管理**
+     - 实现 MediaAsset CRUD
+     - 支持资产派生追踪（parent_id）
+     - 支持标签系统
+   ```
+
+**Git 提交**：
+```bash
+git add internal/domain/media_asset.go \
+        internal/port/repository.go \
+        internal/adapter/persistence/media_asset.go \
+        internal/app/media_asset.go \
+        internal/api/handler/asset.go \
+        internal/api/dto/asset.go \
+        docs/development-progress.md \
+        docs/api.md \
+        CHANGELOG.md
+
+git commit -m "feat(asset): 实现媒体资产管理功能
+
+- 添加 MediaAsset 实体和 Repository
+- 实现 MediaAssetService（CRUD、搜索、派生追踪）
+- 实现 Asset Handler 和 DTO
+- 支持资产派生追踪和标签系统
+- 更新 API 文档和开发进度"
+```
+
+#### 示例 2：修复 Bug
+
+**问题**：工作流 DAG 验证死循环
+
+**需要更新的文档**：
+
+1. `CHANGELOG.md`：
+   ```markdown
+   ## [未发布]
+   
+   ### 修复
+   - 修复工作流 DAG 验证时的死循环问题
+   ```
+
+**Git 提交**：
+```bash
+git add internal/adapter/workflow/engine.go \
+        CHANGELOG.md
+
+git commit -m "fix(workflow): 修复 DAG 验证时的死循环问题
+
+修复了在验证包含自环的 DAG 时导致的死循环。
+现在会在检测到自环时立即返回错误。
+
+Closes #123"
+```
+
+#### 示例 3：更新文档
+
+**变更**：架构文档重写
+
+**Git 提交**：
+```bash
+git add docs/architecture.md \
+        docs/requirements.md \
+        CHANGELOG.md
+
+git commit -m "docs: 更新 V1.0 架构和需求文档
+
+- 重写架构文档，反映新的核心概念
+- 更新需求文档，添加算子和工作流规范
+- 补充工作流引擎设计"
+```
+
+### 强制执行
+
+**AI 和开发者在完成任何功能开发或修改后，必须：**
+
+1. ✅ 更新相关文档
+2. ✅ 进行 Git 提交
+3. ✅ 使用规范的 commit message
+
+**不符合规范的提交示例**（❌ 禁止）：
+```bash
+git commit -m "update"
+git commit -m "fix bug"
+git commit -m "完成功能"
+```
+
+**符合规范的提交示例**（✅ 推荐）：
+```bash
+git commit -m "feat(asset): 实现媒体资产管理功能"
+git commit -m "fix(workflow): 修复 DAG 验证死循环"
+git commit -m "docs: 更新架构文档"
+```
+
+## 测试规范
+
+### 单元测试
+- Domain 层：实体验证逻辑
+- App 层：业务用例
+
+### 集成测试
+- Adapter 层：数据库操作、HTTP 客户端
+- API 层：完整请求流程
+
+### 端到端测试
+- 核心业务流程：创建媒体源 → 录制 → 创建工作流 → 执行任务 → 生成产物
+
+## 常见模式
+
+### 创建实体流程
+```
+1. HTTP Request → Handler（API Layer）
+2. Handler 验证输入 → 转换 DTO to Domain
+3. Handler 调用 Service（App Layer）
+4. Service 业务逻辑 → 调用 Repository（Port）
+5. Repository 保存（Adapter Layer）
+6. 返回 Domain → 转换 Domain to DTO
+7. HTTP Response
+```
+
+### 执行工作流流程
+```
+1. 触发器激活 → WorkflowService.TriggerEvent()
+2. 创建 Task → TaskService.Create()
+3. Scheduler 调度 → WorkflowEngine.Execute()
+4. 解析 DAG → 拓扑排序
+5. 执行节点 → OperatorPort.Execute()
+6. 保存 Artifact → ArtifactService.Create()
+7. 返回执行结果
+```
+
+## 注意事项
+
+1. **V1.0 不向后兼容**：与旧版本数据模型和 API 完全不兼容
+2. **资产派生追踪**：使用 `parent_id` 追踪资产派生关系
+3. **算子幂等性**：算子应设计为无状态、幂等执行
+4. **工作流验证**：DAG 必须无环、连通
+5. **错误传播**：节点失败不影响其他独立分支
+6. **产物关联**：产物可关联新资产（资产派生）

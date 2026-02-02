@@ -1,4 +1,4 @@
-# GoyaVision API 文档
+# GoyaVision V1.0 API 文档
 
 ## 概述
 
@@ -19,7 +19,25 @@ Authorization: Bearer <access_token>
 3. 当 `access_token` 过期时，使用 `refresh_token` 获取新的 Token
 4. 当 `refresh_token` 也过期时，需要重新登录
 
-## 错误响应
+## 通用约定
+
+### 分页参数
+
+```
+limit: 每页数量（默认 20，最大 1000）
+offset: 偏移量（默认 0）
+```
+
+### 分页响应
+
+```json
+{
+  "items": [...],
+  "total": 100
+}
+```
+
+### 错误响应
 
 所有错误响应遵循统一格式：
 
@@ -88,23 +106,14 @@ Content-Type: application/json
 }
 ```
 
-**响应**：
-```json
-{
-  "access_token": "eyJhbGciOiJIUzI1NiIs...",
-  "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
-  "expires_in": 7200
-}
-```
-
-#### 获取当前用户信息（需认证）
+#### 获取当前用户信息
 
 ```http
 GET /api/v1/auth/profile
 Authorization: Bearer <access_token>
 ```
 
-#### 修改密码（需认证）
+#### 修改密码
 
 ```http
 PUT /api/v1/auth/password
@@ -117,24 +126,287 @@ Content-Type: application/json
 }
 ```
 
-#### 登出（需认证）
+#### 登出
 
 ```http
 POST /api/v1/auth/logout
 Authorization: Bearer <access_token>
 ```
 
-### 用户管理（Users）- 需认证
+---
 
-#### 列出用户
+### 媒体源（Sources）
+
+#### 列出媒体源
 
 ```http
-GET /api/v1/users?status=1&limit=20&offset=0
+GET /api/v1/sources?type=pull&enabled=true&with_status=true
 ```
 
 **查询参数**：
-- `status`（可选）：状态过滤（1=启用，0=禁用）
-- `limit`（可选）：每页数量，默认 20
+- `type`（可选）：源类型过滤（pull、push、upload）
+- `enabled`（可选）：启用状态过滤（true、false）
+- `with_status`（可选）：是否包含实时状态（true、false）
+
+**响应**：
+```json
+[
+  {
+    "id": "uuid",
+    "name": "camera1",
+    "type": "pull",
+    "url": "rtsp://192.168.1.100:554/stream",
+    "protocol": "rtsp",
+    "enabled": true,
+    "status": {
+      "ready": true,
+      "online": true,
+      "readers": 2,
+      "bitrate": 2048000
+    },
+    "created_at": "2025-02-01T10:00:00Z",
+    "updated_at": "2025-02-01T10:00:00Z"
+  }
+]
+```
+
+#### 创建媒体源
+
+**拉流（Pull）**：
+```http
+POST /api/v1/sources
+Content-Type: application/json
+
+{
+  "name": "camera1",
+  "type": "pull",
+  "url": "rtsp://192.168.1.100:554/stream",
+  "enabled": true
+}
+```
+
+**推流（Push）**：
+```http
+POST /api/v1/sources
+Content-Type: application/json
+
+{
+  "name": "obs_stream",
+  "type": "push",
+  "enabled": true
+}
+```
+
+#### 获取媒体源详情
+
+```http
+GET /api/v1/sources/:id?with_status=true
+```
+
+#### 更新媒体源
+
+```http
+PUT /api/v1/sources/:id
+Content-Type: application/json
+
+{
+  "name": "camera1_updated",
+  "url": "rtsp://192.168.1.101:554/stream",
+  "enabled": true
+}
+```
+
+#### 删除媒体源
+
+```http
+DELETE /api/v1/sources/:id
+```
+
+#### 启用媒体源
+
+```http
+POST /api/v1/sources/:id/enable
+```
+
+#### 禁用媒体源
+
+```http
+POST /api/v1/sources/:id/disable
+```
+
+#### 获取媒体源状态
+
+```http
+GET /api/v1/sources/:id/status
+```
+
+**响应**：
+```json
+{
+  "ready": true,
+  "online": true,
+  "readers": 2,
+  "bitrate": 2048000
+}
+```
+
+#### 获取预览 URL
+
+```http
+GET /api/v1/sources/:id/preview
+```
+
+**响应**：
+```json
+{
+  "rtsp_url": "rtsp://localhost:8554/camera1",
+  "rtmp_url": "rtmp://localhost:1935/camera1",
+  "hls_url": "http://localhost:8888/camera1/index.m3u8",
+  "webrtc_url": "http://localhost:8889/camera1/whep"
+}
+```
+
+#### 检查流就绪
+
+```http
+GET /api/v1/sources/:id/preview/ready
+```
+
+**响应**：
+```json
+{
+  "ready": true
+}
+```
+
+#### 启动录制
+
+```http
+POST /api/v1/sources/:id/record/start
+```
+
+**响应**：
+```json
+{
+  "session_id": "uuid"
+}
+```
+
+#### 停止录制
+
+```http
+POST /api/v1/sources/:id/record/stop
+```
+
+#### 获取录制状态
+
+```http
+GET /api/v1/sources/:id/record/status
+```
+
+**响应**：
+```json
+{
+  "recording": true,
+  "session_id": "uuid",
+  "started_at": "2025-02-01T10:00:00Z"
+}
+```
+
+#### 列出录制会话
+
+```http
+GET /api/v1/sources/:id/record/sessions
+```
+
+**响应**：
+```json
+[
+  {
+    "id": "uuid",
+    "source_id": "uuid",
+    "status": "stopped",
+    "base_path": "./data/recordings/camera1",
+    "started_at": "2025-02-01T10:00:00Z",
+    "stopped_at": "2025-02-01T11:00:00Z"
+  }
+]
+```
+
+#### 列出录制文件
+
+```http
+GET /api/v1/sources/:id/record/files
+```
+
+**响应**：
+```json
+[
+  {
+    "name": "2025-02-01_10-00-00.mp4",
+    "path": "./data/recordings/camera1/2025-02-01_10-00-00.mp4",
+    "size": 104857600,
+    "start": 1706774400,
+    "duration": 3600
+  }
+]
+```
+
+#### 获取点播 URL
+
+```http
+GET /api/v1/sources/:id/playback?start=1706774400
+```
+
+**查询参数**：
+- `start`（必选）：开始时间戳（Unix 秒）
+
+**响应**：
+```json
+{
+  "hls_url": "http://localhost:9996/camera1/index.m3u8?start=1706774400",
+  "mp4_url": "http://localhost:9996/camera1/2025-02-01_10-00-00.mp4"
+}
+```
+
+#### 列出录制段
+
+```http
+GET /api/v1/sources/:id/playback/segments
+```
+
+**响应**：
+```json
+{
+  "segments": [
+    {
+      "start": 1706774400,
+      "duration": 3600,
+      "path": "2025-02-01_10-00-00.mp4"
+    }
+  ]
+}
+```
+
+---
+
+### 媒体资产（Assets）
+
+#### 列出媒体资产
+
+```http
+GET /api/v1/assets?type=video&source_type=live&source_id=uuid&tags=tag1,tag2&limit=20&offset=0
+```
+
+**查询参数**：
+- `type`（可选）：资产类型（video、image、audio）
+- `source_type`（可选）：来源类型（live、vod、upload、generated）
+- `source_id`（可选）：媒体源 ID
+- `parent_id`（可选）：父资产 ID
+- `tags`（可选）：标签列表（逗号分隔）
+- `from`（可选）：开始时间戳
+- `to`（可选）：结束时间戳
+- `limit`（可选）：每页数量
 - `offset`（可选）：偏移量
 
 **响应**：
@@ -143,19 +415,582 @@ GET /api/v1/users?status=1&limit=20&offset=0
   "items": [
     {
       "id": "uuid",
-      "username": "admin",
-      "nickname": "管理员",
-      "email": "",
-      "phone": "",
-      "status": 1,
-      "roles": [{"id": "uuid", "code": "super_admin", "name": "超级管理员"}],
-      "created_at": "2025-01-26T10:00:00Z",
-      "updated_at": "2025-01-26T10:00:00Z"
+      "type": "video",
+      "source_type": "live",
+      "source_id": "uuid",
+      "parent_id": null,
+      "name": "camera1_2025-02-01_10-00-00.mp4",
+      "path": "./data/recordings/camera1/2025-02-01_10-00-00.mp4",
+      "duration": 3600,
+      "size": 104857600,
+      "format": "mp4",
+      "metadata": {
+        "resolution": "1920x1080",
+        "fps": 30,
+        "codec": "h264"
+      },
+      "status": "ready",
+      "tags": ["camera1", "recording"],
+      "created_at": "2025-02-01T10:00:00Z",
+      "updated_at": "2025-02-01T10:00:00Z"
     }
   ],
-  "total": 1
+  "total": 100
 }
 ```
+
+#### 创建媒体资产
+
+```http
+POST /api/v1/assets
+Content-Type: application/json
+
+{
+  "type": "video",
+  "source_type": "upload",
+  "name": "uploaded_video.mp4",
+  "path": "./data/uploads/uploaded_video.mp4",
+  "duration": 120,
+  "size": 10485760,
+  "format": "mp4",
+  "metadata": {
+    "resolution": "1920x1080",
+    "fps": 30
+  },
+  "tags": ["upload", "demo"]
+}
+```
+
+#### 获取媒体资产详情
+
+```http
+GET /api/v1/assets/:id
+```
+
+#### 更新媒体资产
+
+```http
+PUT /api/v1/assets/:id
+Content-Type: application/json
+
+{
+  "name": "new_name.mp4",
+  "tags": ["tag1", "tag2"]
+}
+```
+
+#### 删除媒体资产
+
+```http
+DELETE /api/v1/assets/:id
+```
+
+#### 列出子资产（派生资产）
+
+```http
+GET /api/v1/assets/:id/children
+```
+
+**响应**：
+```json
+[
+  {
+    "id": "uuid",
+    "type": "image",
+    "source_type": "generated",
+    "parent_id": "uuid",
+    "name": "frame_001.jpg",
+    "path": "./data/frames/uuid/frame_001.jpg",
+    "format": "jpg",
+    "status": "ready",
+    "created_at": "2025-02-01T10:01:00Z"
+  }
+]
+```
+
+---
+
+### 算子（Operators）
+
+#### 列出算子
+
+```http
+GET /api/v1/operators?category=analyze&status=enabled
+```
+
+**查询参数**：
+- `category`（可选）：算子分类（analyze、edit、generate、transform）
+- `status`（可选）：状态（enabled、disabled）
+- `is_builtin`（可选）：是否内置（true、false）
+
+**响应**：
+```json
+[
+  {
+    "id": "uuid",
+    "code": "frame_extract",
+    "name": "抽帧",
+    "category": "analyze",
+    "version": "1.0.0",
+    "input_spec": {
+      "asset_types": ["video"],
+      "params": {
+        "interval": {
+          "type": "integer",
+          "description": "抽帧间隔（秒）",
+          "default": 30
+        }
+      }
+    },
+    "output_spec": {
+      "assets": ["image"],
+      "results": [],
+      "timeline": []
+    },
+    "endpoint": "http://localhost:8080/internal/operators/frame_extract",
+    "status": "enabled",
+    "is_builtin": true,
+    "description": "从视频中按间隔提取帧",
+    "icon": "frame",
+    "created_at": "2025-02-01T10:00:00Z",
+    "updated_at": "2025-02-01T10:00:00Z"
+  }
+]
+```
+
+#### 创建算子
+
+```http
+POST /api/v1/operators
+Content-Type: application/json
+
+{
+  "code": "custom_detector",
+  "name": "自定义检测器",
+  "category": "analyze",
+  "version": "1.0.0",
+  "input_spec": {
+    "asset_types": ["image"],
+    "params": {
+      "threshold": {
+        "type": "float",
+        "description": "检测阈值",
+        "default": 0.5
+      }
+    }
+  },
+  "output_spec": {
+    "assets": [],
+    "results": ["detection"],
+    "timeline": []
+  },
+  "endpoint": "http://ai-service:8080/detect",
+  "config": {
+    "timeout": 10,
+    "retry": 2
+  },
+  "status": "enabled",
+  "is_builtin": false,
+  "description": "自定义目标检测算子"
+}
+```
+
+#### 获取算子详情
+
+```http
+GET /api/v1/operators/:id
+```
+
+#### 更新算子
+
+```http
+PUT /api/v1/operators/:id
+Content-Type: application/json
+
+{
+  "name": "自定义检测器 V2",
+  "version": "2.0.0",
+  "endpoint": "http://ai-service:8080/detect-v2"
+}
+```
+
+#### 删除算子
+
+```http
+DELETE /api/v1/operators/:id
+```
+
+#### 启用算子
+
+```http
+POST /api/v1/operators/:id/enable
+```
+
+#### 禁用算子
+
+```http
+POST /api/v1/operators/:id/disable
+```
+
+#### 测试算子
+
+```http
+POST /api/v1/operators/:id/test
+Content-Type: application/json
+
+{
+  "asset_id": "uuid",
+  "params": {
+    "threshold": 0.7
+  }
+}
+```
+
+**响应**：
+```json
+{
+  "output_assets": [...],
+  "results": [...],
+  "timeline": [...],
+  "diagnostics": {
+    "latency_ms": 150,
+    "model_version": "v1.0",
+    "device": "gpu"
+  }
+}
+```
+
+---
+
+### 工作流（Workflows）
+
+#### 列出工作流
+
+```http
+GET /api/v1/workflows?status=active
+```
+
+**查询参数**：
+- `status`（可选）：状态（draft、active、paused）
+
+**响应**：
+```json
+[
+  {
+    "id": "uuid",
+    "name": "实时视频分析",
+    "description": "对实时视频流进行目标检测和追踪",
+    "trigger": {
+      "type": "schedule",
+      "config": {
+        "interval": "30s"
+      }
+    },
+    "nodes": [
+      {
+        "id": "node1",
+        "operator_id": "uuid",
+        "params": {
+          "interval": 30
+        },
+        "retry": 3,
+        "timeout": 300
+      }
+    ],
+    "edges": [],
+    "status": "active",
+    "created_at": "2025-02-01T10:00:00Z",
+    "updated_at": "2025-02-01T10:00:00Z"
+  }
+]
+```
+
+#### 创建工作流
+
+```http
+POST /api/v1/workflows
+Content-Type: application/json
+
+{
+  "name": "实时视频分析",
+  "description": "对实时视频流进行目标检测和追踪",
+  "trigger": {
+    "type": "schedule",
+    "config": {
+      "interval": "30s"
+    }
+  },
+  "nodes": [
+    {
+      "id": "node1",
+      "operator_id": "uuid",
+      "params": {
+        "interval": 30
+      },
+      "retry": 3,
+      "timeout": 300
+    },
+    {
+      "id": "node2",
+      "operator_id": "uuid2",
+      "params": {
+        "threshold": 0.7
+      },
+      "retry": 2,
+      "timeout": 60
+    }
+  ],
+  "edges": [
+    {
+      "from": "node1",
+      "to": "node2"
+    }
+  ],
+  "status": "draft"
+}
+```
+
+#### 获取工作流详情
+
+```http
+GET /api/v1/workflows/:id
+```
+
+#### 更新工作流
+
+```http
+PUT /api/v1/workflows/:id
+Content-Type: application/json
+
+{
+  "name": "实时视频分析 V2",
+  "status": "active"
+}
+```
+
+#### 删除工作流
+
+```http
+DELETE /api/v1/workflows/:id
+```
+
+#### 启用工作流
+
+```http
+POST /api/v1/workflows/:id/activate
+```
+
+#### 暂停工作流
+
+```http
+POST /api/v1/workflows/:id/pause
+```
+
+#### 验证工作流
+
+```http
+POST /api/v1/workflows/:id/validate
+```
+
+**响应**：
+```json
+{
+  "valid": true,
+  "errors": []
+}
+```
+
+---
+
+### 任务（Tasks）
+
+#### 列出任务
+
+```http
+GET /api/v1/tasks?workflow_id=uuid&status=running&limit=20&offset=0
+```
+
+**查询参数**：
+- `workflow_id`（可选）：工作流 ID
+- `status`（可选）：状态（pending、running、completed、failed、cancelled）
+- `trigger_type`（可选）：触发类型（manual、schedule、event）
+- `from`（可选）：开始时间戳
+- `to`（可选）：结束时间戳
+- `limit`（可选）：每页数量
+- `offset`（可选）：偏移量
+
+**响应**：
+```json
+{
+  "items": [
+    {
+      "id": "uuid",
+      "workflow_id": "uuid",
+      "trigger_type": "schedule",
+      "input_assets": ["uuid1", "uuid2"],
+      "status": "running",
+      "progress": 50,
+      "current_node": "node2",
+      "started_at": "2025-02-01T10:00:00Z",
+      "completed_at": null,
+      "error": null,
+      "created_at": "2025-02-01T10:00:00Z"
+    }
+  ],
+  "total": 100
+}
+```
+
+#### 创建任务
+
+```http
+POST /api/v1/tasks
+Content-Type: application/json
+
+{
+  "workflow_id": "uuid",
+  "trigger_type": "manual",
+  "input_assets": ["uuid1", "uuid2"]
+}
+```
+
+#### 获取任务详情
+
+```http
+GET /api/v1/tasks/:id
+```
+
+**响应**：
+```json
+{
+  "id": "uuid",
+  "workflow_id": "uuid",
+  "workflow": {...},
+  "trigger_type": "manual",
+  "input_assets": [...],
+  "status": "completed",
+  "progress": 100,
+  "current_node": null,
+  "started_at": "2025-02-01T10:00:00Z",
+  "completed_at": "2025-02-01T10:05:00Z",
+  "error": null,
+  "artifacts": [...],
+  "created_at": "2025-02-01T10:00:00Z"
+}
+```
+
+#### 取消任务
+
+```http
+POST /api/v1/tasks/:id/cancel
+```
+
+#### 重试任务
+
+```http
+POST /api/v1/tasks/:id/retry
+```
+
+#### 获取任务日志
+
+```http
+GET /api/v1/tasks/:id/logs
+```
+
+**响应**：
+```json
+{
+  "logs": [
+    {
+      "timestamp": "2025-02-01T10:00:00Z",
+      "level": "info",
+      "node_id": "node1",
+      "message": "Starting node execution"
+    }
+  ]
+}
+```
+
+---
+
+### 产物（Artifacts）
+
+#### 列出产物
+
+```http
+GET /api/v1/artifacts?task_id=uuid&type=result&limit=20&offset=0
+```
+
+**查询参数**：
+- `task_id`（可选）：任务 ID
+- `node_id`（可选）：节点 ID
+- `operator_id`（可选）：算子 ID
+- `type`（可选）：产物类型（asset、result、timeline、diagnostic）
+- `from`（可选）：开始时间戳
+- `to`（可选）：结束时间戳
+- `limit`（可选）：每页数量
+- `offset`（可选）：偏移量
+
+**响应**：
+```json
+{
+  "items": [
+    {
+      "id": "uuid",
+      "task_id": "uuid",
+      "node_id": "node1",
+      "operator_id": "uuid",
+      "type": "result",
+      "asset_id": null,
+      "data": {
+        "type": "detection",
+        "detections": [
+          {
+            "class": "person",
+            "confidence": 0.95,
+            "bbox": [100, 200, 300, 400]
+          }
+        ]
+      },
+      "created_at": "2025-02-01T10:01:00Z"
+    }
+  ],
+  "total": 100
+}
+```
+
+#### 获取产物详情
+
+```http
+GET /api/v1/artifacts/:id
+```
+
+#### 删除产物
+
+```http
+DELETE /api/v1/artifacts/:id
+```
+
+#### 下载产物
+
+```http
+GET /api/v1/artifacts/:id/download
+```
+
+---
+
+### 用户管理（Users）
+
+#### 列出用户
+
+```http
+GET /api/v1/users?status=1&limit=20&offset=0
+```
+
+**查询参数**：
+- `status`（可选）：状态（1=启用，0=禁用）
+- `limit`（可选）：每页数量
+- `offset`（可选）：偏移量
 
 #### 创建用户
 
@@ -204,7 +1039,9 @@ Content-Type: application/json
 }
 ```
 
-### 角色管理（Roles）- 需认证
+---
+
+### 角色管理（Roles）
 
 #### 列出角色
 
@@ -247,7 +1084,33 @@ Content-Type: application/json
 DELETE /api/v1/roles/:id
 ```
 
-### 菜单管理（Menus）- 需认证
+---
+
+### 权限管理（Permissions）
+
+#### 列出所有权限
+
+```http
+GET /api/v1/permissions
+```
+
+**响应**：
+```json
+[
+  {
+    "id": "uuid",
+    "code": "asset:list",
+    "name": "查看媒体资产列表",
+    "method": "GET",
+    "path": "/api/v1/assets",
+    "description": ""
+  }
+]
+```
+
+---
+
+### 菜单管理（Menus）
 
 #### 列出菜单
 
@@ -269,13 +1132,13 @@ Content-Type: application/json
 
 {
   "parent_id": "uuid",
-  "code": "system:user",
-  "name": "用户管理",
+  "code": "asset:list",
+  "name": "媒体资产",
   "type": 2,
-  "path": "/system/user",
-  "icon": "User",
-  "component": "system/user/index",
-  "permission": "user:list",
+  "path": "/asset/list",
+  "icon": "VideoCamera",
+  "component": "asset/index",
+  "permission": "asset:list",
   "sort": 1,
   "visible": true,
   "status": 1
@@ -305,293 +1168,58 @@ Content-Type: application/json
 DELETE /api/v1/menus/:id
 ```
 
-### 权限列表（Permissions）- 需认证
+---
 
-#### 列出所有权限
+## 算子标准协议
 
-```http
-GET /api/v1/permissions
-```
+### 输入格式
 
-**响应**：
 ```json
-[
-  {
-    "id": "uuid",
-    "code": "stream:list",
-    "name": "查看视频流列表",
-    "method": "GET",
-    "path": "/api/v1/streams",
-    "description": ""
-  }
-]
-```
-
-### 视频流（Streams）
-
-#### 列出流
-
-```http
-GET /api/v1/streams?enabled=true
-```
-
-**查询参数**：
-- `enabled`（可选）：过滤启用/禁用的流（true/false）
-
-**响应**：
-```json
-[
-  {
-    "id": "uuid",
-    "url": "rtsp://example.com/stream",
-    "name": "流名称",
-    "enabled": true,
-    "created_at": "2025-01-26T10:00:00Z",
-    "updated_at": "2025-01-26T10:00:00Z"
-  }
-]
-```
-
-#### 创建流
-
-```http
-POST /api/v1/streams
-Content-Type: application/json
-
 {
-  "url": "rtsp://example.com/stream",
-  "name": "流名称",
-  "enabled": true
-}
-```
-
-#### 获取流
-
-```http
-GET /api/v1/streams/:id
-```
-
-#### 更新流
-
-```http
-PUT /api/v1/streams/:id
-Content-Type: application/json
-
-{
-  "url": "rtsp://example.com/stream2",
-  "name": "新名称",
-  "enabled": false
-}
-```
-
-#### 删除流
-
-```http
-DELETE /api/v1/streams/:id
-```
-
-### 算法（Algorithms）
-
-#### 列出算法
-
-```http
-GET /api/v1/algorithms
-```
-
-#### 创建算法
-
-```http
-POST /api/v1/algorithms
-Content-Type: application/json
-
-{
-  "name": "算法名称",
-  "endpoint": "http://ai-service:8080/inference",
-  "input_spec": {},
-  "output_spec": {}
-}
-```
-
-#### 获取算法
-
-```http
-GET /api/v1/algorithms/:id
-```
-
-#### 更新算法
-
-```http
-PUT /api/v1/algorithms/:id
-Content-Type: application/json
-
-{
-  "name": "新名称",
-  "endpoint": "http://ai-service:8080/inference2"
-}
-```
-
-#### 删除算法
-
-```http
-DELETE /api/v1/algorithms/:id
-```
-
-### 算法绑定（Algorithm Bindings）
-
-#### 列出流的算法绑定
-
-```http
-GET /api/v1/streams/:id/algorithm-bindings
-```
-
-#### 创建算法绑定
-
-```http
-POST /api/v1/streams/:id/algorithm-bindings
-Content-Type: application/json
-
-{
-  "algorithm_id": "uuid",
-  "interval_sec": 30,
-  "initial_delay_sec": 0,
-  "enabled": true,
-  "schedule": {
-    "start": "09:00:00",
-    "end": "18:00:00",
-    "days_of_week": [1, 2, 3, 4, 5]
+  "asset_id": "资产 ID",
+  "params": {
+    "key": "value"
   }
 }
 ```
 
-#### 获取算法绑定
+### 输出格式
 
-```http
-GET /api/v1/streams/:id/algorithm-bindings/:bid
-```
-
-#### 更新算法绑定
-
-```http
-PUT /api/v1/streams/:id/algorithm-bindings/:bid
-Content-Type: application/json
-
-{
-  "interval_sec": 60,
-  "enabled": false
-}
-```
-
-#### 删除算法绑定
-
-```http
-DELETE /api/v1/streams/:id/algorithm-bindings/:bid
-```
-
-### 录制（Recording）
-
-#### 启动录制
-
-```http
-POST /api/v1/streams/:id/record/start
-```
-
-**响应**：
 ```json
 {
-  "session_id": "uuid"
-}
-```
-
-#### 停止录制
-
-```http
-POST /api/v1/streams/:id/record/stop
-```
-
-#### 查询录制会话
-
-```http
-GET /api/v1/streams/:id/record/sessions
-```
-
-**响应**：
-```json
-[
-  {
-    "id": "uuid",
-    "stream_id": "uuid",
-    "status": "running",
-    "base_path": "./data/recordings/uuid",
-    "started_at": "2025-01-26T10:00:00Z",
-    "stopped_at": null
-  }
-]
-```
-
-### 推理结果（Inference Results）
-
-#### 查询推理结果
-
-```http
-GET /api/v1/inference_results?stream_id=uuid&binding_id=uuid&from=1706256000&to=1706342400&limit=50&offset=0
-```
-
-**查询参数**：
-- `stream_id`（可选）：流 ID
-- `binding_id`（可选）：算法绑定 ID
-- `from`（可选）：开始时间戳（Unix 秒）
-- `to`（可选）：结束时间戳（Unix 秒）
-- `limit`（可选）：每页数量，默认 50，最大 1000
-- `offset`（可选）：偏移量，默认 0
-
-**响应**：
-```json
-{
-  "items": [
+  "output_assets": [
     {
-      "id": "uuid",
-      "algorithm_binding_id": "uuid",
-      "stream_id": "uuid",
-      "ts": "2025-01-26T10:00:00Z",
-      "frame_ref": "./data/frames/uuid/frame_xxx.jpg",
-      "output": {},
-      "latency_ms": 150,
-      "created_at": "2025-01-26T10:00:00Z"
+      "type": "video|image|audio",
+      "path": "存储路径",
+      "format": "格式",
+      "metadata": {}
     }
   ],
-  "total": 100
+  "results": [
+    {
+      "type": "detection|classification|ocr|...",
+      "data": {},
+      "confidence": 0.95
+    }
+  ],
+  "timeline": [
+    {
+      "start": 0.0,
+      "end": 5.0,
+      "event_type": "事件类型",
+      "confidence": 0.95,
+      "data": {}
+    }
+  ],
+  "diagnostics": {
+    "latency_ms": 150,
+    "model_version": "v1.0",
+    "device": "gpu"
+  }
 }
 ```
 
-### 预览（Preview）
-
-#### 启动预览
-
-```http
-GET /api/v1/streams/:id/preview/start
-```
-
-**响应**：
-```json
-{
-  "hls_url": "/live/uuid/index.m3u8"
-}
-```
-
-#### 停止预览
-
-```http
-POST /api/v1/streams/:id/preview/stop
-```
-
-## HLS 文件服务
-
-HLS 文件通过 `/live/*` 路径提供：
-
-```http
-GET /live/:stream_id/index.m3u8
-GET /live/:stream_id/segment_001.ts
-```
+---
 
 ## 前端静态文件
 
