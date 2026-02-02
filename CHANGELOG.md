@@ -124,6 +124,37 @@
     - GET /api/v1/tasks/stats（统计）
   - 数据库迁移：自动创建 tasks 表
 
+- **Artifact 完整功能**（V1.0 迭代 1）
+  - 添加 Artifact 实体（internal/domain/artifact.go）
+    - 支持四种类型（asset、result、timeline、report）
+    - 关联任务和资产（task_id、asset_id）
+    - 支持 JSONB 数据存储
+    - 定义标准数据结构（AssetInfo、TimelineSegment、AnalysisResult）
+  - 添加 ArtifactRepository 接口和实现
+    - 完整的 CRUD 操作
+    - 支持预加载关联数据（Task、Asset）
+    - 支持复杂过滤（任务、类型、资产、时间范围）
+    - 支持按任务和类型查询
+  - 添加 ArtifactService（internal/app/artifact.go）
+    - Create、Get、List、Delete
+    - ListByTask、ListByType
+    - 完整的业务验证逻辑
+    - 验证关联的任务和资产存在性
+  - 添加 Artifact API（internal/api/handler/artifact.go）
+    - GET /api/v1/artifacts（列表，支持过滤）
+    - POST /api/v1/artifacts（创建）
+    - GET /api/v1/artifacts/:id（详情）
+    - DELETE /api/v1/artifacts/:id（删除）
+    - GET /api/v1/tasks/:task_id/artifacts（列出任务的产物，支持类型过滤）
+  - 数据库迁移：自动创建 artifacts 表
+
+**🎉 V1.0 迭代 1 核心实体层完成（5/5 - 100%）**
+
+全部 5 个核心实体（MediaAsset、Operator、Workflow、Task、Artifact）已完成实现！
+- 总代码：~5000 行
+- 总端点：36 个
+- 总数据表：7 个
+
 - **项目规范**
   - 添加文档更新强制要求（每次功能开发或修改后必须更新文档）
   - 添加 Git 提交规范（遵循 Conventional Commits）

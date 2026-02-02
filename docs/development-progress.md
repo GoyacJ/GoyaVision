@@ -116,7 +116,7 @@
 
 **目标**: 实现新架构的核心实体和服务
 
-**已完成（MediaAsset + Operator + Workflow + Task 完整功能）**:
+**已完成（全部 5 个核心实体）**:
 
 - [x] **实体层（Domain）**
   - [x] MediaAsset 实体定义（media_asset.go）
@@ -144,6 +144,11 @@
     - 记录当前执行节点
     - 记录执行时间（开始、完成）
     - 支持错误信息记录
+  - [x] Artifact 实体定义（artifact.go）
+    - 支持四种类型（asset、result、timeline、report）
+    - 关联任务和资产
+    - 支持 JSONB 数据存储
+    - 定义标准数据结构（AssetInfo、TimelineSegment、AnalysisResult）
 
 - [x] **端口层（Port）**
   - [x] MediaAssetRepository 接口（7个方法）
@@ -161,6 +166,9 @@
   - [x] TaskRepository 接口（8个方法）
     - Create、Get、GetWithRelations、List、Update、Delete
     - GetStats、ListRunning
+  - [x] ArtifactRepository 接口（6个方法）
+    - Create、Get、List、Delete
+    - ListByTask、ListByType
 
 - [x] **适配器层（Adapter）**
   - [x] MediaAssetRepository 实现（GORM + PostgreSQL）
@@ -184,6 +192,12 @@
     - 支持复杂过滤（工作流、资产、状态、时间范围）
     - 支持预加载关联数据（Workflow、Asset、Artifacts）
     - 支持统计查询（按状态分组）
+    - AutoMigrate 集成
+  - [x] ArtifactRepository 实现（GORM + PostgreSQL）
+    - 完整的 CRUD 实现
+    - 支持复杂过滤（任务、类型、资产、时间范围）
+    - 支持预加载关联数据（Task、Asset）
+    - 支持按任务和类型查询
     - AutoMigrate 集成
 
 - [x] **应用层（App）**
@@ -213,6 +227,11 @@
     - 状态转换管理（自动记录开始/完成时间）
     - 进度范围验证（0-100%）
     - 防止删除运行中的任务
+  - [x] ArtifactService 实现（artifact.go）
+    - Create、Get、List、Delete
+    - ListByTask、ListByType
+    - 完整的业务验证逻辑
+    - 验证关联的任务和资产存在性
 
 - [x] **API 层（API）**
   - [x] MediaAsset DTO（asset.go）
@@ -266,28 +285,35 @@
     - POST /tasks/:id/fail（失败）
     - POST /tasks/:id/cancel（取消）
     - GET /tasks/stats（统计）
+  - [x] Artifact DTO（artifact.go）
+    - Request：ArtifactCreateReq、ArtifactListQuery
+    - Response：ArtifactResponse、ArtifactListResponse
+    - 转换函数：ArtifactToResponse、ArtifactsToResponse
+  - [x] Artifact Handler（artifact.go）
+    - GET /artifacts（列表，支持过滤）
+    - POST /artifacts（创建）
+    - GET /artifacts/:id（详情）
+    - DELETE /artifacts/:id（删除）
+    - GET /tasks/:task_id/artifacts（列出任务的产物，支持类型过滤）
   - [x] 路由注册（router.go）
 
-**待实现**:
+## 迭代 1 总结
 
-- [ ] **实体层（Domain）**
-  - [ ] Artifact 实体定义
+**✅ 核心实体层（5/5 完成 - 100%）**
+
+全部 5 个核心实体已完成实现！
+
+**待实现（迭代 2）**:
 
 - [ ] **端口层（Port）**
-  - [ ] ArtifactRepository 接口
   - [ ] OperatorPort 接口（算子执行）
   - [ ] WorkflowEngine 接口（工作流引擎）
 
 - [ ] **应用层（App）**
-  - [ ] ArtifactService 实现
   - [ ] Scheduler 重构（适配新架构）
 
 - [ ] **适配器层（Adapter）**
-  - [ ] ArtifactRepository 实现（GORM）
   - [ ] SimpleWorkflowEngine 实现（单算子）
-
-- [ ] **API 层（API）**
-  - [ ] Artifact Handler + DTO
 
 - [ ] **数据库迁移**
   - [x] 创建 media_assets 表（AutoMigrate）
@@ -296,7 +322,7 @@
   - [x] 创建 workflow_nodes 表（AutoMigrate）
   - [x] 创建 workflow_edges 表（AutoMigrate）
   - [x] 创建 tasks 表（AutoMigrate）
-  - [ ] 创建 artifacts 表
+  - [x] 创建 artifacts 表（AutoMigrate）
   - [ ] 数据迁移脚本（streams → media_sources、algorithms → operators）
   - [ ] 删除旧表（algorithm_bindings、inference_results）
 

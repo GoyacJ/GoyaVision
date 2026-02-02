@@ -129,4 +129,12 @@ type Repository interface {
 	DeleteTask(ctx context.Context, id uuid.UUID) error
 	GetTaskStats(ctx context.Context, workflowID *uuid.UUID) (*domain.TaskStats, error)
 	ListRunningTasks(ctx context.Context) ([]*domain.Task, error)
+
+	// Artifact
+	CreateArtifact(ctx context.Context, a *domain.Artifact) error
+	GetArtifact(ctx context.Context, id uuid.UUID) (*domain.Artifact, error)
+	ListArtifacts(ctx context.Context, filter domain.ArtifactFilter) ([]*domain.Artifact, int64, error)
+	DeleteArtifact(ctx context.Context, id uuid.UUID) error
+	ListArtifactsByTask(ctx context.Context, taskID uuid.UUID) ([]*domain.Artifact, error)
+	ListArtifactsByType(ctx context.Context, taskID uuid.UUID, artifactType domain.ArtifactType) ([]*domain.Artifact, error)
 }

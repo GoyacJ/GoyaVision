@@ -47,6 +47,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&domain.WorkflowNode{},
 		&domain.WorkflowEdge{},
 		&domain.Task{},
+		&domain.Artifact{},
 	); err != nil {
 		return err
 	}
@@ -1204,6 +1205,104 @@ func (r *repository) ListRunningTasks(ctx context.Context) ([]*domain.Task, erro
 		Preload("Asset").
 		Where("status = ?", domain.TaskStatusRunning).
 		Order("created_at ASC").
+		Find(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+// Artifact methods
+
+func (r *repository) CreateArtifact(ctx context.Context, a *domain.Artifact) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	ensureID(&a.ID)
+	return r.db.WithContext(ctx).Create(a).Error
+}
+
+func (r *repository) GetArtifact(ctx context.Context, id uuid.UUID) (*domain.Artifact, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var a domain.Artifact
+	if err := r.db.WithContext(ctx).
+		Preload("Task").
+		Preload("Asset").
+		Where("id = ?", id).
+		First(&a).Error; err != nil {
+		return nil, err
+	}
+	return &a, nil
+}
+
+func (r *repository) ListArtifacts(ctx context.Context, filter domain.ArtifactFilter) ([]*domain.Artifact, int64, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, 0, err
+	}
+
+	q := r.db.WithContext(ctx).Model(&domain.Artifact{})
+
+	if filter.TaskID != nil {
+		q = q.Where("task_id = ?", *filter.TaskID)
+	}
+	if filter.Type != nil {
+		q = q.Where("type = ?", *filter.Type)
+	}
+	if filter.AssetID != nil {
+		q = q.Where("asset_id = ?", *filter.AssetID)
+	}
+	if filter.From != nil {
+		q = q.Where("created_at >= ?", *filter.From)
+	}
+	if filter.To != nil {
+		q = q.Where("created_at <= ?", *filter.To)
+	}
+
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var list []*domain.Artifact
+	if err := q.Limit(filter.Limit).Offset(filter.Offset).Order("created_at DESC").Find(&list).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return list, total, nil
+}
+
+func (r *repository) DeleteArtifact(ctx context.Context, id uuid.UUID) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.Artifact{}).Error
+}
+
+func (r *repository) ListArtifactsByTask(ctx context.Context, taskID uuid.UUID) ([]*domain.Artifact, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var list []*domain.Artifact
+	if err := r.db.WithContext(ctx).
+		Preload("Asset").
+		Where("task_id = ?", taskID).
+		Order("created_at DESC").
+		Find(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+func (r *repository) ListArtifactsByType(ctx context.Context, taskID uuid.UUID, artifactType domain.ArtifactType) ([]*domain.Artifact, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var list []*domain.Artifact
+	if err := r.db.WithContext(ctx).
+		Preload("Asset").
+		Where("task_id = ? AND type = ?", taskID, artifactType).
+		Order("created_at DESC").
 		Find(&list).Error; err != nil {
 		return nil, err
 	}

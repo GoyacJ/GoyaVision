@@ -1,0 +1,154 @@
+package handler
+
+import (
+	"time"
+
+	"goyavision/internal/api/dto"
+	"goyavision/internal/app"
+	"goyavision/internal/domain"
+
+	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
+)
+
+func RegisterArtifact(g *echo.Group, d Deps) {
+	svc := app.NewArtifactService(d.Repo)
+	h := artifactHandler{svc: svc}
+	g.GET("/artifacts", h.List)
+	g.POST("/artifacts", h.Create)
+	g.GET("/artifacts/:id", h.Get)
+	g.DELETE("/artifacts/:id", h.Delete)
+	g.GET("/tasks/:task_id/artifacts", h.ListByTask)
+}
+
+type artifactHandler struct {
+	svc *app.ArtifactService
+}
+
+func (h *artifactHandler) List(c echo.Context) error {
+	var query dto.ArtifactListQuery
+	if err := c.Bind(&query); err != nil {
+		return c.JSON(400, dto.ErrorResponse{
+			Error:   "Bad Request",
+			Message: "invalid query parameters",
+		})
+	}
+
+	req := &app.ListArtifactsRequest{
+		TaskID:  query.TaskID,
+		AssetID: query.AssetID,
+		Limit:   query.Limit,
+		Offset:  query.Offset,
+	}
+
+	if query.Type != nil {
+		t := domain.ArtifactType(*query.Type)
+		req.Type = &t
+	}
+
+	if query.From != nil {
+		t := time.Unix(*query.From, 0)
+		req.From = &t
+	}
+
+	if query.To != nil {
+		t := time.Unix(*query.To, 0)
+		req.To = &t
+	}
+
+	artifacts, total, err := h.svc.List(c.Request().Context(), req)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(200, dto.ArtifactListResponse{
+		Items: dto.ArtifactsToResponse(artifacts),
+		Total: total,
+	})
+}
+
+func (h *artifactHandler) Create(c echo.Context) error {
+	var req dto.ArtifactCreateReq
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(400, dto.ErrorResponse{
+			Error:   "Bad Request",
+			Message: "invalid request body",
+		})
+	}
+
+	createReq := &app.CreateArtifactRequest{
+		TaskID:  req.TaskID,
+		Type:    domain.ArtifactType(req.Type),
+		AssetID: req.AssetID,
+		Data:    req.Data,
+	}
+
+	artifact, err := h.svc.Create(c.Request().Context(), createReq)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(201, dto.ArtifactToResponse(artifact))
+}
+
+func (h *artifactHandler) Get(c echo.Context) error {
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		return c.JSON(400, dto.ErrorResponse{
+			Error:   "Bad Request",
+			Message: "invalid artifact id",
+		})
+	}
+
+	artifact, err := h.svc.Get(c.Request().Context(), id)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(200, dto.ArtifactToResponse(artifact))
+}
+
+func (h *artifactHandler) Delete(c echo.Context) error {
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		return c.JSON(400, dto.ErrorResponse{
+			Error:   "Bad Request",
+			Message: "invalid artifact id",
+		})
+	}
+
+	if err := h.svc.Delete(c.Request().Context(), id); err != nil {
+		return err
+	}
+
+	return c.NoContent(204)
+}
+
+func (h *artifactHandler) ListByTask(c echo.Context) error {
+	taskIDStr := c.Param("task_id")
+	taskID, err := uuid.Parse(taskIDStr)
+	if err != nil {
+		return c.JSON(400, dto.ErrorResponse{
+			Error:   "Bad Request",
+			Message: "invalid task id",
+		})
+	}
+
+	artifactType := c.QueryParam("type")
+	if artifactType != "" {
+		artifacts, err := h.svc.ListByType(c.Request().Context(), taskID, domain.ArtifactType(artifactType))
+		if err != nil {
+			return err
+		}
+		return c.JSON(200, dto.ArtifactsToResponse(artifacts))
+	}
+
+	artifacts, err := h.svc.ListByTask(c.Request().Context(), taskID)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(200, dto.ArtifactsToResponse(artifacts))
+}
