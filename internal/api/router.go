@@ -30,6 +30,7 @@ func RegisterRouter(e *echo.Echo, repo port.Repository, cfg *config.Config, mtxC
 	api.Use(authMiddleware.LoadUserPermissions(repo))
 
 	handler.RegisterStream(api, d)
+	handler.RegisterAsset(api, d)
 	handler.RegisterAlgorithm(api, d)
 	handler.RegisterAlgorithmBinding(api, d)
 	handler.RegisterRecord(api, d)

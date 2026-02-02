@@ -8,6 +8,27 @@
 ## [未发布]
 
 ### 新增
+- **MediaAsset 完整功能**（V1.0 迭代 1）
+  - 添加 MediaAsset 实体（internal/domain/media_asset.go）
+    - 支持视频、图片、音频三种类型
+    - 支持四种来源类型（live、vod、upload、generated）
+    - 支持资产派生追踪（parent_id）
+    - 支持标签系统和元数据存储
+  - 添加 MediaAssetRepository 接口和实现
+    - 完整的 CRUD 操作
+    - 支持复杂过滤和分页
+  - 添加 MediaAssetService（internal/app/media_asset.go）
+    - 完整的业务逻辑和验证
+    - 防止删除有子资产的资产
+  - 添加 MediaAsset API（internal/api/handler/asset.go）
+    - GET /api/v1/assets（列表，支持过滤）
+    - POST /api/v1/assets（创建）
+    - GET /api/v1/assets/:id（详情）
+    - PUT /api/v1/assets/:id（更新）
+    - DELETE /api/v1/assets/:id（删除）
+    - GET /api/v1/assets/:id/children（子资产列表）
+  - 数据库迁移：自动创建 media_assets 表
+
 - **项目规范**
   - 添加文档更新强制要求（每次功能开发或修改后必须更新文档）
   - 添加 Git 提交规范（遵循 Conventional Commits）

@@ -41,6 +41,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&domain.Role{},
 		&domain.Permission{},
 		&domain.Menu{},
+		&domain.MediaAsset{},
 	); err != nil {
 		return err
 	}
@@ -673,4 +674,106 @@ func (r *repository) GetMenusByRoleIDs(ctx context.Context, roleIDs []uuid.UUID)
 		return nil, err
 	}
 	return menus, nil
+}
+
+// MediaAsset methods
+
+func (r *repository) CreateMediaAsset(ctx context.Context, a *domain.MediaAsset) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	ensureID(&a.ID)
+	return r.db.WithContext(ctx).Create(a).Error
+}
+
+func (r *repository) GetMediaAsset(ctx context.Context, id uuid.UUID) (*domain.MediaAsset, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var a domain.MediaAsset
+	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&a).Error; err != nil {
+		return nil, err
+	}
+	return &a, nil
+}
+
+func (r *repository) ListMediaAssets(ctx context.Context, filter domain.MediaAssetFilter) ([]*domain.MediaAsset, int64, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, 0, err
+	}
+
+	q := r.db.WithContext(ctx).Model(&domain.MediaAsset{})
+
+	if filter.Type != nil {
+		q = q.Where("type = ?", *filter.Type)
+	}
+	if filter.SourceType != nil {
+		q = q.Where("source_type = ?", *filter.SourceType)
+	}
+	if filter.SourceID != nil {
+		q = q.Where("source_id = ?", *filter.SourceID)
+	}
+	if filter.ParentID != nil {
+		q = q.Where("parent_id = ?", *filter.ParentID)
+	}
+	if filter.Status != nil {
+		q = q.Where("status = ?", *filter.Status)
+	}
+	if len(filter.Tags) > 0 {
+		q = q.Where("tags @> ?", filter.Tags)
+	}
+	if filter.From != nil {
+		q = q.Where("created_at >= ?", *filter.From)
+	}
+	if filter.To != nil {
+		q = q.Where("created_at <= ?", *filter.To)
+	}
+
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var list []*domain.MediaAsset
+	if err := q.Limit(filter.Limit).Offset(filter.Offset).Order("created_at DESC").Find(&list).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return list, total, nil
+}
+
+func (r *repository) UpdateMediaAsset(ctx context.Context, a *domain.MediaAsset) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Save(a).Error
+}
+
+func (r *repository) DeleteMediaAsset(ctx context.Context, id uuid.UUID) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.MediaAsset{}).Error
+}
+
+func (r *repository) ListMediaAssetsBySource(ctx context.Context, sourceID uuid.UUID) ([]*domain.MediaAsset, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var list []*domain.MediaAsset
+	if err := r.db.WithContext(ctx).Where("source_id = ?", sourceID).Order("created_at DESC").Find(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+func (r *repository) ListMediaAssetsByParent(ctx context.Context, parentID uuid.UUID) ([]*domain.MediaAsset, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var list []*domain.MediaAsset
+	if err := r.db.WithContext(ctx).Where("parent_id = ?", parentID).Order("created_at DESC").Find(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
 }

@@ -80,4 +80,13 @@ type Repository interface {
 	UpdateMenu(ctx context.Context, m *domain.Menu) error
 	DeleteMenu(ctx context.Context, id uuid.UUID) error
 	GetMenusByRoleIDs(ctx context.Context, roleIDs []uuid.UUID) ([]*domain.Menu, error)
+
+	// MediaAsset
+	CreateMediaAsset(ctx context.Context, a *domain.MediaAsset) error
+	GetMediaAsset(ctx context.Context, id uuid.UUID) (*domain.MediaAsset, error)
+	ListMediaAssets(ctx context.Context, filter domain.MediaAssetFilter) ([]*domain.MediaAsset, int64, error)
+	UpdateMediaAsset(ctx context.Context, a *domain.MediaAsset) error
+	DeleteMediaAsset(ctx context.Context, id uuid.UUID) error
+	ListMediaAssetsBySource(ctx context.Context, sourceID uuid.UUID) ([]*domain.MediaAsset, error)
+	ListMediaAssetsByParent(ctx context.Context, parentID uuid.UUID) ([]*domain.MediaAsset, error)
 }

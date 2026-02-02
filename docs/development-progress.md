@@ -116,10 +116,52 @@
 
 **目标**: 实现新架构的核心实体和服务
 
-**任务清单**:
+**已完成（MediaAsset 完整功能）**:
+
+- [x] **实体层（Domain）**
+  - [x] MediaAsset 实体定义（media_asset.go）
+    - 支持视频、图片、音频三种类型
+    - 支持四种来源类型（live、vod、upload、generated）
+    - 支持资产派生追踪（parent_id）
+    - 支持标签系统（tags）
+    - 支持元数据存储（metadata）
+
+- [x] **端口层（Port）**
+  - [x] MediaAssetRepository 接口（7个方法）
+    - Create、Get、List、Update、Delete
+    - ListBySource、ListByParent
+
+- [x] **适配器层（Adapter）**
+  - [x] MediaAssetRepository 实现（GORM + PostgreSQL）
+    - 完整的 CRUD 实现
+    - 支持复杂过滤（类型、来源、状态、标签、时间范围）
+    - 支持分页查询
+    - AutoMigrate 集成
+
+- [x] **应用层（App）**
+  - [x] MediaAssetService 实现（media_asset.go）
+    - Create、Get、List、Update、Delete
+    - ListBySource、ListChildren
+    - 完整的业务验证逻辑
+    - 防止删除有子资产的资产
+
+- [x] **API 层（API）**
+  - [x] MediaAsset DTO（asset.go）
+    - Request：AssetCreateReq、AssetUpdateReq、AssetListQuery
+    - Response：AssetResponse、AssetListResponse
+    - 转换函数：AssetToResponse、AssetsToResponse
+  - [x] MediaAsset Handler（asset.go）
+    - GET /assets（列表，支持过滤）
+    - POST /assets（创建）
+    - GET /assets/:id（详情）
+    - PUT /assets/:id（更新）
+    - DELETE /assets/:id（删除）
+    - GET /assets/:id/children（子资产列表）
+  - [x] 路由注册（router.go）
+
+**待实现**:
 
 - [ ] **实体层（Domain）**
-  - [ ] MediaAsset 实体定义
   - [ ] Operator 实体定义（重构 Algorithm）
   - [ ] Workflow 实体定义（替代 AlgorithmBinding）
   - [ ] Task 实体定义
@@ -127,7 +169,6 @@
   - [ ] WorkflowNode、WorkflowEdge 定义
 
 - [ ] **端口层（Port）**
-  - [ ] MediaAssetRepository 接口
   - [ ] OperatorRepository 接口
   - [ ] WorkflowRepository 接口
   - [ ] TaskRepository 接口
@@ -136,7 +177,6 @@
   - [ ] WorkflowEngine 接口（工作流引擎）
 
 - [ ] **应用层（App）**
-  - [ ] MediaAssetService 实现
   - [ ] OperatorService 实现
   - [ ] WorkflowService 实现
   - [ ] TaskService 实现
@@ -144,7 +184,6 @@
   - [ ] Scheduler 重构（适配新架构）
 
 - [ ] **适配器层（Adapter）**
-  - [ ] MediaAssetRepository 实现（GORM）
   - [ ] OperatorRepository 实现（GORM）
   - [ ] WorkflowRepository 实现（GORM）
   - [ ] TaskRepository 实现（GORM）
@@ -152,7 +191,6 @@
   - [ ] SimpleWorkflowEngine 实现（单算子）
 
 - [ ] **API 层（API）**
-  - [ ] MediaAsset Handler + DTO
   - [ ] Operator Handler + DTO
   - [ ] Workflow Handler + DTO
   - [ ] Task Handler + DTO
@@ -160,7 +198,11 @@
   - [ ] 路由注册
 
 - [ ] **数据库迁移**
-  - [ ] 创建新表（media_assets、operators、workflows、tasks、artifacts）
+  - [x] 创建 media_assets 表（AutoMigrate）
+  - [ ] 创建 operators 表
+  - [ ] 创建 workflows 表
+  - [ ] 创建 tasks 表
+  - [ ] 创建 artifacts 表
   - [ ] 数据迁移脚本（streams → media_sources、algorithms → operators）
   - [ ] 删除旧表（algorithm_bindings、inference_results）
 
