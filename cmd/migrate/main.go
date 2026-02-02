@@ -7,7 +7,6 @@ import (
 	"log"
 
 	"goyavision/config"
-	"goyavision/internal/adapter/persistence"
 	"goyavision/internal/domain"
 
 	"github.com/google/uuid"
@@ -46,7 +45,6 @@ func main() {
 		log.Fatalf("连接数据库失败: %v", err)
 	}
 
-	repo := persistence.NewRepository(db)
 	ctx := context.Background()
 
 	log.Println("\n📊 数据迁移计划:")
@@ -61,11 +59,11 @@ func main() {
 
 	log.Println("\n开始迁移...")
 
-	if err := migrateStreamsToAssets(ctx, db, repo); err != nil {
+	if err := migrateStreamsToAssets(ctx, db); err != nil {
 		log.Fatalf("迁移 streams 失败: %v", err)
 	}
 
-	if err := migrateAlgorithmsToOperators(ctx, db, repo); err != nil {
+	if err := migrateAlgorithmsToOperators(ctx, db); err != nil {
 		log.Fatalf("迁移 algorithms 失败: %v", err)
 	}
 
@@ -78,7 +76,22 @@ func main() {
 	log.Println("\n✅ 迁移完成！")
 }
 
-func migrateStreamsToAssets(ctx context.Context, db *gorm.DB, repo *persistence.Repository) error {
+// LegacyAlgorithm 旧算法结构（用于迁移）
+type LegacyAlgorithm struct {
+	ID          uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Code        string
+	Name        string
+	Description string
+	Type        string
+	Endpoint    string
+	InputSpec   []byte `gorm:"type:jsonb;column:input_spec"`
+	OutputSpec  []byte `gorm:"type:jsonb;column:output_spec"`
+	Config      []byte `gorm:"type:jsonb"`
+}
+
+func (LegacyAlgorithm) TableName() string { return "algorithms" }
+
+func migrateStreamsToAssets(ctx context.Context, db *gorm.DB) error {
 	log.Println("\n[1/3] 迁移 Streams → MediaAssets")
 
 	var streams []domain.Stream
@@ -100,12 +113,11 @@ func migrateStreamsToAssets(ctx context.Context, db *gorm.DB, repo *persistence.
 		asset := &domain.MediaAsset{
 			ID:         uuid.New(),
 			Type:       assetType,
-			SourceType: domain.AssetSourceTypeStreamCapture,
+			SourceType: domain.AssetSourceLive,
 			SourceID:   &stream.ID,
 			Name:       stream.Name,
 			Path:       stream.URL,
 			Format:     "rtsp",
-			Status:     domain.AssetStatusReady,
 		}
 
 		if stream.Enabled {
@@ -114,7 +126,7 @@ func migrateStreamsToAssets(ctx context.Context, db *gorm.DB, repo *persistence.
 			asset.Status = domain.AssetStatusPending
 		}
 
-		if err := repo.CreateMediaAsset(ctx, asset); err != nil {
+		if err := db.WithContext(ctx).Create(asset).Error; err != nil {
 			log.Printf("  ⚠️  跳过流 %s: %v", stream.Name, err)
 			continue
 		}
@@ -127,10 +139,10 @@ func migrateStreamsToAssets(ctx context.Context, db *gorm.DB, repo *persistence.
 	return nil
 }
 
-func migrateAlgorithmsToOperators(ctx context.Context, db *gorm.DB, repo *persistence.Repository) error {
+func migrateAlgorithmsToOperators(ctx context.Context, db *gorm.DB) error {
 	log.Println("\n[2/3] 迁移 Algorithms → Operators")
 
-	var algorithms []domain.Algorithm
+	var algorithms []LegacyAlgorithm
 	if err := db.Find(&algorithms).Error; err != nil {
 		return err
 	}
@@ -160,11 +172,11 @@ func migrateAlgorithmsToOperators(ctx context.Context, db *gorm.DB, repo *persis
 			InputSchema: alg.InputSpec,
 			OutputSpec:  alg.OutputSpec,
 			Config:      alg.Config,
-			Status:      domain.OperatorStatusPublished,
+			Status:      domain.OperatorStatusEnabled,
 			IsBuiltin:   false,
 		}
 
-		if err := repo.CreateOperator(ctx, operator); err != nil {
+		if err := db.WithContext(ctx).Create(operator).Error; err != nil {
 			log.Printf("  ⚠️  跳过算法 %s: %v", alg.Name, err)
 			continue
 		}
