@@ -32,6 +32,7 @@ func RegisterRouter(e *echo.Echo, repo port.Repository, cfg *config.Config, mtxC
 	handler.RegisterStream(api, d)
 	handler.RegisterAsset(api, d)
 	handler.RegisterOperator(api, d)
+	handler.RegisterWorkflow(api, d)
 	handler.RegisterAlgorithm(api, d)
 	handler.RegisterAlgorithmBinding(api, d)
 	handler.RegisterRecord(api, d)

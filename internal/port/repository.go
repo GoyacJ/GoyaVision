@@ -99,4 +99,24 @@ type Repository interface {
 	DeleteOperator(ctx context.Context, id uuid.UUID) error
 	ListEnabledOperators(ctx context.Context) ([]*domain.Operator, error)
 	ListOperatorsByCategory(ctx context.Context, category domain.OperatorCategory) ([]*domain.Operator, error)
+
+	// Workflow
+	CreateWorkflow(ctx context.Context, w *domain.Workflow) error
+	GetWorkflow(ctx context.Context, id uuid.UUID) (*domain.Workflow, error)
+	GetWorkflowByCode(ctx context.Context, code string) (*domain.Workflow, error)
+	GetWorkflowWithNodes(ctx context.Context, id uuid.UUID) (*domain.Workflow, error)
+	ListWorkflows(ctx context.Context, filter domain.WorkflowFilter) ([]*domain.Workflow, int64, error)
+	UpdateWorkflow(ctx context.Context, w *domain.Workflow) error
+	DeleteWorkflow(ctx context.Context, id uuid.UUID) error
+	ListEnabledWorkflows(ctx context.Context) ([]*domain.Workflow, error)
+
+	// WorkflowNode
+	CreateWorkflowNode(ctx context.Context, n *domain.WorkflowNode) error
+	ListWorkflowNodes(ctx context.Context, workflowID uuid.UUID) ([]*domain.WorkflowNode, error)
+	DeleteWorkflowNodes(ctx context.Context, workflowID uuid.UUID) error
+
+	// WorkflowEdge
+	CreateWorkflowEdge(ctx context.Context, e *domain.WorkflowEdge) error
+	ListWorkflowEdges(ctx context.Context, workflowID uuid.UUID) ([]*domain.WorkflowEdge, error)
+	DeleteWorkflowEdges(ctx context.Context, workflowID uuid.UUID) error
 }

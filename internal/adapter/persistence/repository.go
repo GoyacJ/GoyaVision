@@ -43,6 +43,9 @@ func AutoMigrate(db *gorm.DB) error {
 		&domain.Menu{},
 		&domain.MediaAsset{},
 		&domain.Operator{},
+		&domain.Workflow{},
+		&domain.WorkflowNode{},
+		&domain.WorkflowEdge{},
 	); err != nil {
 		return err
 	}
@@ -885,4 +888,174 @@ func (r *repository) ListOperatorsByCategory(ctx context.Context, category domai
 		return nil, err
 	}
 	return list, nil
+}
+
+// Workflow methods
+
+func (r *repository) CreateWorkflow(ctx context.Context, w *domain.Workflow) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	ensureID(&w.ID)
+	return r.db.WithContext(ctx).Create(w).Error
+}
+
+func (r *repository) GetWorkflow(ctx context.Context, id uuid.UUID) (*domain.Workflow, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var w domain.Workflow
+	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&w).Error; err != nil {
+		return nil, err
+	}
+	return &w, nil
+}
+
+func (r *repository) GetWorkflowByCode(ctx context.Context, code string) (*domain.Workflow, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var w domain.Workflow
+	if err := r.db.WithContext(ctx).Where("code = ?", code).First(&w).Error; err != nil {
+		return nil, err
+	}
+	return &w, nil
+}
+
+func (r *repository) GetWorkflowWithNodes(ctx context.Context, id uuid.UUID) (*domain.Workflow, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var w domain.Workflow
+	if err := r.db.WithContext(ctx).
+		Preload("Nodes.Operator").
+		Preload("Edges").
+		Where("id = ?", id).
+		First(&w).Error; err != nil {
+		return nil, err
+	}
+	return &w, nil
+}
+
+func (r *repository) ListWorkflows(ctx context.Context, filter domain.WorkflowFilter) ([]*domain.Workflow, int64, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, 0, err
+	}
+
+	q := r.db.WithContext(ctx).Model(&domain.Workflow{})
+
+	if filter.Status != nil {
+		q = q.Where("status = ?", *filter.Status)
+	}
+	if filter.TriggerType != nil {
+		q = q.Where("trigger_type = ?", *filter.TriggerType)
+	}
+	if len(filter.Tags) > 0 {
+		q = q.Where("tags @> ?", filter.Tags)
+	}
+	if filter.Keyword != "" {
+		keyword := "%" + filter.Keyword + "%"
+		q = q.Where("name ILIKE ? OR description ILIKE ? OR code ILIKE ?", keyword, keyword, keyword)
+	}
+
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var list []*domain.Workflow
+	if err := q.Limit(filter.Limit).Offset(filter.Offset).Order("created_at DESC").Find(&list).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return list, total, nil
+}
+
+func (r *repository) UpdateWorkflow(ctx context.Context, w *domain.Workflow) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Save(w).Error
+}
+
+func (r *repository) DeleteWorkflow(ctx context.Context, id uuid.UUID) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.Workflow{}).Error
+}
+
+func (r *repository) ListEnabledWorkflows(ctx context.Context) ([]*domain.Workflow, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var list []*domain.Workflow
+	if err := r.db.WithContext(ctx).
+		Preload("Nodes.Operator").
+		Preload("Edges").
+		Where("status = ?", domain.WorkflowStatusEnabled).
+		Order("created_at DESC").
+		Find(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+// WorkflowNode methods
+
+func (r *repository) CreateWorkflowNode(ctx context.Context, n *domain.WorkflowNode) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	ensureID(&n.ID)
+	return r.db.WithContext(ctx).Create(n).Error
+}
+
+func (r *repository) ListWorkflowNodes(ctx context.Context, workflowID uuid.UUID) ([]*domain.WorkflowNode, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var list []*domain.WorkflowNode
+	if err := r.db.WithContext(ctx).
+		Preload("Operator").
+		Where("workflow_id = ?", workflowID).
+		Find(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+func (r *repository) DeleteWorkflowNodes(ctx context.Context, workflowID uuid.UUID) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Where("workflow_id = ?", workflowID).Delete(&domain.WorkflowNode{}).Error
+}
+
+// WorkflowEdge methods
+
+func (r *repository) CreateWorkflowEdge(ctx context.Context, e *domain.WorkflowEdge) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	ensureID(&e.ID)
+	return r.db.WithContext(ctx).Create(e).Error
+}
+
+func (r *repository) ListWorkflowEdges(ctx context.Context, workflowID uuid.UUID) ([]*domain.WorkflowEdge, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var list []*domain.WorkflowEdge
+	if err := r.db.WithContext(ctx).Where("workflow_id = ?", workflowID).Find(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+func (r *repository) DeleteWorkflowEdges(ctx context.Context, workflowID uuid.UUID) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Where("workflow_id = ?", workflowID).Delete(&domain.WorkflowEdge{}).Error
 }

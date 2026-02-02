@@ -57,6 +57,37 @@
     - GET /api/v1/operators/category/:category（按分类列出）
   - 数据库迁移：自动创建 operators 表
 
+- **Workflow 完整功能**（V1.0 迭代 1）
+  - 添加 Workflow 实体（internal/domain/workflow.go）
+    - 支持五种触发类型（manual、schedule、event、asset_new、asset_done）
+    - 支持 DAG 工作流定义（WorkflowNode、WorkflowEdge）
+    - 支持节点配置和位置信息
+    - 支持边条件和路由
+    - 支持版本管理和状态控制（enabled、disabled、draft）
+  - 添加 WorkflowNode 和 WorkflowEdge 实体
+    - WorkflowNode：节点键、类型、关联算子、配置、位置
+    - WorkflowEdge：源节点、目标节点、条件
+  - 添加 WorkflowRepository 接口和实现
+    - 完整的 CRUD 操作
+    - 支持预加载节点和边（Preload）
+    - 支持复杂过滤（状态、触发类型、标签、关键词搜索）
+    - 支持级联删除（CASCADE）
+  - 添加 WorkflowService（internal/app/workflow.go）
+    - Create、Get、GetWithNodes、GetByCode、List、Update、Delete
+    - Enable、Disable、ListEnabled
+    - 节点和边的级联管理
+    - 启用前验证工作流完整性
+    - 代码唯一性检查
+  - 添加 Workflow API（internal/api/handler/workflow.go）
+    - GET /api/v1/workflows（列表，支持过滤）
+    - POST /api/v1/workflows（创建）
+    - GET /api/v1/workflows/:id（详情，支持 with_nodes 参数）
+    - PUT /api/v1/workflows/:id（更新）
+    - DELETE /api/v1/workflows/:id（删除）
+    - POST /api/v1/workflows/:id/enable（启用）
+    - POST /api/v1/workflows/:id/disable（禁用）
+  - 数据库迁移：自动创建 workflows、workflow_nodes、workflow_edges 表
+
 - **项目规范**
   - 添加文档更新强制要求（每次功能开发或修改后必须更新文档）
   - 添加 Git 提交规范（遵循 Conventional Commits）

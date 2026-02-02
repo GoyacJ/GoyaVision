@@ -116,7 +116,7 @@
 
 **目标**: 实现新架构的核心实体和服务
 
-**已完成（MediaAsset + Operator 完整功能）**:
+**已完成（MediaAsset + Operator + Workflow 完整功能）**:
 
 - [x] **实体层（Domain）**
   - [x] MediaAsset 实体定义（media_asset.go）
@@ -131,6 +131,12 @@
     - 支持版本管理和状态控制
     - 支持内置算子标识
     - 定义标准输入输出协议（OperatorInput、OperatorOutput）
+  - [x] Workflow 实体定义（workflow.go）
+    - 支持五种触发类型（manual、schedule、event、asset_new、asset_done）
+    - 支持 DAG 工作流定义（WorkflowNode、WorkflowEdge）
+    - 支持节点配置和位置信息
+    - 支持边条件和路由
+    - 支持版本管理和状态控制（enabled、disabled、draft）
 
 - [x] **端口层（Port）**
   - [x] MediaAssetRepository 接口（7个方法）
@@ -139,6 +145,12 @@
   - [x] OperatorRepository 接口（8个方法）
     - Create、Get、GetByCode、List、Update、Delete
     - ListEnabled、ListByCategory
+  - [x] WorkflowRepository 接口（8个方法）
+    - Create、Get、GetByCode、GetWithNodes、List、Update、Delete
+    - ListEnabled
+  - [x] WorkflowNode/Edge Repository 接口（6个方法）
+    - CreateNode、ListNodes、DeleteNodes
+    - CreateEdge、ListEdges、DeleteEdges
 
 - [x] **适配器层（Adapter）**
   - [x] MediaAssetRepository 实现（GORM + PostgreSQL）
@@ -150,6 +162,12 @@
     - 完整的 CRUD 实现
     - 支持复杂过滤（分类、类型、状态、内置标识、关键词搜索）
     - 支持分页查询
+    - AutoMigrate 集成
+  - [x] WorkflowRepository 实现（GORM + PostgreSQL）
+    - 完整的 CRUD 实现
+    - 支持复杂过滤（状态、触发类型、标签、关键词搜索）
+    - 支持预加载节点和边（Preload）
+    - 级联删除支持（CASCADE）
     - AutoMigrate 集成
 
 - [x] **应用层（App）**
@@ -163,6 +181,13 @@
     - Enable、Disable、ListEnabled、ListByCategory
     - 完整的业务验证逻辑
     - 防止修改/删除内置算子
+    - 代码唯一性检查
+  - [x] WorkflowService 实现（workflow.go）
+    - Create、Get、GetWithNodes、GetByCode、List、Update、Delete
+    - Enable、Disable、ListEnabled
+    - 完整的业务验证逻辑
+    - 节点和边的级联管理
+    - 启用前验证工作流完整性
     - 代码唯一性检查
 
 - [x] **API 层（API）**
@@ -190,44 +215,52 @@
     - POST /operators/:id/enable（启用）
     - POST /operators/:id/disable（禁用）
     - GET /operators/category/:category（按分类列出）
+  - [x] Workflow DTO（workflow.go）
+    - Request：WorkflowCreateReq、WorkflowUpdateReq、WorkflowListQuery
+    - Response：WorkflowResponse、WorkflowWithNodesResponse、WorkflowNodeResponse、WorkflowEdgeResponse
+    - 转换函数：WorkflowToResponse、WorkflowToResponseWithNodes、WorkflowsToResponse
+  - [x] Workflow Handler（workflow.go）
+    - GET /workflows（列表，支持过滤）
+    - POST /workflows（创建）
+    - GET /workflows/:id（详情，支持 with_nodes 参数）
+    - PUT /workflows/:id（更新）
+    - DELETE /workflows/:id（删除）
+    - POST /workflows/:id/enable（启用）
+    - POST /workflows/:id/disable（禁用）
   - [x] 路由注册（router.go）
 
 **待实现**:
 
 - [ ] **实体层（Domain）**
-  - [ ] Workflow 实体定义（替代 AlgorithmBinding）
   - [ ] Task 实体定义
   - [ ] Artifact 实体定义
-  - [ ] WorkflowNode、WorkflowEdge 定义
 
 - [ ] **端口层（Port）**
-  - [ ] WorkflowRepository 接口
   - [ ] TaskRepository 接口
   - [ ] ArtifactRepository 接口
   - [ ] OperatorPort 接口（算子执行）
   - [ ] WorkflowEngine 接口（工作流引擎）
 
 - [ ] **应用层（App）**
-  - [ ] WorkflowService 实现
   - [ ] TaskService 实现
   - [ ] ArtifactService 实现
   - [ ] Scheduler 重构（适配新架构）
 
 - [ ] **适配器层（Adapter）**
-  - [ ] WorkflowRepository 实现（GORM）
   - [ ] TaskRepository 实现（GORM）
   - [ ] ArtifactRepository 实现（GORM）
   - [ ] SimpleWorkflowEngine 实现（单算子）
 
 - [ ] **API 层（API）**
-  - [ ] Workflow Handler + DTO
   - [ ] Task Handler + DTO
   - [ ] Artifact Handler + DTO
 
 - [ ] **数据库迁移**
   - [x] 创建 media_assets 表（AutoMigrate）
   - [x] 创建 operators 表（AutoMigrate）
-  - [ ] 创建 workflows 表
+  - [x] 创建 workflows 表（AutoMigrate）
+  - [x] 创建 workflow_nodes 表（AutoMigrate）
+  - [x] 创建 workflow_edges 表（AutoMigrate）
   - [ ] 创建 tasks 表
   - [ ] 创建 artifacts 表
   - [ ] 数据迁移脚本（streams → media_sources、algorithms → operators）
