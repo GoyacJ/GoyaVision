@@ -78,7 +78,7 @@ func (s *WorkflowScheduler) ScheduleWorkflow(ctx context.Context, workflow *doma
 
 	var triggerConf domain.TriggerConfig
 	if workflow.TriggerConf != nil && len(workflow.TriggerConf) > 0 {
-		if err := workflow.TriggerConf.Unmarshal(&triggerConf); err != nil {
+		if err := json.Unmarshal(workflow.TriggerConf, &triggerConf); err != nil {
 			return fmt.Errorf("parse trigger config: %w", err)
 		}
 	}

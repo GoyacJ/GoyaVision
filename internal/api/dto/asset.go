@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"encoding/json"
 	"time"
 
 	"goyavision/internal/domain"
@@ -78,15 +79,13 @@ func AssetToResponse(a *domain.MediaAsset) *AssetResponse {
 	}
 
 	var metadata map[string]interface{}
-	if a.Metadata != nil {
-		if err := a.Metadata.Unmarshal(&metadata); err == nil {
-		}
+	if a.Metadata != nil && len(a.Metadata) > 0 {
+		json.Unmarshal(a.Metadata, &metadata)
 	}
 
 	var tags []string
-	if a.Tags != nil {
-		if err := a.Tags.Unmarshal(&tags); err == nil {
-		}
+	if a.Tags != nil && len(a.Tags) > 0 {
+		json.Unmarshal(a.Tags, &tags)
 	}
 
 	return &AssetResponse{

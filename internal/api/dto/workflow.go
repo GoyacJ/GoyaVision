@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"encoding/json"
 	"time"
 
 	"goyavision/internal/domain"
@@ -123,15 +124,13 @@ func WorkflowToResponse(w *domain.Workflow) *WorkflowResponse {
 	}
 
 	var triggerConf map[string]interface{}
-	if w.TriggerConf != nil {
-		if err := w.TriggerConf.Unmarshal(&triggerConf); err == nil {
-		}
+	if w.TriggerConf != nil && len(w.TriggerConf) > 0 {
+		json.Unmarshal(w.TriggerConf, &triggerConf)
 	}
 
 	var tags []string
-	if w.Tags != nil {
-		if err := w.Tags.Unmarshal(&tags); err == nil {
-		}
+	if w.Tags != nil && len(w.Tags) > 0 {
+		json.Unmarshal(w.Tags, &tags)
 	}
 
 	return &WorkflowResponse{
@@ -156,29 +155,25 @@ func WorkflowToResponseWithNodes(w *domain.Workflow) *WorkflowWithNodesResponse 
 	}
 
 	var triggerConf map[string]interface{}
-	if w.TriggerConf != nil {
-		if err := w.TriggerConf.Unmarshal(&triggerConf); err == nil {
-		}
+	if w.TriggerConf != nil && len(w.TriggerConf) > 0 {
+		json.Unmarshal(w.TriggerConf, &triggerConf)
 	}
 
 	var tags []string
-	if w.Tags != nil {
-		if err := w.Tags.Unmarshal(&tags); err == nil {
-		}
+	if w.Tags != nil && len(w.Tags) > 0 {
+		json.Unmarshal(w.Tags, &tags)
 	}
 
 	nodes := make([]WorkflowNodeResponse, 0, len(w.Nodes))
 	for _, n := range w.Nodes {
 		var config map[string]interface{}
-		if n.Config != nil {
-			if err := n.Config.Unmarshal(&config); err == nil {
-			}
+		if n.Config != nil && len(n.Config) > 0 {
+			json.Unmarshal(n.Config, &config)
 		}
 
 		var position map[string]interface{}
-		if n.Position != nil {
-			if err := n.Position.Unmarshal(&position); err == nil {
-			}
+		if n.Position != nil && len(n.Position) > 0 {
+			json.Unmarshal(n.Position, &position)
 		}
 
 		nodeResp := WorkflowNodeResponse{
@@ -200,9 +195,8 @@ func WorkflowToResponseWithNodes(w *domain.Workflow) *WorkflowWithNodesResponse 
 	edges := make([]WorkflowEdgeResponse, 0, len(w.Edges))
 	for _, e := range w.Edges {
 		var condition map[string]interface{}
-		if e.Condition != nil {
-			if err := e.Condition.Unmarshal(&condition); err == nil {
-			}
+		if e.Condition != nil && len(e.Condition) > 0 {
+			json.Unmarshal(e.Condition, &condition)
 		}
 
 		edges = append(edges, WorkflowEdgeResponse{

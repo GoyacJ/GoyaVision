@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"encoding/json"
 	"time"
 
 	"goyavision/internal/domain"
@@ -85,27 +86,23 @@ func OperatorToResponse(o *domain.Operator) *OperatorResponse {
 	}
 
 	var inputSchema map[string]interface{}
-	if o.InputSchema != nil {
-		if err := o.InputSchema.Unmarshal(&inputSchema); err == nil {
-		}
+	if o.InputSchema != nil && len(o.InputSchema) > 0 {
+		json.Unmarshal(o.InputSchema, &inputSchema)
 	}
 
 	var outputSpec map[string]interface{}
-	if o.OutputSpec != nil {
-		if err := o.OutputSpec.Unmarshal(&outputSpec); err == nil {
-		}
+	if o.OutputSpec != nil && len(o.OutputSpec) > 0 {
+		json.Unmarshal(o.OutputSpec, &outputSpec)
 	}
 
 	var config map[string]interface{}
-	if o.Config != nil {
-		if err := o.Config.Unmarshal(&config); err == nil {
-		}
+	if o.Config != nil && len(o.Config) > 0 {
+		json.Unmarshal(o.Config, &config)
 	}
 
 	var tags []string
-	if o.Tags != nil {
-		if err := o.Tags.Unmarshal(&tags); err == nil {
-		}
+	if o.Tags != nil && len(o.Tags) > 0 {
+		json.Unmarshal(o.Tags, &tags)
 	}
 
 	return &OperatorResponse{

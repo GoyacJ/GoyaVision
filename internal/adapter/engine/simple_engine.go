@@ -102,19 +102,18 @@ func (e *SimpleWorkflowEngine) Execute(ctx context.Context, workflow *domain.Wor
 		}
 
 		var inputParams map[string]interface{}
-		if task.InputParams != nil {
-			if err := task.InputParams.Unmarshal(&inputParams); err != nil {
+		if task.InputParams != nil && len(task.InputParams) > 0 {
+			if err := json.Unmarshal(task.InputParams, &inputParams); err != nil {
 				return fmt.Errorf("failed to unmarshal input params: %w", err)
 			}
 		}
 
 		input := &domain.OperatorInput{
-			AssetID: task.AssetID,
-			Params:  inputParams,
+			Params: inputParams,
 		}
 
 		if task.AssetID != nil {
-			input.AssetID = task.AssetID
+			input.AssetID = *task.AssetID
 		}
 
 		output, err := e.executor.Execute(execCtx, operator, input)

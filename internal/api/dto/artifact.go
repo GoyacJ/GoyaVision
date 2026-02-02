@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"encoding/json"
 	"time"
 
 	"goyavision/internal/domain"
@@ -52,9 +53,8 @@ func ArtifactToResponse(a *domain.Artifact) *ArtifactResponse {
 	}
 
 	var data map[string]interface{}
-	if a.Data != nil {
-		if err := a.Data.Unmarshal(&data); err == nil {
-		}
+	if a.Data != nil && len(a.Data) > 0 {
+		json.Unmarshal(a.Data, &data)
 	}
 
 	resp := &ArtifactResponse{

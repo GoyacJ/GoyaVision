@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"encoding/json"
 	"time"
 
 	"goyavision/internal/domain"
@@ -93,9 +94,8 @@ func TaskToResponse(t *domain.Task) *TaskResponse {
 	}
 
 	var inputParams map[string]interface{}
-	if t.InputParams != nil {
-		if err := t.InputParams.Unmarshal(&inputParams); err == nil {
-		}
+	if t.InputParams != nil && len(t.InputParams) > 0 {
+		json.Unmarshal(t.InputParams, &inputParams)
 	}
 
 	return &TaskResponse{
@@ -122,9 +122,8 @@ func TaskToResponseWithRelations(t *domain.Task) *TaskWithRelationsResponse {
 	}
 
 	var inputParams map[string]interface{}
-	if t.InputParams != nil {
-		if err := t.InputParams.Unmarshal(&inputParams); err == nil {
-		}
+	if t.InputParams != nil && len(t.InputParams) > 0 {
+		json.Unmarshal(t.InputParams, &inputParams)
 	}
 
 	resp := &TaskWithRelationsResponse{
