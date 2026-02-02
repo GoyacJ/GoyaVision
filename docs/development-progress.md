@@ -116,7 +116,7 @@
 
 **目标**: 实现新架构的核心实体和服务
 
-**已完成（MediaAsset 完整功能）**:
+**已完成（MediaAsset + Operator 完整功能）**:
 
 - [x] **实体层（Domain）**
   - [x] MediaAsset 实体定义（media_asset.go）
@@ -125,16 +125,30 @@
     - 支持资产派生追踪（parent_id）
     - 支持标签系统（tags）
     - 支持元数据存储（metadata）
+  - [x] Operator 实体定义（operator.go）
+    - 支持四种分类（analysis、processing、generation、utility）
+    - 支持 15+ 种算子类型（检测、OCR、ASR、剪辑等）
+    - 支持版本管理和状态控制
+    - 支持内置算子标识
+    - 定义标准输入输出协议（OperatorInput、OperatorOutput）
 
 - [x] **端口层（Port）**
   - [x] MediaAssetRepository 接口（7个方法）
     - Create、Get、List、Update、Delete
     - ListBySource、ListByParent
+  - [x] OperatorRepository 接口（8个方法）
+    - Create、Get、GetByCode、List、Update、Delete
+    - ListEnabled、ListByCategory
 
 - [x] **适配器层（Adapter）**
   - [x] MediaAssetRepository 实现（GORM + PostgreSQL）
     - 完整的 CRUD 实现
     - 支持复杂过滤（类型、来源、状态、标签、时间范围）
+    - 支持分页查询
+    - AutoMigrate 集成
+  - [x] OperatorRepository 实现（GORM + PostgreSQL）
+    - 完整的 CRUD 实现
+    - 支持复杂过滤（分类、类型、状态、内置标识、关键词搜索）
     - 支持分页查询
     - AutoMigrate 集成
 
@@ -144,6 +158,12 @@
     - ListBySource、ListChildren
     - 完整的业务验证逻辑
     - 防止删除有子资产的资产
+  - [x] OperatorService 实现（operator.go）
+    - Create、Get、GetByCode、List、Update、Delete
+    - Enable、Disable、ListEnabled、ListByCategory
+    - 完整的业务验证逻辑
+    - 防止修改/删除内置算子
+    - 代码唯一性检查
 
 - [x] **API 层（API）**
   - [x] MediaAsset DTO（asset.go）
@@ -157,19 +177,30 @@
     - PUT /assets/:id（更新）
     - DELETE /assets/:id（删除）
     - GET /assets/:id/children（子资产列表）
+  - [x] Operator DTO（operator.go）
+    - Request：OperatorCreateReq、OperatorUpdateReq、OperatorListQuery
+    - Response：OperatorResponse、OperatorListResponse
+    - 转换函数：OperatorToResponse、OperatorsToResponse
+  - [x] Operator Handler（operator.go）
+    - GET /operators（列表，支持过滤）
+    - POST /operators（创建）
+    - GET /operators/:id（详情）
+    - PUT /operators/:id（更新）
+    - DELETE /operators/:id（删除）
+    - POST /operators/:id/enable（启用）
+    - POST /operators/:id/disable（禁用）
+    - GET /operators/category/:category（按分类列出）
   - [x] 路由注册（router.go）
 
 **待实现**:
 
 - [ ] **实体层（Domain）**
-  - [ ] Operator 实体定义（重构 Algorithm）
   - [ ] Workflow 实体定义（替代 AlgorithmBinding）
   - [ ] Task 实体定义
   - [ ] Artifact 实体定义
   - [ ] WorkflowNode、WorkflowEdge 定义
 
 - [ ] **端口层（Port）**
-  - [ ] OperatorRepository 接口
   - [ ] WorkflowRepository 接口
   - [ ] TaskRepository 接口
   - [ ] ArtifactRepository 接口
@@ -177,29 +208,25 @@
   - [ ] WorkflowEngine 接口（工作流引擎）
 
 - [ ] **应用层（App）**
-  - [ ] OperatorService 实现
   - [ ] WorkflowService 实现
   - [ ] TaskService 实现
   - [ ] ArtifactService 实现
   - [ ] Scheduler 重构（适配新架构）
 
 - [ ] **适配器层（Adapter）**
-  - [ ] OperatorRepository 实现（GORM）
   - [ ] WorkflowRepository 实现（GORM）
   - [ ] TaskRepository 实现（GORM）
   - [ ] ArtifactRepository 实现（GORM）
   - [ ] SimpleWorkflowEngine 实现（单算子）
 
 - [ ] **API 层（API）**
-  - [ ] Operator Handler + DTO
   - [ ] Workflow Handler + DTO
   - [ ] Task Handler + DTO
   - [ ] Artifact Handler + DTO
-  - [ ] 路由注册
 
 - [ ] **数据库迁移**
   - [x] 创建 media_assets 表（AutoMigrate）
-  - [ ] 创建 operators 表
+  - [x] 创建 operators 表（AutoMigrate）
   - [ ] 创建 workflows 表
   - [ ] 创建 tasks 表
   - [ ] 创建 artifacts 表

@@ -42,6 +42,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&domain.Permission{},
 		&domain.Menu{},
 		&domain.MediaAsset{},
+		&domain.Operator{},
 	); err != nil {
 		return err
 	}
@@ -773,6 +774,114 @@ func (r *repository) ListMediaAssetsByParent(ctx context.Context, parentID uuid.
 	}
 	var list []*domain.MediaAsset
 	if err := r.db.WithContext(ctx).Where("parent_id = ?", parentID).Order("created_at DESC").Find(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+// Operator methods
+
+func (r *repository) CreateOperator(ctx context.Context, o *domain.Operator) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	ensureID(&o.ID)
+	return r.db.WithContext(ctx).Create(o).Error
+}
+
+func (r *repository) GetOperator(ctx context.Context, id uuid.UUID) (*domain.Operator, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var o domain.Operator
+	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&o).Error; err != nil {
+		return nil, err
+	}
+	return &o, nil
+}
+
+func (r *repository) GetOperatorByCode(ctx context.Context, code string) (*domain.Operator, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var o domain.Operator
+	if err := r.db.WithContext(ctx).Where("code = ?", code).First(&o).Error; err != nil {
+		return nil, err
+	}
+	return &o, nil
+}
+
+func (r *repository) ListOperators(ctx context.Context, filter domain.OperatorFilter) ([]*domain.Operator, int64, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, 0, err
+	}
+
+	q := r.db.WithContext(ctx).Model(&domain.Operator{})
+
+	if filter.Category != nil {
+		q = q.Where("category = ?", *filter.Category)
+	}
+	if filter.Type != nil {
+		q = q.Where("type = ?", *filter.Type)
+	}
+	if filter.Status != nil {
+		q = q.Where("status = ?", *filter.Status)
+	}
+	if filter.IsBuiltin != nil {
+		q = q.Where("is_builtin = ?", *filter.IsBuiltin)
+	}
+	if len(filter.Tags) > 0 {
+		q = q.Where("tags @> ?", filter.Tags)
+	}
+	if filter.Keyword != "" {
+		keyword := "%" + filter.Keyword + "%"
+		q = q.Where("name ILIKE ? OR description ILIKE ? OR code ILIKE ?", keyword, keyword, keyword)
+	}
+
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var list []*domain.Operator
+	if err := q.Limit(filter.Limit).Offset(filter.Offset).Order("created_at DESC").Find(&list).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return list, total, nil
+}
+
+func (r *repository) UpdateOperator(ctx context.Context, o *domain.Operator) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Save(o).Error
+}
+
+func (r *repository) DeleteOperator(ctx context.Context, id uuid.UUID) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.Operator{}).Error
+}
+
+func (r *repository) ListEnabledOperators(ctx context.Context) ([]*domain.Operator, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var list []*domain.Operator
+	if err := r.db.WithContext(ctx).Where("status = ?", domain.OperatorStatusEnabled).Order("created_at DESC").Find(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+func (r *repository) ListOperatorsByCategory(ctx context.Context, category domain.OperatorCategory) ([]*domain.Operator, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var list []*domain.Operator
+	if err := r.db.WithContext(ctx).Where("category = ?", category).Order("created_at DESC").Find(&list).Error; err != nil {
 		return nil, err
 	}
 	return list, nil

@@ -89,4 +89,14 @@ type Repository interface {
 	DeleteMediaAsset(ctx context.Context, id uuid.UUID) error
 	ListMediaAssetsBySource(ctx context.Context, sourceID uuid.UUID) ([]*domain.MediaAsset, error)
 	ListMediaAssetsByParent(ctx context.Context, parentID uuid.UUID) ([]*domain.MediaAsset, error)
+
+	// Operator
+	CreateOperator(ctx context.Context, o *domain.Operator) error
+	GetOperator(ctx context.Context, id uuid.UUID) (*domain.Operator, error)
+	GetOperatorByCode(ctx context.Context, code string) (*domain.Operator, error)
+	ListOperators(ctx context.Context, filter domain.OperatorFilter) ([]*domain.Operator, int64, error)
+	UpdateOperator(ctx context.Context, o *domain.Operator) error
+	DeleteOperator(ctx context.Context, id uuid.UUID) error
+	ListEnabledOperators(ctx context.Context) ([]*domain.Operator, error)
+	ListOperatorsByCategory(ctx context.Context, category domain.OperatorCategory) ([]*domain.Operator, error)
 }

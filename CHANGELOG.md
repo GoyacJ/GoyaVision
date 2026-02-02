@@ -29,6 +29,34 @@
     - GET /api/v1/assets/:id/children（子资产列表）
   - 数据库迁移：自动创建 media_assets 表
 
+- **Operator 完整功能**（V1.0 迭代 1）
+  - 添加 Operator 实体（internal/domain/operator.go）
+    - 支持四种分类（analysis、processing、generation、utility）
+    - 支持 15+ 种算子类型（检测、OCR、ASR、剪辑等）
+    - 支持版本管理和状态控制（enabled、disabled、draft）
+    - 支持内置算子标识
+    - 定义标准输入输出协议（OperatorInput、OperatorOutput）
+  - 添加 OperatorRepository 接口和实现
+    - 完整的 CRUD 操作
+    - 支持复杂过滤（分类、类型、状态、内置标识、关键词搜索）
+    - 支持分页查询
+  - 添加 OperatorService（internal/app/operator.go）
+    - Create、Get、GetByCode、List、Update、Delete
+    - Enable、Disable、ListEnabled、ListByCategory
+    - 完整的业务验证逻辑
+    - 防止修改/删除内置算子
+    - 代码唯一性检查
+  - 添加 Operator API（internal/api/handler/operator.go）
+    - GET /api/v1/operators（列表，支持过滤）
+    - POST /api/v1/operators（创建）
+    - GET /api/v1/operators/:id（详情）
+    - PUT /api/v1/operators/:id（更新）
+    - DELETE /api/v1/operators/:id（删除）
+    - POST /api/v1/operators/:id/enable（启用）
+    - POST /api/v1/operators/:id/disable（禁用）
+    - GET /api/v1/operators/category/:category（按分类列出）
+  - 数据库迁移：自动创建 operators 表
+
 - **项目规范**
   - 添加文档更新强制要求（每次功能开发或修改后必须更新文档）
   - 添加 Git 提交规范（遵循 Conventional Commits）
