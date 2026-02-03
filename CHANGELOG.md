@@ -7,6 +7,92 @@
 
 ## [未发布]
 
+### 前端重构 - 2026-02-03
+
+#### ✨ Phase 1: 基础设施搭建完成
+
+**环境配置：**
+- Tailwind CSS v3.4 + PostCSS + Autoprefixer
+- Tailwind 插件（@tailwindcss/forms、typography、container-queries）
+- Storybook v7.6（组件文档）
+- 工具库（clsx、tailwind-merge、@vueuse/core）
+
+**设计令牌系统（Design Tokens）：**
+- colors.ts - 颜色系统（10 色系，70+ 色值）
+- spacing.ts - 间距系统（16 档，基于 8px 网格）
+- typography.ts - 字体系统（9 档字阶 + 6 档字重）
+- shadows.ts - 阴影系统（5 层级 + 6 彩色阴影）
+- radius.ts - 圆角系统（9 档圆角）
+- index.ts - 动画曲线、时长、断点、zIndex
+
+**工具函数和 Composables：**
+- utils/cn.ts - 类名合并工具（clsx + tailwind-merge）
+- composables/useTheme.ts - 主题切换（light/dark/system）
+- composables/useBreakpoint.ts - 响应式断点判断
+
+**样式系统：**
+- styles/tailwind.css - Tailwind 入口 + 自定义样式
+- 自定义滚动条（渐变色）
+- 工具类（surface、text-ellipsis）
+
+**代码量**: ~1,550 行  
+**新增文件**: 17 个
+
+#### ✨ Phase 2: 基础组件库（Week 3 完成）
+
+**已完成组件（5 个）：**
+
+1. **GvButton - 按钮组件**
+   - 4 种变体（filled、tonal、outlined、text）
+   - 6 种颜色（primary、secondary、success、error、warning、info）
+   - 3 种尺寸（small、medium、large）
+   - 支持图标、加载状态、圆形/块级按钮
+   - 代码量: ~350 行
+
+2. **GvCard - 卡片组件**
+   - 5 种阴影大小
+   - 4 种内边距
+   - 3 个插槽（header、default、footer）
+   - 支持悬停效果、边框、自定义背景
+   - 代码量: ~470 行
+
+3. **GvBadge - 徽章组件**
+   - 7 种颜色主题
+   - 3 种变体、3 种尺寸
+   - 支持独立徽章和角标徽章
+   - 支持数字显示、点状徽章
+   - 代码量: ~550 行
+
+4. **GvTag - 标签组件**
+   - 7 种颜色主题
+   - 3 种变体、3 种尺寸
+   - 支持图标、可关闭、圆形标签
+   - 代码量: ~450 行
+
+5. **GvContainer - 容器组件**
+   - 6 种最大宽度
+   - 响应式内边距
+   - 居中对齐控制
+   - 代码量: ~200 行
+
+**代码量**: ~2,220 行  
+**新增文件**: 15 个  
+**组件完成度**: 5/30+ (17%)
+
+**技术特点：**
+- Material Design 3 完整实现
+- Tailwind CSS 工具类
+- TypeScript 类型安全
+- 深色模式自动适配
+- 完整的组件文档
+
+**相关文档：**
+- [前端重构方案](./docs/frontend-refactor-plan.md)
+- [组件使用规范](./cursor/rules/frontend-components.mdc)
+- [重构进度追踪](./docs/REFACTOR-PROGRESS.md)
+
+---
+
 ### UI/UX 优化 - 2026-02-03
 
 #### ✨ 全面优化前端 UI 设计
