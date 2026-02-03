@@ -117,8 +117,19 @@ func updateMenusAndPermissions(ctx context.Context, db *gorm.DB) error {
 
 	log.Println("  清理旧菜单...")
 	oldMenuCodes := []string{"stream", "algorithm", "inference", "legacy", "legacy:stream"}
+	
 	for _, code := range oldMenuCodes {
-		if err := db.Where("code = ?", code).Delete(&domain.Menu{}).Error; err != nil {
+		var menu domain.Menu
+		if err := db.Where("code = ?", code).First(&menu).Error; err != nil {
+			continue
+		}
+		
+		if err := db.Exec("DELETE FROM role_menus WHERE menu_id = ?", menu.ID).Error; err != nil {
+			log.Printf("  ⚠️  删除菜单关联失败 %s: %v", code, err)
+			continue
+		}
+		
+		if err := db.Where("id = ?", menu.ID).Delete(&domain.Menu{}).Error; err != nil {
 			log.Printf("  ⚠️  删除旧菜单 %s 失败: %v", code, err)
 		} else {
 			log.Printf("  ✓ 删除旧菜单: %s", code)
@@ -134,8 +145,19 @@ func updateMenusAndPermissions(ctx context.Context, db *gorm.DB) error {
 		"binding:list", "binding:create", "binding:update", "binding:delete",
 		"inference:list",
 	}
+	
 	for _, code := range oldPermCodes {
-		if err := db.Where("code = ?", code).Delete(&domain.Permission{}).Error; err != nil {
+		var perm domain.Permission
+		if err := db.Where("code = ?", code).First(&perm).Error; err != nil {
+			continue
+		}
+		
+		if err := db.Exec("DELETE FROM role_permissions WHERE permission_id = ?", perm.ID).Error; err != nil {
+			log.Printf("  ⚠️  删除权限关联失败 %s: %v", code, err)
+			continue
+		}
+		
+		if err := db.Where("id = ?", perm.ID).Delete(&domain.Permission{}).Error; err != nil {
 			log.Printf("  ⚠️  删除旧权限 %s 失败: %v", code, err)
 		} else {
 			log.Printf("  ✓ 删除旧权限: %s", code)
