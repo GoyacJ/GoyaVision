@@ -105,4 +105,13 @@ type Repository interface {
 	DeleteArtifact(ctx context.Context, id uuid.UUID) error
 	ListArtifactsByTask(ctx context.Context, taskID uuid.UUID) ([]*domain.Artifact, error)
 	ListArtifactsByType(ctx context.Context, taskID uuid.UUID, artifactType domain.ArtifactType) ([]*domain.Artifact, error)
+
+	// File
+	CreateFile(ctx context.Context, f *domain.File) error
+	GetFile(ctx context.Context, id uuid.UUID) (*domain.File, error)
+	GetFileByPath(ctx context.Context, path string) (*domain.File, error)
+	ListFiles(ctx context.Context, filter domain.FileFilter) ([]*domain.File, int64, error)
+	UpdateFile(ctx context.Context, f *domain.File) error
+	DeleteFile(ctx context.Context, id uuid.UUID) error
+	GetFileByHash(ctx context.Context, hash string) (*domain.File, error)
 }

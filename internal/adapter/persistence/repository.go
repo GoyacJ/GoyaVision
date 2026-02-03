@@ -44,6 +44,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&domain.WorkflowEdge{},
 		&domain.Task{},
 		&domain.Artifact{},
+		&domain.File{},
 	); err != nil {
 		return err
 	}
@@ -1101,4 +1102,100 @@ func (r *repository) ListArtifactsByType(ctx context.Context, taskID uuid.UUID, 
 		return nil, err
 	}
 	return list, nil
+}
+
+// File methods
+
+func (r *repository) CreateFile(ctx context.Context, f *domain.File) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	ensureID(&f.ID)
+	return r.db.WithContext(ctx).Create(f).Error
+}
+
+func (r *repository) GetFile(ctx context.Context, id uuid.UUID) (*domain.File, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var f domain.File
+	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&f).Error; err != nil {
+		return nil, err
+	}
+	return &f, nil
+}
+
+func (r *repository) GetFileByPath(ctx context.Context, path string) (*domain.File, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var f domain.File
+	if err := r.db.WithContext(ctx).Where("path = ?", path).First(&f).Error; err != nil {
+		return nil, err
+	}
+	return &f, nil
+}
+
+func (r *repository) ListFiles(ctx context.Context, filter domain.FileFilter) ([]*domain.File, int64, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, 0, err
+	}
+
+	q := r.db.WithContext(ctx).Model(&domain.File{})
+
+	if filter.Type != nil {
+		q = q.Where("type = ?", *filter.Type)
+	}
+	if filter.Status != nil {
+		q = q.Where("status = ?", *filter.Status)
+	}
+	if filter.UploaderID != nil {
+		q = q.Where("uploader_id = ?", *filter.UploaderID)
+	}
+	if filter.Search != "" {
+		q = q.Where("name ILIKE ? OR original_name ILIKE ?", "%"+filter.Search+"%", "%"+filter.Search+"%")
+	}
+	if filter.From != nil {
+		q = q.Where("created_at >= ?", *filter.From)
+	}
+	if filter.To != nil {
+		q = q.Where("created_at <= ?", *filter.To)
+	}
+
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var list []*domain.File
+	if err := q.Limit(filter.Limit).Offset(filter.Offset).Order("created_at DESC").Find(&list).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return list, total, nil
+}
+
+func (r *repository) UpdateFile(ctx context.Context, f *domain.File) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Save(f).Error
+}
+
+func (r *repository) DeleteFile(ctx context.Context, id uuid.UUID) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.File{}).Error
+}
+
+func (r *repository) GetFileByHash(ctx context.Context, hash string) (*domain.File, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var f domain.File
+	if err := r.db.WithContext(ctx).Where("hash = ?", hash).First(&f).Error; err != nil {
+		return nil, err
+	}
+	return &f, nil
 }

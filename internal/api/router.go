@@ -29,6 +29,7 @@ func RegisterRouter(e *echo.Echo, d HandlerDeps, webFS fs.FS) {
 
 	handler.RegisterAsset(api, d)
 	handler.RegisterUpload(api, d)
+	handler.RegisterFile(api, d)
 	handler.RegisterOperator(api, d)
 	handler.RegisterWorkflow(api, d)
 	handler.RegisterTask(api, d)

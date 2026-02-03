@@ -7,6 +7,7 @@ import (
 
 	"goyavision/config"
 	"goyavision/internal/api/dto"
+	"goyavision/internal/api/middleware"
 	"goyavision/internal/app"
 	"goyavision/internal/domain"
 	"goyavision/pkg/storage"
@@ -17,7 +18,8 @@ import (
 
 func RegisterUpload(g *echo.Group, d Deps) {
 	h := uploadHandler{
-		svc:         app.NewMediaAssetService(d.Repo),
+		assetSvc:    app.NewMediaAssetService(d.Repo),
+		fileSvc:     app.NewFileService(d.Repo, d.MinIOClient),
 		minioClient: d.MinIOClient,
 		cfg:         d.Cfg,
 	}
@@ -25,7 +27,8 @@ func RegisterUpload(g *echo.Group, d Deps) {
 }
 
 type uploadHandler struct {
-	svc         *app.MediaAssetService
+	assetSvc    *app.MediaAssetService
+	fileSvc     *app.FileService
 	minioClient *storage.MinIOClient
 	cfg         *config.Config
 }
@@ -70,15 +73,14 @@ func (h *uploadHandler) Upload(c echo.Context) error {
 	}
 	defer src.Close()
 
-	ext := filepath.Ext(file.Filename)
-	objectName := fmt.Sprintf("%s/%s%s", assetType, uuid.New().String(), ext)
-
-	contentType := file.Header.Get("Content-Type")
-	if contentType == "" {
-		contentType = "application/octet-stream"
+	// 获取上传者 ID（从 JWT token 中）
+	var uploaderID *uuid.UUID
+	if id, ok := middleware.GetUserID(c); ok {
+		uploaderID = &id
 	}
 
-	_, err = h.minioClient.Upload(c.Request().Context(), objectName, src, file.Size, contentType)
+	// 使用文件服务上传文件
+	uploadedFile, err := h.fileSvc.UploadFile(c.Request().Context(), src, file.Filename, file.Size, uploaderID)
 	if err != nil {
 		return c.JSON(500, dto.ErrorResponse{
 			Error:   "Internal Server Error",
@@ -86,6 +88,8 @@ func (h *uploadHandler) Upload(c echo.Context) error {
 		})
 	}
 
+	// 创建媒体资产记录
+	ext := filepath.Ext(file.Filename)
 	format := ext
 	if len(format) > 0 && format[0] == '.' {
 		format = format[1:]
@@ -95,16 +99,16 @@ func (h *uploadHandler) Upload(c echo.Context) error {
 		Type:       domain.AssetType(assetType),
 		SourceType: domain.AssetSourceUpload,
 		Name:       name,
-		Path:       objectName,
+		Path:       uploadedFile.Path,
 		Size:       file.Size,
 		Format:     format,
 		Status:     domain.AssetStatusReady,
 		Tags:       tags,
 	}
 
-	asset, err := h.svc.Create(c.Request().Context(), createReq)
+	asset, err := h.assetSvc.Create(c.Request().Context(), createReq)
 	if err != nil {
-		_ = h.minioClient.Delete(c.Request().Context(), objectName)
+		_ = h.fileSvc.DeleteFile(c.Request().Context(), uploadedFile.ID)
 		return err
 	}
 

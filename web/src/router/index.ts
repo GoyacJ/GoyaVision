@@ -10,6 +10,7 @@ const TaskList = () => import('../views/task/index.vue')
 const UserList = () => import('../views/system/user/index.vue')
 const RoleList = () => import('../views/system/role/index.vue')
 const MenuList = () => import('../views/system/menu/index.vue')
+const FileList = () => import('../views/file/index.vue')
 
 export const constantRoutes: RouteRecordRaw[] = [
   {
@@ -34,6 +35,12 @@ export const constantRoutes: RouteRecordRaw[] = [
         name: 'AssetList',
         component: AssetList,
         meta: { title: '媒体资产', icon: 'Film' }
+      },
+      {
+        path: 'files',
+        name: 'FileList',
+        component: FileList,
+        meta: { title: '文件管理', icon: 'Document' }
       },
       {
         path: 'operators',
