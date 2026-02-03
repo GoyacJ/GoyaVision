@@ -1,7 +1,7 @@
 .PHONY: build build-web build-all clean
 
 build-web:
-	cd web && npm install && npm run build
+	cd web && pnpm install && pnpm run build
 
 build:
 	go build -o bin/goyavision ./cmd/server

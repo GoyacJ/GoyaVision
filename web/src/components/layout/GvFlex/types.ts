@@ -3,10 +3,9 @@
  * 基于 CSS Flexbox 的弹性布局
  */
 
-/**
- * 间距大小
- */
-export type GapSize = 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl'
+import type { GapSize } from '../GvGrid/types'
+
+export type { GapSize }
 
 /**
  * Flex 方向

@@ -3,7 +3,7 @@
  * 支持 light / dark 主题切换
  */
 
-import { ref, computed, watch } from 'vue'
+import { computed, watch } from 'vue'
 import { useLocalStorage } from '@vueuse/core'
 
 export type Theme = 'light' | 'dark' | 'system'
