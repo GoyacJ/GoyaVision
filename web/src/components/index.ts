@@ -26,6 +26,8 @@ export { default as GvSpace } from './layout/GvSpace/index.vue'
 // 业务组件
 export { default as StatusBadge } from './business/StatusBadge/index.vue'
 export { default as SearchBar } from './business/SearchBar/index.vue'
+export { default as PageHeader } from './business/PageHeader/index.vue'
+export { default as FilterBar } from './business/FilterBar/index.vue'
 
 // 类型导出
 export type * from './base/GvButton/types'
@@ -47,3 +49,5 @@ export type * from './layout/GvDivider/types'
 export type * from './layout/GvSpace/types'
 export type * from './business/StatusBadge/types'
 export type * from './business/SearchBar/types'
+export type * from './business/PageHeader/types'
+export type * from './business/FilterBar/types'
