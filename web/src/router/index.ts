@@ -2,6 +2,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 
 const Layout = () => import('../layout/index.vue')
 const Login = () => import('../views/login/index.vue')
+const ComponentDemo = () => import('../views/ComponentDemo.vue')
 const AssetList = () => import('../views/asset/index.vue')
 const OperatorList = () => import('../views/operator/index.vue')
 const WorkflowList = () => import('../views/workflow/index.vue')
@@ -16,6 +17,12 @@ export const constantRoutes: RouteRecordRaw[] = [
     name: 'Login',
     component: Login,
     meta: { title: '登录', hidden: true }
+  },
+  {
+    path: '/component-demo',
+    name: 'ComponentDemo',
+    component: ComponentDemo,
+    meta: { title: '组件展示', hidden: true }
   },
   {
     path: '/',
