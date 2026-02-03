@@ -175,19 +175,22 @@ async function handleChangePassword() {
   height: 100vh;
   display: flex;
   flex-direction: column;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
 }
 
 .layout-header {
-  height: 60px;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  height: 70px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 4px 24px rgba(31, 38, 135, 0.1);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  padding: 0 32px;
   position: sticky;
   top: 0;
   z-index: 1000;
+  border-bottom: 1px solid rgba(102, 126, 234, 0.1);
 }
 
 .header-left {
@@ -201,18 +204,24 @@ async function handleChangePassword() {
 .logo {
   display: flex;
   align-items: center;
-  margin-right: 40px;
+  margin-right: 48px;
   flex-shrink: 0;
+  cursor: pointer;
+  transition: transform 0.3s;
+}
+
+.logo:hover {
+  transform: scale(1.05);
 }
 
 .logo-text {
-  font-size: 22px;
-  font-weight: bold;
-  background: linear-gradient(135deg, #409EFF 0%, #67C23A 100%);
+  font-size: 26px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  letter-spacing: 1px;
+  letter-spacing: -0.5px;
 }
 
 .layout-menu {
@@ -224,18 +233,37 @@ async function handleChangePassword() {
 .layout-menu :deep(.el-menu-item),
 .layout-menu :deep(.el-sub-menu__title) {
   border-bottom: none;
-  height: 60px;
-  line-height: 60px;
-}
-
-.layout-menu :deep(.el-menu-item.is-active) {
-  color: #409EFF;
-  border-bottom: 2px solid #409EFF;
+  height: 70px;
+  line-height: 70px;
+  font-weight: 500;
+  transition: all 0.3s;
+  position: relative;
+  margin: 0 4px;
+  border-radius: 8px;
 }
 
 .layout-menu :deep(.el-menu-item:hover),
 .layout-menu :deep(.el-sub-menu__title:hover) {
-  background-color: rgba(64, 158, 255, 0.08);
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+  color: #667eea;
+}
+
+.layout-menu :deep(.el-menu-item.is-active) {
+  color: #667eea;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.layout-menu :deep(.el-menu-item.is-active::after) {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 20%;
+  right: 20%;
+  height: 3px;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  border-radius: 2px;
 }
 
 .header-right {
@@ -247,37 +275,106 @@ async function handleChangePassword() {
 .user-info {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 4px;
-  transition: background-color 0.3s;
+  padding: 10px 16px;
+  border-radius: 12px;
+  transition: all 0.3s;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
 }
 
 .user-info:hover {
-  background-color: #f5f7fa;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.user-info :deep(.el-avatar) {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .username {
   color: #333;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .layout-main {
   flex: 1;
-  background: #f0f2f5;
-  padding: 24px;
+  background: transparent;
+  padding: 32px;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.fade-enter-from,
+.fade-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
 .fade-leave-to {
   opacity: 0;
+  transform: translateY(-10px);
+}
+
+:deep(.el-dropdown-menu) {
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+  border: 1px solid rgba(102, 126, 234, 0.1);
+  padding: 8px;
+}
+
+:deep(.el-dropdown-menu__item) {
+  border-radius: 8px;
+  margin: 4px 0;
+  transition: all 0.3s;
+}
+
+:deep(.el-dropdown-menu__item:hover) {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  color: #667eea;
+}
+
+:deep(.el-dialog) {
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(31, 38, 135, 0.2);
+}
+
+:deep(.el-dialog__header) {
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+:deep(.el-dialog__body) {
+  padding: 24px;
+}
+
+@media (max-width: 768px) {
+  .layout-header {
+    padding: 0 16px;
+    height: 60px;
+  }
+
+  .logo {
+    margin-right: 24px;
+  }
+
+  .logo-text {
+    font-size: 20px;
+  }
+
+  .layout-main {
+    padding: 16px;
+  }
+
+  .username {
+    display: none;
+  }
 }
 </style>

@@ -391,6 +391,26 @@ function formatDate(dateStr: string): string {
 <style scoped>
 .page-container {
   padding: 0;
+  animation: fadeIn 0.4s ease-out;
+}
+
+:deep(.el-card) {
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.12);
+  border: 1px solid rgba(102, 126, 234, 0.1);
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  overflow: hidden;
+}
+
+:deep(.el-card__header) {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+  border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+  padding: 20px 24px;
+}
+
+:deep(.el-card__body) {
+  padding: 24px;
 }
 
 .card-header {
@@ -399,18 +419,242 @@ function formatDate(dateStr: string): string {
   align-items: center;
 }
 
+.card-header > span {
+  font-size: 18px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 .header-actions {
   display: flex;
   align-items: center;
+  gap: 12px;
+}
+
+:deep(.header-actions .el-input__wrapper) {
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s;
+}
+
+:deep(.header-actions .el-input__wrapper:hover) {
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+:deep(.header-actions .el-button--primary) {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  transition: all 0.3s;
+}
+
+:deep(.header-actions .el-button--primary:hover) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
 }
 
 .filter-bar {
   margin-bottom: 20px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.03) 0%, rgba(118, 75, 162, 0.03) 100%);
+  border-radius: 12px;
+  border: 1px solid rgba(102, 126, 234, 0.08);
+}
+
+:deep(.filter-bar .el-select .el-input__wrapper),
+:deep(.filter-bar .el-input__wrapper) {
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s;
+}
+
+:deep(.filter-bar .el-select .el-input__wrapper:hover),
+:deep(.filter-bar .el-input__wrapper:hover) {
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.12);
+}
+
+:deep(.el-table) {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+:deep(.el-table__header-wrapper) {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+}
+
+:deep(.el-table thead) {
+  color: #333;
+  font-weight: 600;
+}
+
+:deep(.el-table th.el-table__cell) {
+  background: transparent;
+  border-bottom: 2px solid rgba(102, 126, 234, 0.15);
+}
+
+:deep(.el-table .el-table__row) {
+  transition: all 0.3s;
+}
+
+:deep(.el-table .el-table__row:hover > td) {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.03) 0%, rgba(118, 75, 162, 0.03) 100%);
+}
+
+:deep(.el-tag) {
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-weight: 500;
+  border: none;
+}
+
+:deep(.el-tag--primary) {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+  color: #667eea;
+}
+
+:deep(.el-tag--success) {
+  background: linear-gradient(135deg, rgba(103, 194, 58, 0.15) 0%, rgba(56, 249, 215, 0.15) 100%);
+  color: #67c23a;
+}
+
+:deep(.el-tag--warning) {
+  background: linear-gradient(135deg, rgba(230, 162, 60, 0.15) 0%, rgba(245, 87, 108, 0.15) 100%);
+  color: #e6a23c;
+}
+
+:deep(.el-tag--danger) {
+  background: linear-gradient(135deg, rgba(245, 108, 108, 0.15) 0%, rgba(245, 87, 108, 0.15) 100%);
+  color: #f56c6c;
+}
+
+:deep(.el-tag--info) {
+  background: linear-gradient(135deg, rgba(144, 147, 153, 0.15) 0%, rgba(144, 147, 153, 0.15) 100%);
+  color: #909399;
+}
+
+:deep(.el-button--text),
+:deep(.el-button--link) {
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+:deep(.el-button--text:hover),
+:deep(.el-button--link:hover) {
+  transform: translateX(2px);
 }
 
 .pagination {
-  margin-top: 20px;
+  margin-top: 24px;
   display: flex;
   justify-content: flex-end;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.03) 0%, rgba(118, 75, 162, 0.03) 100%);
+  border-radius: 12px;
+}
+
+:deep(.el-pagination) {
+  font-weight: 500;
+}
+
+:deep(.el-pagination .el-pager li) {
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+:deep(.el-pagination .el-pager li.is-active) {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+:deep(.el-pagination .btn-prev),
+:deep(.el-pagination .btn-next) {
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+:deep(.el-pagination .btn-prev:hover),
+:deep(.el-pagination .btn-next:hover) {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  color: #667eea;
+}
+
+:deep(.el-dialog) {
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(31, 38, 135, 0.2);
+  border: 1px solid rgba(102, 126, 234, 0.1);
+}
+
+:deep(.el-dialog__header) {
+  padding: 24px 24px 16px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+  border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+  border-radius: 16px 16px 0 0;
+}
+
+:deep(.el-dialog__title) {
+  font-size: 18px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+:deep(.el-dialog__body) {
+  padding: 24px;
+}
+
+:deep(.el-dialog__footer) {
+  padding: 16px 24px 24px;
+  border-top: 1px solid rgba(102, 126, 234, 0.1);
+}
+
+:deep(.el-form-item__label) {
+  font-weight: 600;
+  color: #333;
+}
+
+:deep(.el-input__wrapper) {
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s;
+}
+
+:deep(.el-input__wrapper:hover) {
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.12);
+}
+
+:deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.25);
+}
+
+:deep(.el-select .el-input__wrapper) {
+  border-radius: 10px;
+}
+
+:deep(.el-descriptions) {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+:deep(.el-descriptions__label) {
+  font-weight: 600;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>
