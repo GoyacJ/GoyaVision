@@ -196,79 +196,60 @@ defineExpose({
 })
 </script>
 
-<style scoped lang="scss">
+<style scoped>
 .gv-upload {
-  width: 100%;
+  @apply w-full;
 }
 
 .gv-upload-wrapper {
-  width: 100%;
+  @apply w-full;
 }
 
 .gv-upload--disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  @apply opacity-60 cursor-not-allowed;
 }
 
 .gv-upload-tip {
-  margin-top: 8px;
-  font-size: 12px;
-  color: var(--text-tertiary);
+  @apply mt-2 text-xs text-text-tertiary;
 }
 
 .gv-upload-list {
-  margin-top: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  @apply mt-3 flex flex-col gap-2;
 }
 
 .gv-upload-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
-  background: var(--bg-secondary);
-  border-radius: 8px;
-  transition: all 0.2s;
+  @apply flex items-center gap-3 px-3 py-2 bg-neutral-50 rounded-lg transition-all duration-200;
 }
 
 .gv-upload-item:hover {
-  background: var(--bg-tertiary);
+  @apply bg-neutral-100;
 }
 
 .gv-upload-item-info {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
+  @apply flex-1 flex items-center gap-2 min-w-0;
 }
 
 .gv-upload-item-icon {
-  flex-shrink: 0;
-  color: var(--text-secondary);
-  font-size: 16px;
+  @apply flex-shrink-0 text-text-secondary text-base;
 }
 
 .gv-upload-item-name {
-  flex: 1;
-  font-size: 14px;
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  @apply flex-1 text-sm text-text-primary overflow-hidden text-ellipsis whitespace-nowrap;
 }
 
 .gv-upload-item-size {
-  flex-shrink: 0;
-  font-size: 12px;
-  color: var(--text-tertiary);
-  margin-left: auto;
+  @apply flex-shrink-0 text-xs text-text-tertiary ml-auto;
 }
 
 .gv-upload-item-progress {
-  flex: 1;
-  min-width: 0;
+  @apply flex-1 min-w-0;
+}
+
+.dark .gv-upload-item {
+  @apply bg-neutral-800;
+}
+
+.dark .gv-upload-item:hover {
+  @apply bg-neutral-700;
 }
 </style>
