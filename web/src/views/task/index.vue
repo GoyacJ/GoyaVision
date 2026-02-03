@@ -1,161 +1,147 @@
 <template>
-  <div class="page-container">
-    <el-row :gutter="20" class="stats-row">
-      <el-col :span="4">
-        <el-card class="stats-card">
-          <div class="stat-item">
-            <div class="stat-label">总任务数</div>
-            <div class="stat-value">{{ stats.total }}</div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="4">
-        <el-card class="stats-card pending">
-          <div class="stat-item">
-            <div class="stat-label">待执行</div>
-            <div class="stat-value">{{ stats.pending }}</div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="4">
-        <el-card class="stats-card running">
-          <div class="stat-item">
-            <div class="stat-label">执行中</div>
-            <div class="stat-value">{{ stats.running }}</div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="4">
-        <el-card class="stats-card success">
-          <div class="stat-item">
-            <div class="stat-label">已成功</div>
-            <div class="stat-value">{{ stats.success }}</div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="4">
-        <el-card class="stats-card failed">
-          <div class="stat-item">
-            <div class="stat-label">已失败</div>
-            <div class="stat-value">{{ stats.failed }}</div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="4">
-        <el-card class="stats-card cancelled">
-          <div class="stat-item">
-            <div class="stat-label">已取消</div>
-            <div class="stat-value">{{ stats.cancelled }}</div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
-
-    <el-card class="mt-4">
-      <template #header>
-        <div class="card-header">
-          <span>任务列表</span>
-          <el-button type="primary" @click="loadTasks">
+  <GvContainer max-width="full">
+    <!-- 页面头部 -->
+    <PageHeader
+      title="任务管理"
+      description="查看和管理所有工作流任务的执行状态"
+    >
+      <template #actions>
+        <GvButton @click="handleRefresh">
+          <template #icon>
             <el-icon><Refresh /></el-icon>
-            刷新
-          </el-button>
-        </div>
+          </template>
+          刷新
+        </GvButton>
       </template>
+      
+      <template #extra>
+        <GvSpace wrap>
+          <StatusBadge status="pending" :text="`${stats.pending} 个待执行`" :animated="false" />
+          <StatusBadge status="running" :text="`${stats.running} 个执行中`" />
+          <StatusBadge status="success" :text="`${stats.success} 个已成功`" :animated="false" />
+          <StatusBadge status="failed" :text="`${stats.failed} 个已失败`" :animated="false" />
+        </GvSpace>
+      </template>
+    </PageHeader>
 
-      <div class="filter-bar">
-        <el-space wrap>
-          <el-select v-model="filterStatus" placeholder="状态" clearable @change="loadTasks" style="width: 120px">
-            <el-option label="待执行" value="pending" />
-            <el-option label="执行中" value="running" />
-            <el-option label="已成功" value="success" />
-            <el-option label="已失败" value="failed" />
-            <el-option label="已取消" value="cancelled" />
-          </el-select>
-        </el-space>
-      </div>
+    <!-- 统计卡片 -->
+    <GvGrid :cols="6" gap="lg" class="mb-6">
+      <GvCard class="text-center">
+        <div class="text-text-tertiary text-sm mb-2">总任务数</div>
+        <div class="text-3xl font-bold text-text-primary">{{ stats.total }}</div>
+      </GvCard>
+      <GvCard class="text-center border-l-4 border-neutral-400">
+        <div class="text-text-tertiary text-sm mb-2">待执行</div>
+        <div class="text-3xl font-bold text-neutral-600">{{ stats.pending }}</div>
+      </GvCard>
+      <GvCard class="text-center border-l-4 border-primary-500">
+        <div class="text-text-tertiary text-sm mb-2">执行中</div>
+        <div class="text-3xl font-bold text-primary-600">{{ stats.running }}</div>
+      </GvCard>
+      <GvCard class="text-center border-l-4 border-success-500">
+        <div class="text-text-tertiary text-sm mb-2">已成功</div>
+        <div class="text-3xl font-bold text-success-600">{{ stats.success }}</div>
+      </GvCard>
+      <GvCard class="text-center border-l-4 border-error-500">
+        <div class="text-text-tertiary text-sm mb-2">已失败</div>
+        <div class="text-3xl font-bold text-error-600">{{ stats.failed }}</div>
+      </GvCard>
+      <GvCard class="text-center border-l-4 border-warning-500">
+        <div class="text-text-tertiary text-sm mb-2">已取消</div>
+        <div class="text-3xl font-bold text-warning-600">{{ stats.cancelled }}</div>
+      </GvCard>
+    </GvGrid>
 
-      <el-table :data="tasks" v-loading="loading" stripe>
-        <el-table-column prop="id" label="任务 ID" width="280" show-overflow-tooltip />
-        <el-table-column label="工作流" min-width="150">
-          <template #default="{ row }">
-            {{ row.workflow?.name || '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="getStatusColor(row.status)" size="small">
-              {{ getStatusLabel(row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="进度" width="120">
-          <template #default="{ row }">
-            <el-progress :percentage="row.progress" :status="getProgressStatus(row.status)" />
-          </template>
-        </el-table-column>
-        <el-table-column prop="current_node" label="当前节点" width="120" show-overflow-tooltip />
-        <el-table-column label="开始时间" width="160">
-          <template #default="{ row }">
-            {{ row.started_at ? formatDate(row.started_at) : '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column label="完成时间" width="160">
-          <template #default="{ row }">
-            {{ row.completed_at ? formatDate(row.completed_at) : '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column label="耗时" width="100">
-          <template #default="{ row }">
-            {{ calculateDuration(row) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="240" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" size="small" @click="handleView(row)">查看</el-button>
-            <el-button link type="success" size="small" @click="handleViewArtifacts(row)">产物</el-button>
-            <el-button
-              v-if="row.status === 'running'"
-              link
-              type="warning"
-              size="small"
-              @click="handleCancel(row)"
-            >
-              取消
-            </el-button>
-            <el-button
-              v-if="row.status !== 'running' && row.status !== 'pending'"
-              link
-              type="danger"
-              size="small"
-              @click="handleDelete(row)"
-            >
-              删除
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+    <!-- 筛选栏 -->
+    <FilterBar
+      v-model="filters"
+      :fields="filterFields"
+      :columns="1"
+      :loading="loading"
+      @filter="loadTasks"
+      @reset="handleResetFilter"
+    />
 
-      <div class="pagination">
-        <el-pagination
-          v-model:current-page="pagination.page"
-          v-model:page-size="pagination.page_size"
-          :total="pagination.total"
-          :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="loadTasks"
-          @current-change="loadTasks"
+    <!-- 数据表格 -->
+    <GvTable
+      :data="tasks"
+      :columns="columns"
+      :loading="loading"
+      border
+      stripe
+      pagination
+      :pagination-config="paginationConfig"
+      @current-change="handlePageChange"
+      @size-change="handleSizeChange"
+    >
+      <template #workflow="{ row }">
+        {{ row.workflow?.name || '-' }}
+      </template>
+      
+      <template #status="{ row }">
+        <StatusBadge :status="mapStatus(row.status)" />
+      </template>
+      
+      <template #progress="{ row }">
+        <el-progress
+          :percentage="row.progress"
+          :status="getProgressStatus(row.status)"
         />
-      </div>
-    </el-card>
+      </template>
+      
+      <template #started_at="{ row }">
+        {{ row.started_at ? formatDate(row.started_at) : '-' }}
+      </template>
+      
+      <template #completed_at="{ row }">
+        {{ row.completed_at ? formatDate(row.completed_at) : '-' }}
+      </template>
+      
+      <template #duration="{ row }">
+        {{ calculateDuration(row) }}
+      </template>
+      
+      <template #actions="{ row }">
+        <GvSpace size="xs">
+          <GvButton size="small" variant="tonal" @click="handleView(row)">
+            查看
+          </GvButton>
+          <GvButton size="small" variant="tonal" @click="handleViewArtifacts(row)">
+            产物
+          </GvButton>
+          <GvButton
+            v-if="row.status === 'running'"
+            size="small"
+            variant="text"
+            @click="handleCancel(row)"
+          >
+            取消
+          </GvButton>
+          <GvButton
+            v-if="row.status !== 'running' && row.status !== 'pending'"
+            size="small"
+            variant="text"
+            @click="handleDelete(row)"
+          >
+            删除
+          </GvButton>
+        </GvSpace>
+      </template>
+    </GvTable>
 
-    <el-dialog v-model="showViewDialog" title="任务详情" width="700px">
+    <!-- 详情对话框 -->
+    <GvModal
+      v-model="showViewDialog"
+      title="任务详情"
+      size="large"
+      :show-confirm="false"
+      cancel-text="关闭"
+    >
       <el-descriptions v-if="currentTask" :column="2" border>
         <el-descriptions-item label="任务 ID" :span="2">{{ currentTask.id }}</el-descriptions-item>
         <el-descriptions-item label="工作流">{{ currentTask.workflow?.name || '-' }}</el-descriptions-item>
         <el-descriptions-item label="状态">
-          <el-tag :type="getStatusColor(currentTask.status)" size="small">
-            {{ getStatusLabel(currentTask.status) }}
-          </el-tag>
+          <StatusBadge :status="mapStatus(currentTask.status)" />
         </el-descriptions-item>
         <el-descriptions-item label="进度">{{ currentTask.progress }}%</el-descriptions-item>
         <el-descriptions-item label="当前节点">{{ currentTask.current_node || '-' }}</el-descriptions-item>
@@ -163,25 +149,43 @@
         <el-descriptions-item label="完成时间" :span="2">{{ currentTask.completed_at ? formatDate(currentTask.completed_at) : '-' }}</el-descriptions-item>
         <el-descriptions-item label="耗时" :span="2">{{ calculateDuration(currentTask) }}</el-descriptions-item>
         <el-descriptions-item v-if="currentTask.error" label="错误信息" :span="2">
-          <el-alert type="error" :closable="false">{{ currentTask.error }}</el-alert>
+          <GvAlert type="error" :closable="false">{{ currentTask.error }}</GvAlert>
         </el-descriptions-item>
         <el-descriptions-item label="创建时间" :span="2">{{ formatDate(currentTask.created_at) }}</el-descriptions-item>
       </el-descriptions>
-    </el-dialog>
-  </div>
+    </GvModal>
+  </GvContainer>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Refresh } from '@element-plus/icons-vue'
 import { taskApi, type Task, type TaskStats } from '@/api/task'
+import {
+  GvContainer,
+  GvGrid,
+  GvCard,
+  GvTable,
+  GvModal,
+  GvButton,
+  GvSpace,
+  GvAlert,
+  PageHeader,
+  FilterBar,
+  StatusBadge,
+  type TableColumn,
+  type FilterField
+} from '@/components'
 
 const loading = ref(false)
 const tasks = ref<Task[]>([])
 const showViewDialog = ref(false)
 const currentTask = ref<Task | null>(null)
 
-const filterStatus = ref('')
+const filters = ref({
+  status: ''
+})
 
 const pagination = reactive({
   page: 1,
@@ -198,6 +202,42 @@ const stats = reactive<TaskStats>({
   cancelled: 0
 })
 
+const statusOptions = [
+  { label: '待执行', value: 'pending' },
+  { label: '执行中', value: 'running' },
+  { label: '已成功', value: 'success' },
+  { label: '已失败', value: 'failed' },
+  { label: '已取消', value: 'cancelled' }
+]
+
+const filterFields: FilterField[] = [
+  {
+    key: 'status',
+    label: '任务状态',
+    type: 'select',
+    placeholder: '选择任务状态',
+    options: statusOptions
+  }
+]
+
+const columns: TableColumn[] = [
+  { prop: 'id', label: '任务 ID', width: '280', showOverflowTooltip: true },
+  { prop: 'workflow', label: '工作流', minWidth: '150' },
+  { prop: 'status', label: '状态', width: '120' },
+  { prop: 'progress', label: '进度', width: '120' },
+  { prop: 'current_node', label: '当前节点', width: '120', showOverflowTooltip: true },
+  { prop: 'started_at', label: '开始时间', width: '160' },
+  { prop: 'completed_at', label: '完成时间', width: '160' },
+  { prop: 'duration', label: '耗时', width: '100' },
+  { prop: 'actions', label: '操作', width: '280', fixed: 'right' }
+]
+
+const paginationConfig = computed(() => ({
+  currentPage: pagination.page,
+  pageSize: pagination.page_size,
+  total: pagination.total
+}))
+
 onMounted(() => {
   loadTasks()
   loadStats()
@@ -207,7 +247,7 @@ async function loadTasks() {
   loading.value = true
   try {
     const response = await taskApi.list({
-      status: filterStatus.value as any,
+      status: filters.value.status as any,
       page: pagination.page,
       page_size: pagination.page_size
     })
@@ -227,6 +267,26 @@ async function loadStats() {
   } catch (error: any) {
     ElMessage.error(error.response?.data?.message || '加载统计失败')
   }
+}
+
+function handleRefresh() {
+  loadTasks()
+  loadStats()
+}
+
+function handlePageChange(page: number) {
+  pagination.page = page
+  loadTasks()
+}
+
+function handleSizeChange(size: number) {
+  pagination.page_size = size
+  pagination.page = 1
+  loadTasks()
+}
+
+function handleResetFilter() {
+  loadTasks()
 }
 
 function handleView(row: Task) {
@@ -270,26 +330,15 @@ async function handleDelete(row: Task) {
   }
 }
 
-function getStatusLabel(status: string) {
+function mapStatus(status: string): any {
   const map: Record<string, string> = {
-    pending: '待执行',
-    running: '执行中',
-    success: '已成功',
-    failed: '已失败',
-    cancelled: '已取消'
-  }
-  return map[status] || status
-}
-
-function getStatusColor(status: string) {
-  const map: Record<string, any> = {
-    pending: 'info',
-    running: 'primary',
+    pending: 'pending',
+    running: 'running',
     success: 'success',
-    failed: 'danger',
-    cancelled: 'warning'
+    failed: 'failed',
+    cancelled: 'stopped'
   }
-  return map[status] || ''
+  return map[status] || 'inactive'
 }
 
 function getProgressStatus(status: string) {
@@ -317,72 +366,27 @@ function formatDate(dateStr: string): string {
 </script>
 
 <style scoped>
-.page-container {
-  padding: 0;
+:deep(.el-descriptions) {
+  @apply rounded-lg overflow-hidden;
 }
 
-.stats-row {
-  margin-bottom: 20px;
+:deep(.el-descriptions__label) {
+  @apply font-semibold bg-neutral-50;
 }
 
-.stats-card {
-  text-align: center;
-  border-left: 4px solid #409EFF;
+:deep(.el-descriptions__content) {
+  @apply text-text-primary;
 }
 
-.stats-card.pending {
-  border-left-color: #909399;
+.dark :deep(.el-descriptions__label) {
+  @apply bg-neutral-800 text-text-inverse;
 }
 
-.stats-card.running {
-  border-left-color: #409EFF;
+.dark :deep(.el-descriptions__content) {
+  @apply bg-surface-dark text-text-inverse;
 }
 
-.stats-card.success {
-  border-left-color: #67C23A;
-}
-
-.stats-card.failed {
-  border-left-color: #F56C6C;
-}
-
-.stats-card.cancelled {
-  border-left-color: #E6A23C;
-}
-
-.stat-item {
-  padding: 10px 0;
-}
-
-.stat-label {
-  font-size: 14px;
-  color: #909399;
-  margin-bottom: 8px;
-}
-
-.stat-value {
-  font-size: 24px;
-  font-weight: bold;
-  color: #303133;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.filter-bar {
-  margin-bottom: 20px;
-}
-
-.pagination {
-  margin-top: 20px;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.mt-4 {
-  margin-top: 20px;
+.dark .text-text-tertiary {
+  @apply text-neutral-400;
 }
 </style>
