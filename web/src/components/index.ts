@@ -16,6 +16,8 @@ export { default as GvDrawer } from './base/GvDrawer/index.vue'
 
 // 布局组件
 export { default as GvContainer } from './layout/GvContainer/index.vue'
+export { default as GvGrid } from './layout/GvGrid/index.vue'
+export { default as GvFlex } from './layout/GvFlex/index.vue'
 
 // 类型导出
 export type * from './base/GvButton/types'
@@ -29,3 +31,5 @@ export type * from './base/GvSelect/types'
 export type * from './base/GvLoading/types'
 export type * from './base/GvDrawer/types'
 export type * from './layout/GvContainer/types'
+export type * from './layout/GvGrid/types'
+export type * from './layout/GvFlex/types'
