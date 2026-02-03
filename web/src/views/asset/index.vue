@@ -89,6 +89,22 @@
                 :show-button="false"
                 @search="loadAssets"
               />
+              <div class="view-switch-group">
+                <button
+                  :class="['view-switch-btn', { active: viewMode === 'grid' }]"
+                  @click="viewMode = 'grid'"
+                  title="网格视图"
+                >
+                  <el-icon :size="18"><Grid /></el-icon>
+                </button>
+                <button
+                  :class="['view-switch-btn', { active: viewMode === 'list' }]"
+                  @click="viewMode = 'list'"
+                  title="列表视图"
+                >
+                  <el-icon :size="18"><List /></el-icon>
+                </button>
+              </div>
               <GvButton @click="showUploadDialog = true">
                 <template #icon>
                   <el-icon><Upload /></el-icon>
@@ -99,7 +115,7 @@
           </template>
         </PageHeader>
 
-        <!-- 资产网格展示 -->
+        <!-- 资产展示 -->
         <div v-if="loading" class="flex justify-center items-center py-20">
           <GvLoading />
         </div>
@@ -110,7 +126,8 @@
           <p class="text-text-tertiary">暂无资产</p>
         </div>
         <div v-else>
-          <GvGrid :cols="4" gap="md" class="mb-6">
+          <!-- 网格视图 -->
+          <div v-if="viewMode === 'grid'" class="grid gap-4 mb-6" :class="gridClass">
             <AssetCard
               v-for="asset in assets"
               :key="asset.id"
@@ -119,7 +136,57 @@
               @edit="handleEdit"
               @delete="handleDelete"
             />
-          </GvGrid>
+          </div>
+
+          <!-- 列表视图 -->
+          <GvTable
+            v-else
+            :data="assets"
+            :columns="tableColumns"
+            :loading="loading"
+            class="mb-6"
+          >
+            <template #type="{ row }">
+              <GvTag :color="getTypeColor(row.type)" size="small">
+                {{ getTypeLabel(row.type) }}
+              </GvTag>
+            </template>
+            <template #source_type="{ row }">
+              <GvTag color="info" size="small" variant="tonal">
+                {{ getSourceTypeLabel(row.source_type) }}
+              </GvTag>
+            </template>
+            <template #size="{ row }">
+              {{ formatSize(row.size) }}
+            </template>
+            <template #duration="{ row }">
+              {{ row.duration ? formatDuration(row.duration) : '-' }}
+            </template>
+            <template #status="{ row }">
+              <StatusBadge :status="mapStatus(row.status)" />
+            </template>
+            <template #tags="{ row }">
+              <GvSpace v-if="row.tags && row.tags.length > 0" size="xs" wrap>
+                <GvTag v-for="tag in row.tags.slice(0, 3)" :key="tag" size="small" color="primary" variant="tonal">
+                  {{ tag }}
+                </GvTag>
+                <GvTag v-if="row.tags.length > 3" size="small" color="neutral" variant="tonal">
+                  +{{ row.tags.length - 3 }}
+                </GvTag>
+              </GvSpace>
+              <span v-else class="text-text-tertiary text-sm">-</span>
+            </template>
+            <template #created_at="{ row }">
+              {{ formatDate(row.created_at) }}
+            </template>
+            <template #actions="{ row }">
+              <GvSpace size="xs">
+                <GvButton variant="text" size="small" @click="handleView(row)">查看</GvButton>
+                <GvButton variant="text" size="small" @click="handleEdit(row)">编辑</GvButton>
+                <GvButton variant="text" size="small" color="error" @click="handleDelete(row)">删除</GvButton>
+              </GvSpace>
+            </template>
+          </GvTable>
 
           <!-- 分页 -->
           <div class="flex justify-end">
@@ -295,7 +362,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type UploadFile } from 'element-plus'
-import { Upload, VideoCamera, Picture, Headset, Connection, Refresh, FolderOpened } from '@element-plus/icons-vue'
+import { Upload, VideoCamera, Picture, Headset, Connection, Refresh, FolderOpened, Grid, List } from '@element-plus/icons-vue'
 import { assetApi, type MediaAsset, type AssetCreateReq, type AssetUpdateReq } from '@/api/asset'
 import {
   GvContainer,
@@ -307,8 +374,8 @@ import {
   GvBadge,
   GvInput,
   GvSelect,
-  GvGrid,
   GvLoading,
+  GvTable,
   PageHeader,
   SearchBar,
   StatusBadge,
@@ -329,6 +396,7 @@ const editFormRef = ref<FormInstance>()
 const uploadRef = ref()
 const uploadType = ref<'url' | 'file'>('url')
 const selectedFile = ref<UploadFile | null>(null)
+const viewMode = ref<'grid' | 'list'>('grid')
 
 const searchName = ref('')
 const selectedType = ref<string | null>(null)
@@ -387,6 +455,24 @@ const statusOptions = [
   { label: '待处理', value: 'pending' },
   { label: '错误', value: 'error' }
 ]
+
+const tableColumns = [
+  { prop: 'name', label: '名称', minWidth: 200 },
+  { prop: 'type', label: '类型', width: 100 },
+  { prop: 'source_type', label: '来源', width: 120 },
+  { prop: 'format', label: '格式', width: 80 },
+  { prop: 'size', label: '大小', width: 100 },
+  { prop: 'duration', label: '时长', width: 100 },
+  { prop: 'status', label: '状态', width: 100 },
+  { prop: 'tags', label: '标签', width: 200 },
+  { prop: 'created_at', label: '创建时间', width: 180 },
+  { prop: 'actions', label: '操作', width: 200, fixed: 'right' }
+]
+
+// 响应式网格类名
+const gridClass = computed(() => {
+  return 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6'
+})
 
 onMounted(() => {
   loadAssets()
@@ -622,6 +708,58 @@ function formatDate(dateStr: string): string {
 </script>
 
 <style scoped>
+/* 视图切换按钮组 */
+.view-switch-group {
+  display: inline-flex;
+  background: #f5f7fa;
+  border-radius: 8px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.view-switch-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #606266;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.view-switch-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.view-switch-btn:hover::before {
+  opacity: 0.08;
+}
+
+.view-switch-btn:active {
+  transform: scale(0.95);
+}
+
+.view-switch-btn.active {
+  background: #ffffff;
+  color: #409eff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.view-switch-btn.active:hover::before {
+  opacity: 0;
+}
+
 :deep(.el-descriptions) {
   @apply rounded-lg overflow-hidden;
 }

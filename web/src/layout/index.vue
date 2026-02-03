@@ -175,7 +175,7 @@ async function handleChangePassword() {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+  background: #ffffff;
 }
 
 .layout-header {
@@ -246,13 +246,13 @@ async function handleChangePassword() {
 
 .layout-menu :deep(.el-menu-item:hover),
 .layout-menu :deep(.el-sub-menu__title:hover) {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+  background: transparent;
   color: #667eea;
 }
 
 .layout-menu :deep(.el-menu-item.is-active) {
   color: #667eea;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  background: transparent;
   border-radius: 8px;
   font-weight: 600;
 }

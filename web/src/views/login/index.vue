@@ -25,7 +25,6 @@
           <el-input
             v-model="loginForm.username"
             placeholder="用户名"
-            prefix-icon="User"
             size="large"
             clearable
           >
