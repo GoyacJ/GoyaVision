@@ -7,6 +7,62 @@
 
 ## [未发布]
 
+### 流媒体资产与媒体源（设计文档落地） - 2026-02-04
+
+#### 新增
+
+- **前端**
+  - 媒体源管理页（`/sources`）：列表 CRUD、创建（拉流/推流）、编辑、删除、预览（含 type=push 时展示 push_url）、流预览对话框
+  - 添加资产-流媒体接入：支持「输入流地址」传 `stream_url` 新建媒体源并创建资产；支持「从已有媒体源创建」选择媒体源传 `source_id`
+  - 新增 `web/src/api/source.ts` 与媒体源页面 `web/src/views/source/index.vue`，路由与菜单（init_data 权限与菜单项）
+- **API 文档**
+  - `docs/api.md` 媒体源章节与当前实现对齐：已实现端点（列表、创建、详情、更新、删除、预览）与响应格式；未实现端点标注为「计划实现」
+  - 资产创建说明更新：流媒体接入注明 `stream_url` / `source_id` 两种方式
+- **测试**
+  - `internal/domain/media_source_test.go`：`GeneratePathName` 格式与唯一性单元测试
+
+#### 变更
+
+- 流媒体创建请求：前端由传 `path` 改为传 `stream_url`（新建流）或 `source_id`（从已有源创建），与后端及设计文档一致
+
+### 添加资产 - 流媒体接入 - 2026-02-03
+
+#### 📋 新增
+
+**添加资产增加流媒体接入设计与功能：**
+
+- **设计文档**
+  - `docs/requirements.md`：3.1.2 媒体资产管理补充「添加资产 - 流媒体接入」设计（通过流地址创建 / 从已有媒体源创建预留）
+  - `docs/asset-stream-ingestion.md`：新增流媒体接入设计与实现说明（目标、接入方式、前后端要点）
+- **前端**
+  - 添加资产对话框增加 Tab「流媒体接入」：资产名称、流地址（多行输入）、标签；提交创建 `type=stream`、`source_type=live`、`path=流地址`
+  - 切换至流媒体接入时自动设置类型与来源；表单校验与提交分支适配三种方式（URL、文件上传、流媒体接入）
+- **后端**
+  - 沿用现有 `POST /api/v1/assets`，已支持 `type=stream`、`source_type=live`，无需接口变更
+
+### 开发工作流规范 - 2026-02-03
+
+#### 📋 新增
+
+**Cursor 开发工作流规范（Rules / Skills / Hooks）：**
+
+- **规则**：`.cursor/rules/development-workflow.mdc`  
+  - 新需求前：查阅项目文档体系与开发进度  
+  - 开发中：使用 Cursor Rules 与 Skills，依据项目文档与规范  
+  - 完成后：更新开发进度、变更日志与项目文档，再 Git 提交  
+
+- **Skill**：`.cursor/skills/development-workflow/SKILL.md`  
+  - 「开始开发」：必读文档与必用 Rules/Skills 清单  
+  - 「完成开发」：更新文档与 Git 提交步骤与自检清单  
+  - 可通过 @development-workflow 或「开始开发」「完成开发」触发  
+
+- **Hooks**：`.cursor/hooks.json`  
+  - `stop` 钩子：任务结束时执行 `hooks/finish-dev-reminder.sh`，输出完成开发检查清单  
+
+- **主规则**：`goyavision.mdc` 增加「开发工作流」小节，引用上述规则与 Skill  
+
+- **文档**：`docs/development-progress.md` 迭代 0 中记录本规范建立项  
+
 ### 资产与构建优化 - 2026-02-03
 
 #### 🐛 Bug 修复

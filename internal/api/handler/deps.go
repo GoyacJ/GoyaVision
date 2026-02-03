@@ -9,9 +9,10 @@ import (
 )
 
 type Deps struct {
-	Repo              port.Repository
-	Cfg               *config.Config
-	MtxCli            *mediamtx.Client
-	MinIOClient       *storage.MinIOClient
-	WorkflowScheduler *app.WorkflowScheduler
+	Repo                port.Repository
+	Cfg                 *config.Config
+	MtxCli              *mediamtx.Client
+	MediaSourceService  *app.MediaSourceService
+	MinIOClient         *storage.MinIOClient
+	WorkflowScheduler   *app.WorkflowScheduler
 }

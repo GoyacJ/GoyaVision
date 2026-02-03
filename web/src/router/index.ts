@@ -4,6 +4,7 @@ const Layout = () => import('../layout/index.vue')
 const Login = () => import('../views/login/index.vue')
 const ComponentDemo = () => import('../views/ComponentDemo.vue')
 const AssetList = () => import('../views/asset/index.vue')
+const SourceList = () => import('../views/source/index.vue')
 const OperatorList = () => import('../views/operator/index.vue')
 const WorkflowList = () => import('../views/workflow/index.vue')
 const TaskList = () => import('../views/task/index.vue')
@@ -35,6 +36,12 @@ export const constantRoutes: RouteRecordRaw[] = [
         name: 'AssetList',
         component: AssetList,
         meta: { title: '媒体资产', icon: 'Film' }
+      },
+      {
+        path: 'sources',
+        name: 'SourceList',
+        component: SourceList,
+        meta: { title: '媒体源', icon: 'VideoCamera' }
       },
       {
         path: 'operators',

@@ -42,8 +42,8 @@
 | 仪表盘 | 系统概览 | ⏸️ 待开始 | |
 | 审计日志 | 操作日志 | ⏸️ 待开始 | |
 | **前端** | | | |
-| 媒体源页面 | 流管理、预览 | ✅ 已完成 | 支持多协议预览 |
-| 媒体资产页面 | 左右布局、类型/标签筛选、网格展示 | ✅ 已完成 | 支持 URL 和文件上传；类型与标签同款 GvTag 样式；标签筛选按 JSONB 查询 |
+| 媒体源页面 | 流管理、预览 | ✅ 已完成 | 独立页面 /sources，CRUD、预览 URL（含 push 时 push_url）、与设计文档对齐 |
+| 媒体资产页面 | 左右布局、类型/标签筛选、网格展示 | ✅ 已完成 | 支持 URL、文件上传与流媒体接入；流媒体接入支持「输入流地址」（传 stream_url 新建媒体源+资产）与「从已有媒体源创建」（传 source_id）；类型与标签同款 GvTag 样式；标签筛选按 JSONB 查询 |
 | 算子中心页面 | 算子市场 | ✅ 已完成 | 重构完成 |
 | 工作流页面 | 工作流列表 | ✅ 已完成 | 重构完成 |
 | 任务页面 | 任务列表、详情 | ✅ 已完成 | 重构完成 |
@@ -111,6 +111,11 @@
 - [x] 更新项目技能（`.cursor/skills/goyavision-context/SKILL.md`）
 - [x] 建立文档更新规范
 - [x] 建立 Git 提交规范（Conventional Commits）
+- [x] 建立 Cursor 开发工作流规范（2026-02-03）
+  - 新增 `.cursor/rules/development-workflow.mdc`：新需求前查阅文档、开发中遵循 rules/skills、完成后更新文档并提交
+  - 新增 `.cursor/skills/development-workflow/SKILL.md`：开始开发 / 完成开发清单，可 @development-workflow 引用
+  - 新增 `.cursor/hooks.json` 与 `hooks/finish-dev-reminder.sh`：任务结束（stop）时输出完成开发检查清单
+  - 主规则 `goyavision.mdc` 增加「开发工作流」小节，引用上述规则与 Skill
 
 ### 迭代 1：核心实体与服务（当前）
 
@@ -463,13 +468,15 @@
     - 保留旧页面（标记为"旧"）：/streams、/algorithms、/inference-results
     - 默认重定向到 /assets
 
-**待实现**:
-  - [ ] 适配新端点
+**本次完成（流媒体资产与媒体源）**:
+  - [x] 媒体源管理页：路由 /sources、source API、列表 CRUD、预览（含 push_url）、详情
+  - [x] 添加资产-流媒体：传 stream_url 新建流并创建资产；从已有媒体源创建（source_id）
+  - [x] API 文档 Sources 与当前实现对齐，未实现端点标注为计划实现
+  - [x] Domain 层 path_name 生成单元测试（media_source_test.go）
 
-- [ ] **路由与菜单**
-  - [ ] 更新路由配置
-  - [ ] 更新菜单配置
-  - [ ] 更新权限配置
+**待实现**:
+  - [ ] 其他新端点（录制、点播、status、enable/disable 等）前后端对接
+  - [ ] 路由与菜单（媒体源已加入 init_data 与前端路由）
 
 ### 迭代 3：测试与优化
 
@@ -571,6 +578,7 @@
 
 | 日期 | 版本 | 变更内容 |
 |------|------|----------|
+| 2026-02-04 | V1.0 | **流媒体资产与媒体源**：媒体源管理页（/sources）完成；添加资产-流媒体支持 stream_url 与从已有媒体源创建；API 文档 Sources 与实现对齐；domain path_name 单元测试。 |
 | 2026-02-03 | V1.0 | **资产与构建优化**：媒体资产按标签筛选修复（PostgreSQL jsonb @> 传参改为 JSON 字符串，避免 invalid input syntax for type json）；资产展示类型与标签样式统一（网格卡片右上角与列表「类型」列均改为 GvTag tonal 样式）；文件管理迁移至系统管理（路由 /system/file、菜单与权限）；Go 构建移除 file handler 未使用 pkg/storage 导入；Vite 构建：manualChunks 分包、chunkSizeWarningLimit、视图从 @/components 改为直接导入组件消除循环依赖警告。 |
 | 2026-02-03 | V1.0 | **资产管理深度优化**：修复标签保存到数据库的问题（前后端完整修复）、重设计资产详情对话框（两栏布局+资产预览）、列表视图类型标识采用渐变色设计（4种类型渐变色+图标）、移除卡片状态显示避免冗余 |
 | 2026-02-03 | V1.0 | **UI 样式优化**：移除顶部菜单悬停/选中背景色、主体区域改为纯白色、修复登录页重复图标；**视图切换功能**：资产页面支持网格/列表视图切换、响应式网格布局（2-6列自适应）、现代化切换按钮设计 |

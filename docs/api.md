@@ -137,42 +137,46 @@ Authorization: Bearer <access_token>
 
 ### 媒体源（Sources）
 
-#### 列出媒体源
+媒体源与 MediaMTX path 一一对应，用于流媒体资产接入。设计详见 `docs/stream-asset-mediamtx-design.md`。
+
+#### 已实现的端点
+
+##### 列出媒体源
 
 ```http
-GET /api/v1/sources?type=pull&enabled=true&with_status=true
+GET /api/v1/sources?type=pull&limit=20&offset=0
 ```
 
 **查询参数**：
-- `type`（可选）：源类型过滤（pull、push、upload）
-- `enabled`（可选）：启用状态过滤（true、false）
-- `with_status`（可选）：是否包含实时状态（true、false）
+- `type`（可选）：源类型过滤（pull、push）
+- `limit`（可选）：每页数量，默认 20
+- `offset`（可选）：偏移量，默认 0
 
 **响应**：
 ```json
-[
-  {
-    "id": "uuid",
-    "name": "camera1",
-    "type": "pull",
-    "url": "rtsp://192.168.1.100:554/stream",
-    "protocol": "rtsp",
-    "enabled": true,
-    "status": {
-      "ready": true,
-      "online": true,
-      "readers": 2,
-      "bitrate": 2048000
-    },
-    "created_at": "2025-02-01T10:00:00Z",
-    "updated_at": "2025-02-01T10:00:00Z"
-  }
-]
+{
+  "items": [
+    {
+      "id": "uuid",
+      "name": "camera1",
+      "path_name": "live/camera1-a1b2c3d4",
+      "type": "pull",
+      "url": "rtsp://192.168.1.100:554/stream",
+      "protocol": "rtsp",
+      "enabled": true,
+      "record_enabled": false,
+      "created_at": "2025-02-01T10:00:00Z",
+      "updated_at": "2025-02-01T10:00:00Z"
+    }
+  ],
+  "total": 1
+}
 ```
 
-#### 创建媒体源
+##### 创建媒体源
 
-**拉流（Pull）**：
+拉流（type=pull 时必填 url）；推流（type=push 时 url 可为空，创建后通过预览接口获取推流地址）。
+
 ```http
 POST /api/v1/sources
 Content-Type: application/json
@@ -181,29 +185,18 @@ Content-Type: application/json
   "name": "camera1",
   "type": "pull",
   "url": "rtsp://192.168.1.100:554/stream",
+  "protocol": "rtsp",
   "enabled": true
 }
 ```
 
-**推流（Push）**：
-```http
-POST /api/v1/sources
-Content-Type: application/json
-
-{
-  "name": "obs_stream",
-  "type": "push",
-  "enabled": true
-}
-```
-
-#### 获取媒体源详情
+##### 获取媒体源详情
 
 ```http
-GET /api/v1/sources/:id?with_status=true
+GET /api/v1/sources/:id
 ```
 
-#### 更新媒体源
+##### 更新媒体源
 
 ```http
 PUT /api/v1/sources/:id
@@ -216,41 +209,17 @@ Content-Type: application/json
 }
 ```
 
-#### 删除媒体源
+##### 删除媒体源
+
+仅当无流媒体资产关联该源时允许；有关联时返回 409。
 
 ```http
 DELETE /api/v1/sources/:id
 ```
 
-#### 启用媒体源
+##### 获取预览 URL
 
-```http
-POST /api/v1/sources/:id/enable
-```
-
-#### 禁用媒体源
-
-```http
-POST /api/v1/sources/:id/disable
-```
-
-#### 获取媒体源状态
-
-```http
-GET /api/v1/sources/:id/status
-```
-
-**响应**：
-```json
-{
-  "ready": true,
-  "online": true,
-  "readers": 2,
-  "bitrate": 2048000
-}
-```
-
-#### 获取预览 URL
+type=push 时响应中同时包含 `push_url`（推流地址，供 OBS 等配置）。
 
 ```http
 GET /api/v1/sources/:id/preview
@@ -259,134 +228,20 @@ GET /api/v1/sources/:id/preview
 **响应**：
 ```json
 {
-  "rtsp_url": "rtsp://localhost:8554/camera1",
-  "rtmp_url": "rtmp://localhost:1935/camera1",
-  "hls_url": "http://localhost:8888/camera1/index.m3u8",
-  "webrtc_url": "http://localhost:8889/camera1/whep"
+  "path_name": "live/camera1-a1b2c3d4",
+  "hls_url": "http://localhost:8888/live/camera1-a1b2c3d4/index.m3u8",
+  "rtsp_url": "rtsp://localhost:8554/live/camera1-a1b2c3d4",
+  "rtmp_url": "rtmp://localhost:1935/live/camera1-a1b2c3d4",
+  "webrtc_url": "http://localhost:8889/live/camera1-a1b2c3d4/whep",
+  "push_url": "rtmp://localhost:1935/live/camera1-a1b2c3d4"
 }
 ```
 
-#### 检查流就绪
+（`push_url` 仅当 type=push 时存在。）
 
-```http
-GET /api/v1/sources/:id/preview/ready
-```
+#### 计划实现的端点（当前未实现）
 
-**响应**：
-```json
-{
-  "ready": true
-}
-```
-
-#### 启动录制
-
-```http
-POST /api/v1/sources/:id/record/start
-```
-
-**响应**：
-```json
-{
-  "session_id": "uuid"
-}
-```
-
-#### 停止录制
-
-```http
-POST /api/v1/sources/:id/record/stop
-```
-
-#### 获取录制状态
-
-```http
-GET /api/v1/sources/:id/record/status
-```
-
-**响应**：
-```json
-{
-  "recording": true,
-  "session_id": "uuid",
-  "started_at": "2025-02-01T10:00:00Z"
-}
-```
-
-#### 列出录制会话
-
-```http
-GET /api/v1/sources/:id/record/sessions
-```
-
-**响应**：
-```json
-[
-  {
-    "id": "uuid",
-    "source_id": "uuid",
-    "status": "stopped",
-    "base_path": "./data/recordings/camera1",
-    "started_at": "2025-02-01T10:00:00Z",
-    "stopped_at": "2025-02-01T11:00:00Z"
-  }
-]
-```
-
-#### 列出录制文件
-
-```http
-GET /api/v1/sources/:id/record/files
-```
-
-**响应**：
-```json
-[
-  {
-    "name": "2025-02-01_10-00-00.mp4",
-    "path": "./data/recordings/camera1/2025-02-01_10-00-00.mp4",
-    "size": 104857600,
-    "start": 1706774400,
-    "duration": 3600
-  }
-]
-```
-
-#### 获取点播 URL
-
-```http
-GET /api/v1/sources/:id/playback?start=1706774400
-```
-
-**查询参数**：
-- `start`（必选）：开始时间戳（Unix 秒）
-
-**响应**：
-```json
-{
-  "hls_url": "http://localhost:9996/camera1/index.m3u8?start=1706774400",
-  "mp4_url": "http://localhost:9996/camera1/2025-02-01_10-00-00.mp4"
-}
-```
-
-#### 列出录制段
-
-```http
-GET /api/v1/sources/:id/playback/segments
-```
-
-**响应**：
-```json
-{
-  "segments": [
-    {
-      "start": 1706774400,
-      "duration": 3600,
-      "path": "2025-02-01_10-00-00.mp4"
-    }
-  ]
-}
-```
+以下按设计文档 2.3 节规划，后续迭代实现：列表/详情 with_status、enable/disable、status、preview/ready、录制与点播相关端点。
 
 ---
 
@@ -460,6 +315,8 @@ Content-Type: application/json
   "tags": ["upload", "demo"]
 }
 ```
+
+**流媒体接入**：当 `type=stream`、`source_type=live` 时有两种方式：（1）传 `stream_url` 表示新建流并创建资产（后端先创建 MediaSource 再创建 Asset）；（2）传 `source_id` 表示从已有媒体源创建资产，path 由后端从 MediaSource 补全。详见 `docs/stream-asset-mediamtx-design.md` 与 `docs/asset-stream-ingestion.md`。
 
 #### 获取媒体资产详情
 

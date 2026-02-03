@@ -58,6 +58,14 @@ type Repository interface {
 	ListMediaAssetsByParent(ctx context.Context, parentID uuid.UUID) ([]*domain.MediaAsset, error)
 	GetAllAssetTags(ctx context.Context) ([]string, error) // 获取所有标签
 
+	// MediaSource
+	CreateMediaSource(ctx context.Context, s *domain.MediaSource) error
+	GetMediaSource(ctx context.Context, id uuid.UUID) (*domain.MediaSource, error)
+	GetMediaSourceByPathName(ctx context.Context, pathName string) (*domain.MediaSource, error)
+	ListMediaSources(ctx context.Context, filter domain.MediaSourceFilter) ([]*domain.MediaSource, int64, error)
+	UpdateMediaSource(ctx context.Context, s *domain.MediaSource) error
+	DeleteMediaSource(ctx context.Context, id uuid.UUID) error
+
 	// Operator
 	CreateOperator(ctx context.Context, o *domain.Operator) error
 	GetOperator(ctx context.Context, id uuid.UUID) (*domain.Operator, error)

@@ -25,13 +25,15 @@ type AssetListQuery struct {
 }
 
 // AssetCreateReq 创建资产请求
+// 流媒体资产：传 stream_url 时表示新建流并创建资产（后端会先创建 MediaSource 再创建 Asset）；传 source_id 时表示从已有媒体源创建资产，path 可由后端从 MediaSource 补全
 type AssetCreateReq struct {
 	Type       string                 `json:"type" validate:"required"`
 	SourceType string                 `json:"source_type" validate:"required"`
 	SourceID   *uuid.UUID             `json:"source_id,omitempty"`
+	StreamURL  string                 `json:"stream_url,omitempty"`
 	ParentID   *uuid.UUID             `json:"parent_id,omitempty"`
 	Name       string                 `json:"name" validate:"required"`
-	Path       string                 `json:"path" validate:"required"`
+	Path       string                 `json:"path"`
 	Duration   *float64               `json:"duration,omitempty"`
 	Size       int64                  `json:"size"`
 	Format     string                 `json:"format,omitempty"`

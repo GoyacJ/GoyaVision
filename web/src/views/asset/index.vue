@@ -219,13 +219,14 @@
           <el-tabs v-model="uploadType" class="mb-4">
             <el-tab-pane label="URL 地址" name="url" />
             <el-tab-pane label="文件上传" name="file" />
+            <el-tab-pane label="流媒体接入" name="stream" />
           </el-tabs>
 
           <el-form ref="uploadFormRef" :model="uploadForm" :rules="uploadRules" label-width="100px">
             <el-form-item label="资产名称" prop="name">
               <GvInput v-model="uploadForm.name" placeholder="请输入资产名称" />
             </el-form-item>
-            <el-form-item label="资产类型" prop="type">
+            <el-form-item v-if="uploadType !== 'stream'" label="资产类型" prop="type">
               <GvSelect
                 v-model="uploadForm.type"
                 :options="typeOptions"
@@ -237,6 +238,46 @@
             <template v-if="uploadType === 'url'">
               <el-form-item label="资源地址" prop="path">
                 <GvInput v-model="uploadForm.path" placeholder="请输入资源 URL" />
+              </el-form-item>
+            </template>
+
+            <!-- 流媒体接入模式 -->
+            <template v-else-if="uploadType === 'stream'">
+              <el-form-item label="创建方式">
+                <el-radio-group v-model="streamCreateMode">
+                  <el-radio value="url">输入流地址（新建媒体源并创建资产）</el-radio>
+                  <el-radio value="from_source">从已有媒体源创建资产</el-radio>
+                </el-radio-group>
+              </el-form-item>
+              <el-form-item v-if="streamCreateMode === 'url'" label="流地址" prop="path">
+                <GvInput
+                  v-model="uploadForm.path"
+                  placeholder="请输入流地址，如 rtsp://...、rtmp://...、https://.../live.m3u8"
+                  type="textarea"
+                  :rows="2"
+                />
+                <div class="text-text-tertiary text-xs mt-1">
+                  支持 RTSP、RTMP、HLS 等协议，将自动接入 MediaMTX 并创建媒体源与资产
+                </div>
+              </el-form-item>
+              <el-form-item v-else label="媒体源" prop="source_id">
+                <el-select
+                  v-model="uploadForm.source_id"
+                  placeholder="请选择已有媒体源"
+                  filterable
+                  class="w-full"
+                  :loading="sourcesLoading"
+                >
+                  <el-option
+                    v-for="s in sources"
+                    :key="s.id"
+                    :label="`${s.name} (${s.path_name})`"
+                    :value="s.id"
+                  />
+                </el-select>
+                <div class="text-text-tertiary text-xs mt-1">
+                  在媒体源管理页可先创建拉流/推流源，再在此处选源创建资产
+                </div>
               </el-form-item>
             </template>
 
@@ -445,10 +486,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type UploadFile, type UploadFiles } from 'element-plus'
 import { Upload, VideoCamera, Picture, Headset, Connection, Refresh, FolderOpened, Grid, List } from '@element-plus/icons-vue'
 import { assetApi, type MediaAsset, type AssetCreateReq, type AssetUpdateReq } from '@/api/asset'
+import { sourceApi } from '@/api/source'
 import GvContainer from '@/components/layout/GvContainer/index.vue'
 import GvCard from '@/components/base/GvCard/index.vue'
 import GvModal from '@/components/base/GvModal/index.vue'
@@ -478,7 +520,10 @@ const currentAsset = ref<MediaAsset | null>(null)
 const uploadFormRef = ref<FormInstance>()
 const editFormRef = ref<FormInstance>()
 const uploadRef = ref()
-const uploadType = ref<'url' | 'file'>('url')
+const uploadType = ref<'url' | 'file' | 'stream'>('url')
+const streamCreateMode = ref<'url' | 'from_source'>('url')
+const sources = ref<import('@/api/source').MediaSource[]>([])
+const sourcesLoading = ref(false)
 const uploadFileList = ref<UploadFile[]>([])
 const selectedFile = ref<UploadFile | null>(null)
 const viewMode = ref<'grid' | 'list'>('grid')
@@ -500,6 +545,7 @@ const uploadForm = reactive<AssetCreateReq>({
   path: '',
   size: 0,
   format: '',
+  source_id: undefined,
   tags: []
 })
 
@@ -511,8 +557,62 @@ const editForm = reactive<AssetUpdateReq>({
 
 const uploadRules: FormRules = {
   name: [{ required: true, message: '请输入资产名称', trigger: 'blur' }],
-  type: [{ required: true, message: '请选择资产类型', trigger: 'change' }],
-  path: [{ required: uploadType.value === 'url', message: '请输入资源地址', trigger: 'blur' }]
+  type: [
+    {
+      required: true,
+      message: '请选择资产类型',
+      trigger: 'change',
+      validator: (_rule: unknown, value: string, callback: (e?: Error) => void) => {
+        if (uploadType.value === 'stream') {
+          callback()
+        } else if (!value) {
+          callback(new Error('请选择资产类型'))
+        } else {
+          callback()
+        }
+      }
+    }
+  ],
+  path: [
+    {
+      required: true,
+      message: '请输入资源地址或流地址',
+      trigger: 'blur',
+      validator: (_rule: unknown, value: string, callback: (e?: Error) => void) => {
+        if (uploadType.value === 'url') {
+          if (!value || !value.trim()) {
+            callback(new Error('请输入资源地址'))
+          } else {
+            callback()
+          }
+        } else if (uploadType.value === 'stream' && streamCreateMode.value === 'url') {
+          if (!value || !value.trim()) {
+            callback(new Error('请输入流地址'))
+          } else {
+            callback()
+          }
+        } else {
+          callback()
+        }
+      }
+    }
+  ],
+  source_id: [
+    {
+      validator: (_rule: unknown, _value: string, callback: (e?: Error) => void) => {
+        if (uploadType.value === 'stream' && streamCreateMode.value === 'from_source') {
+          if (!uploadForm.source_id) {
+            callback(new Error('请选择媒体源'))
+          } else {
+            callback()
+          }
+        } else {
+          callback()
+        }
+      },
+      trigger: 'change'
+    }
+  ]
 }
 
 const editRules: FormRules = {
@@ -558,6 +658,34 @@ const tableColumns = [
 const gridClass = computed(() => {
   return 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6'
 })
+
+watch(uploadType, (t) => {
+  if (t === 'stream') {
+    uploadForm.type = 'stream'
+    uploadForm.source_type = 'live'
+    if (streamCreateMode.value === 'from_source') {
+      loadSources()
+    }
+  }
+})
+
+watch([uploadType, streamCreateMode], () => {
+  if (uploadType.value === 'stream' && streamCreateMode.value === 'from_source') {
+    loadSources()
+  }
+})
+
+async function loadSources() {
+  sourcesLoading.value = true
+  try {
+    const res = await sourceApi.list({ limit: 200 })
+    sources.value = res.data?.items ?? []
+  } catch {
+    sources.value = []
+  } finally {
+    sourcesLoading.value = false
+  }
+}
 
 onMounted(() => {
   loadAssets()
@@ -653,15 +781,35 @@ async function handleUpload() {
     uploading.value = true
     try {
       if (uploadType.value === 'file' && selectedFile.value?.raw) {
-        // 文件上传模式
         await assetApi.upload(
           selectedFile.value.raw,
           uploadForm.type,
           uploadForm.name,
           uploadForm.tags || []
         )
+      } else if (uploadType.value === 'stream') {
+        if (streamCreateMode.value === 'url') {
+          await assetApi.create({
+            type: 'stream',
+            source_type: 'live',
+            name: uploadForm.name,
+            stream_url: uploadForm.path!.trim(),
+            size: 0,
+            format: '',
+            tags: uploadForm.tags || []
+          })
+        } else {
+          await assetApi.create({
+            type: 'stream',
+            source_type: 'live',
+            name: uploadForm.name,
+            source_id: uploadForm.source_id!,
+            size: 0,
+            format: '',
+            tags: uploadForm.tags || []
+          })
+        }
       } else {
-        // URL 模式 - 确保包含所有必需字段
         const createData = {
           type: uploadForm.type,
           source_type: uploadForm.source_type,
@@ -687,12 +835,15 @@ async function handleUpload() {
 }
 
 function resetUploadForm() {
+  uploadType.value = 'url'
+  streamCreateMode.value = 'url'
   uploadForm.type = 'video'
   uploadForm.source_type = 'upload'
   uploadForm.name = ''
   uploadForm.path = ''
   uploadForm.size = 0
   uploadForm.format = ''
+  uploadForm.source_id = undefined
   uploadForm.tags = []
   selectedFile.value = null
   uploadFileList.value = []

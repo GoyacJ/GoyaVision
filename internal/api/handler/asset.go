@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"net/url"
 	"strings"
 	"time"
 
@@ -14,10 +15,31 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+func inferProtocol(rawURL string) string {
+	rawURL = strings.TrimSpace(rawURL)
+	if rawURL == "" {
+		return ""
+	}
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return ""
+	}
+	scheme := strings.ToLower(u.Scheme)
+	switch scheme {
+	case "rtsp", "rtmp", "rtmps", "hls", "https", "http", "webrtc", "srt":
+		return scheme
+	}
+	if scheme != "" {
+		return scheme
+	}
+	return ""
+}
+
 func RegisterAsset(g *echo.Group, d Deps) {
 	svc := app.NewMediaAssetService(d.Repo)
 	h := assetHandler{
 		svc:         svc,
+		sourceSvc:   d.MediaSourceService,
 		cfg:         d.Cfg,
 		minioClient: d.MinIOClient,
 	}
@@ -32,6 +54,7 @@ func RegisterAsset(g *echo.Group, d Deps) {
 
 type assetHandler struct {
 	svc         *app.MediaAssetService
+	sourceSvc   *app.MediaSourceService
 	cfg         *config.Config
 	minioClient *storage.MinIOClient
 }
@@ -107,11 +130,6 @@ func (h *assetHandler) Create(c echo.Context) error {
 		})
 	}
 
-	status := domain.AssetStatusPending
-	if req.Status != "" {
-		status = domain.AssetStatus(req.Status)
-	}
-
 	createReq := &app.CreateMediaAssetRequest{
 		Type:       domain.AssetType(req.Type),
 		SourceType: domain.AssetSourceType(req.SourceType),
@@ -123,8 +141,34 @@ func (h *assetHandler) Create(c echo.Context) error {
 		Size:       req.Size,
 		Format:     req.Format,
 		Metadata:   req.Metadata,
-		Status:     status,
+		Status:     domain.AssetStatusPending,
 		Tags:       req.Tags,
+	}
+	if req.Status != "" {
+		createReq.Status = domain.AssetStatus(req.Status)
+	}
+
+	if req.Type == string(domain.AssetTypeStream) && req.SourceType == string(domain.AssetSourceLive) && h.sourceSvc != nil {
+		if req.StreamURL != "" {
+			src, err := h.sourceSvc.Create(c.Request().Context(), &app.CreateMediaSourceRequest{
+				Name:     req.Name,
+				Type:     domain.SourceTypePull,
+				URL:      req.StreamURL,
+				Protocol: inferProtocol(req.StreamURL),
+				Enabled:  true,
+			})
+			if err != nil {
+				return err
+			}
+			createReq.SourceID = &src.ID
+			createReq.Path = src.PathName
+		} else if req.SourceID != nil && req.Path == "" {
+			src, err := h.sourceSvc.Get(c.Request().Context(), *req.SourceID)
+			if err != nil {
+				return err
+			}
+			createReq.Path = src.PathName
+		}
 	}
 
 	asset, err := h.svc.Create(c.Request().Context(), createReq)

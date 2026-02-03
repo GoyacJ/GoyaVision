@@ -28,6 +28,7 @@ func RegisterRouter(e *echo.Echo, d HandlerDeps, webFS fs.FS) {
 	api.Use(authMiddleware.LoadUserPermissions(d.Repo))
 
 	handler.RegisterAsset(api, d)
+	handler.RegisterSource(api, d)
 	handler.RegisterUpload(api, d)
 	handler.RegisterFile(api, d)
 	handler.RegisterOperator(api, d)

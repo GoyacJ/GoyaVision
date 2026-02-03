@@ -31,14 +31,15 @@ export interface AssetListQuery {
 }
 
 export interface AssetCreateReq {
-  type: 'video' | 'image' | 'audio' | 'stream' // ✅ 添加 stream 类型
+  type: 'video' | 'image' | 'audio' | 'stream'
   source_type: 'upload' | 'stream_capture' | 'operator_output' | 'live' | 'vod' | 'generated'
   source_id?: string
+  stream_url?: string
   parent_id?: string
   name: string
-  path: string
+  path?: string
   duration?: number
-  size: number
+  size?: number
   format?: string
   metadata?: Record<string, any>
   tags?: string[]

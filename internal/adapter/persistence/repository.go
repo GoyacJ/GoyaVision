@@ -38,6 +38,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&domain.Permission{},
 		&domain.Menu{},
 		&domain.MediaAsset{},
+		&domain.MediaSource{},
 		&domain.Operator{},
 		&domain.Workflow{},
 		&domain.WorkflowNode{},
@@ -578,6 +579,77 @@ func (r *repository) GetAllAssetTags(ctx context.Context) ([]string, error) {
 	}
 
 	return result, nil
+}
+
+// MediaSource methods
+
+func (r *repository) CreateMediaSource(ctx context.Context, s *domain.MediaSource) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	ensureID(&s.ID)
+	return r.db.WithContext(ctx).Create(s).Error
+}
+
+func (r *repository) GetMediaSource(ctx context.Context, id uuid.UUID) (*domain.MediaSource, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var s domain.MediaSource
+	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&s).Error; err != nil {
+		return nil, err
+	}
+	return &s, nil
+}
+
+func (r *repository) GetMediaSourceByPathName(ctx context.Context, pathName string) (*domain.MediaSource, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	var s domain.MediaSource
+	if err := r.db.WithContext(ctx).Where("path_name = ?", pathName).First(&s).Error; err != nil {
+		return nil, err
+	}
+	return &s, nil
+}
+
+func (r *repository) ListMediaSources(ctx context.Context, filter domain.MediaSourceFilter) ([]*domain.MediaSource, int64, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, 0, err
+	}
+	q := r.db.WithContext(ctx).Model(&domain.MediaSource{})
+	if filter.Type != nil {
+		q = q.Where("type = ?", *filter.Type)
+	}
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	if filter.Limit <= 0 {
+		filter.Limit = 20
+	}
+	if filter.Limit > 1000 {
+		filter.Limit = 1000
+	}
+	var list []*domain.MediaSource
+	if err := q.Limit(filter.Limit).Offset(filter.Offset).Order("created_at DESC").Find(&list).Error; err != nil {
+		return nil, 0, err
+	}
+	return list, total, nil
+}
+
+func (r *repository) UpdateMediaSource(ctx context.Context, s *domain.MediaSource) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Save(s).Error
+}
+
+func (r *repository) DeleteMediaSource(ctx context.Context, id uuid.UUID) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.MediaSource{}).Error
 }
 
 // Operator methods
