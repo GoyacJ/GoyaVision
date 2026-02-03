@@ -1,93 +1,108 @@
 <template>
-  <div class="page-container">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>用户管理</span>
-          <el-button type="primary" @click="handleAdd" v-permission="'user:create'">
+  <GvContainer max-width="full">
+    <!-- 页面头部 -->
+    <PageHeader
+      title="用户管理"
+      description="管理系统用户，分配角色和权限"
+    >
+      <template #actions>
+        <GvButton @click="handleAdd" v-permission="'user:create'">
+          <template #icon>
             <el-icon><Plus /></el-icon>
-            新增用户
-          </el-button>
-        </div>
+          </template>
+          新增用户
+        </GvButton>
       </template>
+    </PageHeader>
 
-      <el-table :data="tableData" v-loading="loading" stripe>
-        <el-table-column prop="username" label="用户名" width="120" />
-        <el-table-column prop="nickname" label="昵称" width="120" />
-        <el-table-column prop="email" label="邮箱" width="180" />
-        <el-table-column prop="phone" label="手机号" width="120" />
-        <el-table-column label="角色" min-width="150">
-          <template #default="{ row }">
-            <el-tag v-for="role in row.roles" :key="role.id" class="role-tag" size="small">
-              {{ role.name }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" width="80">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-              {{ row.status === 1 ? '启用' : '禁用' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="180">
-          <template #default="{ row }">
-            {{ formatDate(row.created_at) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="220" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" size="small" @click="handleEdit(row)" v-permission="'user:update'">
-              编辑
-            </el-button>
-            <el-button link type="primary" size="small" @click="handleResetPassword(row)" v-permission="'user:update'">
-              重置密码
-            </el-button>
-            <el-button link type="danger" size="small" @click="handleDelete(row)" v-permission="'user:delete'">
-              删除
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+    <!-- 数据表格 -->
+    <GvTable
+      :data="tableData"
+      :columns="columns"
+      :loading="loading"
+      border
+      stripe
+      pagination
+      :pagination-config="paginationConfig"
+      @current-change="handlePageChange"
+      @size-change="handleSizeChange"
+    >
+      <template #roles="{ row }">
+        <GvSpace wrap size="xs">
+          <GvTag v-for="role in row.roles" :key="role.id" size="small">
+            {{ role.name }}
+          </GvTag>
+        </GvSpace>
+      </template>
+      
+      <template #status="{ row }">
+        <StatusBadge :status="row.status === 1 ? 'enabled' : 'disabled'" />
+      </template>
+      
+      <template #created_at="{ row }">
+        {{ formatDate(row.created_at) }}
+      </template>
+      
+      <template #actions="{ row }">
+        <GvSpace size="xs">
+          <GvButton
+            size="small"
+            @click="handleEdit(row)"
+            v-permission="'user:update'"
+          >
+            编辑
+          </GvButton>
+          <GvButton
+            size="small"
+            variant="tonal"
+            @click="handleResetPassword(row)"
+            v-permission="'user:update'"
+          >
+            重置密码
+          </GvButton>
+          <GvButton
+            size="small"
+            variant="text"
+            @click="handleDelete(row)"
+            v-permission="'user:delete'"
+          >
+            删除
+          </GvButton>
+        </GvSpace>
+      </template>
+    </GvTable>
 
-      <el-pagination
-        class="pagination"
-        v-model:current-page="currentPage"
-        v-model:page-size="pageSize"
-        :total="total"
-        :page-sizes="[10, 20, 50]"
-        layout="total, sizes, prev, pager, next"
-        @size-change="loadData"
-        @current-change="loadData"
-      />
-    </el-card>
-
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
+    <!-- 新增/编辑对话框 -->
+    <GvModal
+      v-model="dialogVisible"
+      :title="dialogTitle"
+      :confirm-loading="submitLoading"
+      @confirm="handleSubmit"
+      @cancel="dialogVisible = false"
+    >
       <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
         <el-form-item label="用户名" prop="username">
-          <el-input v-model="form.username" :disabled="isEdit" />
+          <GvInput v-model="form.username" :disabled="isEdit" />
         </el-form-item>
         <el-form-item v-if="!isEdit" label="密码" prop="password">
-          <el-input v-model="form.password" type="password" show-password />
+          <GvInput v-model="form.password" type="password" show-password />
         </el-form-item>
         <el-form-item label="昵称" prop="nickname">
-          <el-input v-model="form.nickname" />
+          <GvInput v-model="form.nickname" />
         </el-form-item>
         <el-form-item label="邮箱" prop="email">
-          <el-input v-model="form.email" />
+          <GvInput v-model="form.email" type="email" />
         </el-form-item>
         <el-form-item label="手机号" prop="phone">
-          <el-input v-model="form.phone" />
+          <GvInput v-model="form.phone" type="tel" />
         </el-form-item>
         <el-form-item label="角色" prop="role_ids">
-          <el-select v-model="form.role_ids" multiple style="width: 100%">
-            <el-option
-              v-for="role in roles"
-              :key="role.id"
-              :label="role.name"
-              :value="role.id"
-            />
-          </el-select>
+          <GvSelect
+            v-model="form.role_ids"
+            :options="roleOptions"
+            multiple
+            placeholder="选择角色"
+          />
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-radio-group v-model="form.status">
@@ -96,21 +111,29 @@
           </el-radio-group>
         </el-form-item>
       </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitLoading" @click="handleSubmit">
-          确定
-        </el-button>
-      </template>
-    </el-dialog>
-  </div>
+    </GvModal>
+  </GvContainer>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
+import { Plus } from '@element-plus/icons-vue'
 import { userApi, type User } from '../../../api/user'
 import { roleApi, type Role } from '../../../api/role'
+import {
+  GvContainer,
+  GvTable,
+  GvModal,
+  GvButton,
+  GvSpace,
+  GvTag,
+  GvInput,
+  GvSelect,
+  PageHeader,
+  StatusBadge,
+  type TableColumn
+} from '@/components'
 
 const loading = ref(false)
 const tableData = ref<User[]>([])
@@ -146,6 +169,27 @@ const rules: FormRules = {
   ]
 }
 
+const columns: TableColumn[] = [
+  { prop: 'username', label: '用户名', width: '120' },
+  { prop: 'nickname', label: '昵称', width: '120' },
+  { prop: 'email', label: '邮箱', width: '180' },
+  { prop: 'phone', label: '手机号', width: '120' },
+  { prop: 'roles', label: '角色', minWidth: '150' },
+  { prop: 'status', label: '状态', width: '100' },
+  { prop: 'created_at', label: '创建时间', width: '180' },
+  { prop: 'actions', label: '操作', width: '240', fixed: 'right' }
+]
+
+const roleOptions = computed(() => 
+  roles.value.map(r => ({ label: r.name, value: r.id }))
+)
+
+const paginationConfig = computed(() => ({
+  currentPage: currentPage.value,
+  pageSize: pageSize.value,
+  total: total.value
+}))
+
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleString()
 }
@@ -173,6 +217,17 @@ async function loadRoles() {
   } catch (error) {
     console.error('加载角色失败', error)
   }
+}
+
+function handlePageChange(page: number) {
+  currentPage.value = page
+  loadData()
+}
+
+function handleSizeChange(size: number) {
+  pageSize.value = size
+  currentPage.value = 1
+  loadData()
 }
 
 function handleAdd() {
@@ -284,22 +339,4 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.page-container {
-  padding: 0;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.role-tag {
-  margin-right: 4px;
-}
-
-.pagination {
-  margin-top: 20px;
-  justify-content: flex-end;
-}
 </style>

@@ -1,65 +1,83 @@
 <template>
-  <div class="page-container">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>角色管理</span>
-          <el-button type="primary" @click="handleAdd" v-permission="'role:create'">
+  <GvContainer max-width="full">
+    <!-- 页面头部 -->
+    <PageHeader
+      title="角色管理"
+      description="管理系统角色，配置菜单和接口权限"
+    >
+      <template #actions>
+        <GvButton @click="handleAdd" v-permission="'role:create'">
+          <template #icon>
             <el-icon><Plus /></el-icon>
-            新增角色
-          </el-button>
-        </div>
+          </template>
+          新增角色
+        </GvButton>
       </template>
+    </PageHeader>
 
-      <el-table :data="tableData" v-loading="loading" stripe>
-        <el-table-column prop="code" label="角色编码" width="150" />
-        <el-table-column prop="name" label="角色名称" width="150" />
-        <el-table-column prop="description" label="描述" min-width="200" />
-        <el-table-column prop="status" label="状态" width="80">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-              {{ row.status === 1 ? '启用' : '禁用' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="180">
-          <template #default="{ row }">
-            {{ formatDate(row.created_at) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="180" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" size="small" @click="handleEdit(row)" v-permission="'role:update'">
-              编辑
-            </el-button>
-            <el-button link type="primary" size="small" @click="handlePermission(row)" v-permission="'role:update'">
-              权限
-            </el-button>
-            <el-button
-              link
-              type="danger"
-              size="small"
-              @click="handleDelete(row)"
-              v-permission="'role:delete'"
-              :disabled="row.code === 'super_admin'"
-            >
-              删除
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
+    <!-- 数据表格 -->
+    <GvTable
+      :data="tableData"
+      :columns="columns"
+      :loading="loading"
+      border
+      stripe
+    >
+      <template #status="{ row }">
+        <StatusBadge :status="row.status === 1 ? 'enabled' : 'disabled'" />
+      </template>
+      
+      <template #created_at="{ row }">
+        {{ formatDate(row.created_at) }}
+      </template>
+      
+      <template #actions="{ row }">
+        <GvSpace size="xs">
+          <GvButton
+            size="small"
+            @click="handleEdit(row)"
+            v-permission="'role:update'"
+          >
+            编辑
+          </GvButton>
+          <GvButton
+            size="small"
+            variant="tonal"
+            @click="handlePermission(row)"
+            v-permission="'role:update'"
+          >
+            权限
+          </GvButton>
+          <GvButton
+            size="small"
+            variant="text"
+            @click="handleDelete(row)"
+            v-permission="'role:delete'"
+            :disabled="row.code === 'super_admin'"
+          >
+            删除
+          </GvButton>
+        </GvSpace>
+      </template>
+    </GvTable>
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
+    <!-- 新增/编辑对话框 -->
+    <GvModal
+      v-model="dialogVisible"
+      :title="dialogTitle"
+      :confirm-loading="submitLoading"
+      @confirm="handleSubmit"
+      @cancel="dialogVisible = false"
+    >
       <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
         <el-form-item label="编码" prop="code">
-          <el-input v-model="form.code" :disabled="isEdit" placeholder="唯一标识，如 admin" />
+          <GvInput v-model="form.code" :disabled="isEdit" placeholder="唯一标识，如 admin" />
         </el-form-item>
         <el-form-item label="名称" prop="name">
-          <el-input v-model="form.name" placeholder="显示名称" />
+          <GvInput v-model="form.name" placeholder="显示名称" />
         </el-form-item>
         <el-form-item label="描述" prop="description">
-          <el-input v-model="form.description" type="textarea" :rows="3" />
+          <GvInput v-model="form.description" type="textarea" :rows="3" />
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-radio-group v-model="form.status">
@@ -68,15 +86,17 @@
           </el-radio-group>
         </el-form-item>
       </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitLoading" @click="handleSubmit">
-          确定
-        </el-button>
-      </template>
-    </el-dialog>
+    </GvModal>
 
-    <el-dialog v-model="permissionDialogVisible" title="分配权限" width="600px">
+    <!-- 权限分配对话框 -->
+    <GvModal
+      v-model="permissionDialogVisible"
+      title="分配权限"
+      size="large"
+      :confirm-loading="permissionLoading"
+      @confirm="handlePermissionSubmit"
+      @cancel="permissionDialogVisible = false"
+    >
       <el-tabs v-model="activeTab">
         <el-tab-pane label="菜单权限" name="menus">
           <el-tree
@@ -98,22 +118,28 @@
           </el-checkbox-group>
         </el-tab-pane>
       </el-tabs>
-      <template #footer>
-        <el-button @click="permissionDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="permissionLoading" @click="handlePermissionSubmit">
-          确定
-        </el-button>
-      </template>
-    </el-dialog>
-  </div>
+    </GvModal>
+  </GvContainer>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import type { ElTree } from 'element-plus'
+import { Plus } from '@element-plus/icons-vue'
 import { roleApi, permissionApi, type Role, type Permission } from '../../../api/role'
 import { menuApi, type Menu } from '../../../api/menu'
+import {
+  GvContainer,
+  GvTable,
+  GvModal,
+  GvButton,
+  GvSpace,
+  GvInput,
+  PageHeader,
+  StatusBadge,
+  type TableColumn
+} from '@/components'
 
 const loading = ref(false)
 const tableData = ref<Role[]>([])
@@ -150,6 +176,15 @@ const rules: FormRules = {
     { required: true, message: '请输入角色名称', trigger: 'blur' }
   ]
 }
+
+const columns: TableColumn[] = [
+  { prop: 'code', label: '角色编码', width: '150' },
+  { prop: 'name', label: '角色名称', width: '150' },
+  { prop: 'description', label: '描述', minWidth: '200' },
+  { prop: 'status', label: '状态', width: '100' },
+  { prop: 'created_at', label: '创建时间', width: '180' },
+  { prop: 'actions', label: '操作', width: '200', fixed: 'right' }
+]
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleString()
@@ -295,17 +330,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.page-container {
-  padding: 0;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
 .permission-item {
-  padding: 4px 0;
+  @apply py-1;
 }
 </style>
