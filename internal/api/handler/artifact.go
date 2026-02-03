@@ -3,6 +3,7 @@ package handler
 import (
 	"time"
 
+	"goyavision/config"
 	"goyavision/internal/api/dto"
 	"goyavision/internal/app"
 	"goyavision/internal/domain"
@@ -13,7 +14,10 @@ import (
 
 func RegisterArtifact(g *echo.Group, d Deps) {
 	svc := app.NewArtifactService(d.Repo)
-	h := artifactHandler{svc: svc}
+	h := artifactHandler{
+		svc: svc,
+		cfg: d.Cfg,
+	}
 	g.GET("/artifacts", h.List)
 	g.POST("/artifacts", h.Create)
 	g.GET("/artifacts/:id", h.Get)
@@ -23,6 +27,7 @@ func RegisterArtifact(g *echo.Group, d Deps) {
 
 type artifactHandler struct {
 	svc *app.ArtifactService
+	cfg *config.Config
 }
 
 func (h *artifactHandler) List(c echo.Context) error {
@@ -62,7 +67,7 @@ func (h *artifactHandler) List(c echo.Context) error {
 	}
 
 	return c.JSON(200, dto.ArtifactListResponse{
-		Items: dto.ArtifactsToResponse(artifacts),
+		Items: dto.ArtifactsToResponse(artifacts, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL),
 		Total: total,
 	})
 }
@@ -88,7 +93,7 @@ func (h *artifactHandler) Create(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(201, dto.ArtifactToResponse(artifact))
+	return c.JSON(201, dto.ArtifactToResponse(artifact, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL))
 }
 
 func (h *artifactHandler) Get(c echo.Context) error {
@@ -106,7 +111,7 @@ func (h *artifactHandler) Get(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(200, dto.ArtifactToResponse(artifact))
+	return c.JSON(200, dto.ArtifactToResponse(artifact, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL))
 }
 
 func (h *artifactHandler) Delete(c echo.Context) error {
@@ -142,7 +147,7 @@ func (h *artifactHandler) ListByTask(c echo.Context) error {
 		if err != nil {
 			return err
 		}
-		return c.JSON(200, dto.ArtifactsToResponse(artifacts))
+		return c.JSON(200, dto.ArtifactsToResponse(artifacts, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL))
 	}
 
 	artifacts, err := h.svc.ListByTask(c.Request().Context(), taskID)
@@ -150,5 +155,5 @@ func (h *artifactHandler) ListByTask(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(200, dto.ArtifactsToResponse(artifacts))
+	return c.JSON(200, dto.ArtifactsToResponse(artifacts, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL))
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"goyavision/config"
 	"goyavision/internal/api/dto"
 	"goyavision/internal/app"
 	"goyavision/internal/domain"
@@ -18,6 +19,7 @@ func RegisterUpload(g *echo.Group, d Deps) {
 	h := uploadHandler{
 		svc:         app.NewMediaAssetService(d.Repo),
 		minioClient: d.MinIOClient,
+		cfg:         d.Cfg,
 	}
 	g.POST("/upload", h.Upload)
 }
@@ -25,6 +27,7 @@ func RegisterUpload(g *echo.Group, d Deps) {
 type uploadHandler struct {
 	svc         *app.MediaAssetService
 	minioClient *storage.MinIOClient
+	cfg         *config.Config
 }
 
 func (h *uploadHandler) Upload(c echo.Context) error {
@@ -105,5 +108,5 @@ func (h *uploadHandler) Upload(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(201, dto.AssetToResponse(asset))
+	return c.JSON(201, dto.AssetToResponse(asset, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL))
 }

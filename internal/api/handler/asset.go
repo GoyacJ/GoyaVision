@@ -4,9 +4,11 @@ import (
 	"strings"
 	"time"
 
+	"goyavision/config"
 	"goyavision/internal/api/dto"
 	"goyavision/internal/app"
 	"goyavision/internal/domain"
+	"goyavision/pkg/storage"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -14,7 +16,11 @@ import (
 
 func RegisterAsset(g *echo.Group, d Deps) {
 	svc := app.NewMediaAssetService(d.Repo)
-	h := assetHandler{svc: svc}
+	h := assetHandler{
+		svc:         svc,
+		cfg:         d.Cfg,
+		minioClient: d.MinIOClient,
+	}
 	g.GET("/assets", h.List)
 	g.POST("/assets", h.Create)
 	g.GET("/assets/:id", h.Get)
@@ -25,7 +31,9 @@ func RegisterAsset(g *echo.Group, d Deps) {
 }
 
 type assetHandler struct {
-	svc *app.MediaAssetService
+	svc         *app.MediaAssetService
+	cfg         *config.Config
+	minioClient *storage.MinIOClient
 }
 
 func (h *assetHandler) List(c echo.Context) error {
@@ -85,7 +93,7 @@ func (h *assetHandler) List(c echo.Context) error {
 	}
 
 	return c.JSON(200, dto.AssetListResponse{
-		Items: dto.AssetsToResponse(assets),
+		Items: dto.AssetsToResponse(assets, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL),
 		Total: total,
 	})
 }
@@ -124,7 +132,7 @@ func (h *assetHandler) Create(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(201, dto.AssetToResponse(asset))
+	return c.JSON(201, dto.AssetToResponse(asset, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL))
 }
 
 func (h *assetHandler) Get(c echo.Context) error {
@@ -142,7 +150,7 @@ func (h *assetHandler) Get(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(200, dto.AssetToResponse(asset))
+	return c.JSON(200, dto.AssetToResponse(asset, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL))
 }
 
 func (h *assetHandler) Update(c echo.Context) error {
@@ -183,7 +191,7 @@ func (h *assetHandler) Update(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(200, dto.AssetToResponse(asset))
+	return c.JSON(200, dto.AssetToResponse(asset, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL))
 }
 
 func (h *assetHandler) Delete(c echo.Context) error {
@@ -218,7 +226,7 @@ func (h *assetHandler) ListChildren(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(200, dto.AssetsToResponse(children))
+	return c.JSON(200, dto.AssetsToResponse(children, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL))
 }
 
 func (h *assetHandler) GetAllTags(c echo.Context) error {

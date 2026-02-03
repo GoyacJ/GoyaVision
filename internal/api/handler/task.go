@@ -3,6 +3,7 @@ package handler
 import (
 	"time"
 
+	"goyavision/config"
 	"goyavision/internal/api/dto"
 	"goyavision/internal/app"
 	"goyavision/internal/domain"
@@ -13,7 +14,10 @@ import (
 
 func RegisterTask(g *echo.Group, d Deps) {
 	svc := app.NewTaskService(d.Repo)
-	h := taskHandler{svc: svc}
+	h := taskHandler{
+		svc: svc,
+		cfg: d.Cfg,
+	}
 	g.GET("/tasks", h.List)
 	g.POST("/tasks", h.Create)
 	g.GET("/tasks/:id", h.Get)
@@ -28,6 +32,7 @@ func RegisterTask(g *echo.Group, d Deps) {
 
 type taskHandler struct {
 	svc *app.TaskService
+	cfg *config.Config
 }
 
 func (h *taskHandler) List(c echo.Context) error {
@@ -92,7 +97,7 @@ func (h *taskHandler) Create(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(201, dto.TaskToResponseWithRelations(task))
+	return c.JSON(201, dto.TaskToResponseWithRelations(task, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL))
 }
 
 func (h *taskHandler) Get(c echo.Context) error {
@@ -111,7 +116,7 @@ func (h *taskHandler) Get(c echo.Context) error {
 		if err != nil {
 			return err
 		}
-		return c.JSON(200, dto.TaskToResponseWithRelations(task))
+		return c.JSON(200, dto.TaskToResponseWithRelations(task, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL))
 	}
 
 	task, err := h.svc.Get(c.Request().Context(), id)

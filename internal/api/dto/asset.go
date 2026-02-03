@@ -2,6 +2,7 @@ package dto
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 
 	"goyavision/internal/domain"
@@ -73,7 +74,10 @@ type AssetListResponse struct {
 }
 
 // AssetToResponse 转换为响应
-func AssetToResponse(a *domain.MediaAsset) *AssetResponse {
+// minioEndpoint: MinIO 端点地址（如 "39.105.2.5:14250"）
+// minioBucket: MinIO 存储桶名称
+// minioUseSSL: 是否使用 SSL
+func AssetToResponse(a *domain.MediaAsset, minioEndpoint, minioBucket string, minioUseSSL bool) *AssetResponse {
 	if a == nil {
 		return nil
 	}
@@ -88,6 +92,19 @@ func AssetToResponse(a *domain.MediaAsset) *AssetResponse {
 		json.Unmarshal(a.Tags, &tags)
 	}
 
+	// 生成完整的文件 URL
+	path := a.Path
+	if a.SourceType == domain.AssetSourceUpload || a.SourceType == domain.AssetSourceGenerated {
+		// 如果是上传或生成的文件，且 path 不是完整 URL，则生成 MinIO 完整 URL
+		if !strings.HasPrefix(path, "http://") && !strings.HasPrefix(path, "https://") {
+			protocol := "http"
+			if minioUseSSL {
+				protocol = "https"
+			}
+			path = strings.TrimSuffix(protocol+"://"+minioEndpoint, "/") + "/" + minioBucket + "/" + strings.TrimPrefix(path, "/")
+		}
+	}
+
 	return &AssetResponse{
 		ID:         a.ID,
 		Type:       string(a.Type),
@@ -95,7 +112,7 @@ func AssetToResponse(a *domain.MediaAsset) *AssetResponse {
 		SourceID:   a.SourceID,
 		ParentID:   a.ParentID,
 		Name:       a.Name,
-		Path:       a.Path,
+		Path:       path,
 		Duration:   a.Duration,
 		Size:       a.Size,
 		Format:     a.Format,
@@ -108,10 +125,10 @@ func AssetToResponse(a *domain.MediaAsset) *AssetResponse {
 }
 
 // AssetsToResponse 转换为响应列表
-func AssetsToResponse(assets []*domain.MediaAsset) []*AssetResponse {
+func AssetsToResponse(assets []*domain.MediaAsset, minioEndpoint, minioBucket string, minioUseSSL bool) []*AssetResponse {
 	result := make([]*AssetResponse, len(assets))
 	for i, a := range assets {
-		result[i] = AssetToResponse(a)
+		result[i] = AssetToResponse(a, minioEndpoint, minioBucket, minioUseSSL)
 	}
 	return result
 }

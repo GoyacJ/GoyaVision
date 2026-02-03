@@ -241,22 +241,16 @@
             <!-- 文件上传模式 -->
             <template v-else>
               <el-form-item label="选择文件" prop="file">
-                <el-upload
+                <GvUpload
                   ref="uploadRef"
+                  v-model="uploadFileList"
                   :auto-upload="false"
                   :limit="1"
-                  :on-change="handleFileChange"
-                  :on-remove="handleFileRemove"
-                >
-                  <template #trigger>
-                    <GvButton variant="outlined">选择文件</GvButton>
-                  </template>
-                  <template #tip>
-                    <div class="text-sm text-text-tertiary mt-2">
-                      支持视频、图片、音频文件
-                    </div>
-                  </template>
-                </el-upload>
+                  button-text="选择文件"
+                  tip="支持视频、图片、音频文件"
+                  @change="handleFileChange"
+                  @remove="handleFileRemove"
+                />
               </el-form-item>
             </template>
 
@@ -450,7 +444,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type UploadFile } from 'element-plus'
+import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type UploadFile, type UploadFiles } from 'element-plus'
 import { Upload, VideoCamera, Picture, Headset, Connection, Refresh, FolderOpened, Grid, List } from '@element-plus/icons-vue'
 import { assetApi, type MediaAsset, type AssetCreateReq, type AssetUpdateReq } from '@/api/asset'
 import {
@@ -465,6 +459,7 @@ import {
   GvSelect,
   GvLoading,
   GvTable,
+  GvUpload,
   PageHeader,
   SearchBar,
   StatusBadge,
@@ -484,6 +479,7 @@ const uploadFormRef = ref<FormInstance>()
 const editFormRef = ref<FormInstance>()
 const uploadRef = ref()
 const uploadType = ref<'url' | 'file'>('url')
+const uploadFileList = ref<UploadFile[]>([])
 const selectedFile = ref<UploadFile | null>(null)
 const viewMode = ref<'grid' | 'list'>('grid')
 
@@ -622,19 +618,25 @@ function handleSizeChange(size: number) {
   loadAssets()
 }
 
-function handleFileChange(file: UploadFile) {
-  selectedFile.value = file
-  uploadForm.name = file.name.split('.')[0]
-  uploadForm.size = file.size || 0
-  uploadForm.format = file.name.split('.').pop() || ''
-  uploadForm.path = file.name
+function handleFileChange(file: UploadFile, fileList: UploadFiles) {
+  if (fileList.length > 0 && file.raw) {
+    selectedFile.value = file
+    uploadForm.name = file.name.split('.')[0]
+    uploadForm.size = file.size || 0
+    uploadForm.format = file.name.split('.').pop() || ''
+  } else {
+    selectedFile.value = null
+    uploadForm.size = 0
+    uploadForm.format = ''
+  }
 }
 
-function handleFileRemove() {
-  selectedFile.value = null
-  uploadForm.path = ''
-  uploadForm.size = 0
-  uploadForm.format = ''
+function handleFileRemove(file: UploadFile, fileList: UploadFiles) {
+  if (fileList.length === 0) {
+    selectedFile.value = null
+    uploadForm.size = 0
+    uploadForm.format = ''
+  }
 }
 
 async function handleUpload() {
@@ -693,6 +695,8 @@ function resetUploadForm() {
   uploadForm.format = ''
   uploadForm.tags = []
   selectedFile.value = null
+  uploadFileList.value = []
+  uploadRef.value?.clearFiles()
   uploadFormRef.value?.resetFields()
 }
 

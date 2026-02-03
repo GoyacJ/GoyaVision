@@ -47,7 +47,7 @@ type ArtifactListResponse struct {
 }
 
 // ArtifactToResponse 转换为响应
-func ArtifactToResponse(a *domain.Artifact) *ArtifactResponse {
+func ArtifactToResponse(a *domain.Artifact, minioEndpoint, minioBucket string, minioUseSSL bool) *ArtifactResponse {
 	if a == nil {
 		return nil
 	}
@@ -68,17 +68,17 @@ func ArtifactToResponse(a *domain.Artifact) *ArtifactResponse {
 	}
 
 	if a.Asset != nil {
-		resp.Asset = AssetToResponse(a.Asset)
+		resp.Asset = AssetToResponse(a.Asset, minioEndpoint, minioBucket, minioUseSSL)
 	}
 
 	return resp
 }
 
 // ArtifactsToResponse 转换为响应列表
-func ArtifactsToResponse(artifacts []*domain.Artifact) []*ArtifactResponse {
+func ArtifactsToResponse(artifacts []*domain.Artifact, minioEndpoint, minioBucket string, minioUseSSL bool) []*ArtifactResponse {
 	result := make([]*ArtifactResponse, len(artifacts))
 	for i, a := range artifacts {
-		result[i] = ArtifactToResponse(a)
+		result[i] = ArtifactToResponse(a, minioEndpoint, minioBucket, minioUseSSL)
 	}
 	return result
 }

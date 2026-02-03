@@ -116,7 +116,7 @@ func TaskToResponse(t *domain.Task) *TaskResponse {
 }
 
 // TaskToResponseWithRelations 转换为包含关联数据的响应
-func TaskToResponseWithRelations(t *domain.Task) *TaskWithRelationsResponse {
+func TaskToResponseWithRelations(t *domain.Task, minioEndpoint, minioBucket string, minioUseSSL bool) *TaskWithRelationsResponse {
 	if t == nil {
 		return nil
 	}
@@ -147,7 +147,7 @@ func TaskToResponseWithRelations(t *domain.Task) *TaskWithRelationsResponse {
 	}
 
 	if t.Asset != nil {
-		resp.Asset = AssetToResponse(t.Asset)
+		resp.Asset = AssetToResponse(t.Asset, minioEndpoint, minioBucket, minioUseSSL)
 	}
 
 	return resp
