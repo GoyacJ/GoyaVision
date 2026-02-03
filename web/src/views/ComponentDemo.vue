@@ -11,6 +11,160 @@
         </p>
       </header>
       
+      <!-- GvCard 展示 -->
+      <section class="mb-12">
+        <h2 class="text-2xl font-semibold text-text-primary mb-4">
+          GvCard - 卡片组件
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- 基础卡片 -->
+          <GvCard>
+            <h3 class="text-lg font-semibold mb-2">基础卡片</h3>
+            <p class="text-sm text-text-secondary">这是一个基础的卡片组件</p>
+          </GvCard>
+          
+          <!-- 带头部和底部 -->
+          <GvCard>
+            <template #header>
+              <div class="flex justify-between items-center">
+                <h3 class="font-semibold">完整卡片</h3>
+                <GvBadge>NEW</GvBadge>
+              </div>
+            </template>
+            <p class="text-sm text-text-secondary">带头部和底部的卡片</p>
+            <template #footer>
+              <div class="flex justify-end gap-2">
+                <GvButton variant="text" size="small">查看</GvButton>
+              </div>
+            </template>
+          </GvCard>
+          
+          <!-- 可悬停卡片 -->
+          <GvCard hoverable>
+            <h3 class="text-lg font-semibold mb-2">可悬停卡片</h3>
+            <p class="text-sm text-text-secondary">鼠标悬停查看效果</p>
+          </GvCard>
+        </div>
+      </section>
+      
+      <!-- GvBadge 展示 -->
+      <section class="mb-12">
+        <h2 class="text-2xl font-semibold text-text-primary mb-4">
+          GvBadge - 徽章组件
+        </h2>
+        
+        <div class="bg-white rounded-xl p-6 shadow-md">
+          <div class="space-y-6">
+            <!-- 独立徽章 -->
+            <div>
+              <h3 class="text-lg font-medium text-text-primary mb-3">独立徽章</h3>
+              <div class="flex flex-wrap gap-3">
+                <GvBadge color="primary">Primary</GvBadge>
+                <GvBadge color="success">Success</GvBadge>
+                <GvBadge color="error">Error</GvBadge>
+                <GvBadge color="warning">Warning</GvBadge>
+                <GvBadge color="info">Info</GvBadge>
+              </div>
+            </div>
+            
+            <!-- 变体 -->
+            <div>
+              <h3 class="text-lg font-medium text-text-primary mb-3">变体</h3>
+              <div class="flex flex-wrap gap-3">
+                <GvBadge variant="filled">Filled</GvBadge>
+                <GvBadge variant="tonal">Tonal</GvBadge>
+                <GvBadge variant="outlined">Outlined</GvBadge>
+              </div>
+            </div>
+            
+            <!-- 角标徽章 -->
+            <div>
+              <h3 class="text-lg font-medium text-text-primary mb-3">角标徽章</h3>
+              <div class="flex flex-wrap gap-6">
+                <GvBadge :value="5">
+                  <el-icon :size="24"><Bell /></el-icon>
+                </GvBadge>
+                <GvBadge :value="99">
+                  <el-icon :size="24"><Message /></el-icon>
+                </GvBadge>
+                <GvBadge :value="100" :max="99">
+                  <el-icon :size="24"><ChatDotRound /></el-icon>
+                </GvBadge>
+                <GvBadge dot color="success">
+                  <el-icon :size="24"><User /></el-icon>
+                </GvBadge>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- GvTag 展示 -->
+      <section class="mb-12">
+        <h2 class="text-2xl font-semibold text-text-primary mb-4">
+          GvTag - 标签组件
+        </h2>
+        
+        <div class="bg-white rounded-xl p-6 shadow-md">
+          <div class="space-y-6">
+            <!-- 颜色主题 -->
+            <div>
+              <h3 class="text-lg font-medium text-text-primary mb-3">颜色主题</h3>
+              <div class="flex flex-wrap gap-3">
+                <GvTag color="primary">Primary</GvTag>
+                <GvTag color="success">Success</GvTag>
+                <GvTag color="error">Error</GvTag>
+                <GvTag color="warning">Warning</GvTag>
+                <GvTag color="info">Info</GvTag>
+                <GvTag color="neutral">Neutral</GvTag>
+              </div>
+            </div>
+            
+            <!-- 变体 -->
+            <div>
+              <h3 class="text-lg font-medium text-text-primary mb-3">变体</h3>
+              <div class="flex flex-wrap gap-3">
+                <GvTag variant="filled" color="primary">Filled</GvTag>
+                <GvTag variant="tonal" color="primary">Tonal</GvTag>
+                <GvTag variant="outlined" color="primary">Outlined</GvTag>
+              </div>
+            </div>
+            
+            <!-- 尺寸 -->
+            <div>
+              <h3 class="text-lg font-medium text-text-primary mb-3">尺寸</h3>
+              <div class="flex flex-wrap items-center gap-3">
+                <GvTag size="small">Small</GvTag>
+                <GvTag size="medium">Medium</GvTag>
+                <GvTag size="large">Large</GvTag>
+              </div>
+            </div>
+            
+            <!-- 带图标 -->
+            <div>
+              <h3 class="text-lg font-medium text-text-primary mb-3">带图标</h3>
+              <div class="flex flex-wrap gap-3">
+                <GvTag icon="Check" color="success">已完成</GvTag>
+                <GvTag icon="Clock" color="warning">进行中</GvTag>
+                <GvTag icon="Close" color="error">失败</GvTag>
+                <GvTag icon="VideoCamera" color="primary">视频</GvTag>
+              </div>
+            </div>
+            
+            <!-- 可关闭标签 -->
+            <div>
+              <h3 class="text-lg font-medium text-text-primary mb-3">可关闭标签</h3>
+              <div class="flex flex-wrap gap-3">
+                <GvTag closable>标签 1</GvTag>
+                <GvTag closable color="primary">标签 2</GvTag>
+                <GvTag closable color="success">标签 3</GvTag>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
       <!-- GvButton 展示 -->
       <section class="mb-12">
         <h2 class="text-2xl font-semibold text-text-primary mb-4">
@@ -172,7 +326,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { GvButton } from '@/components'
+import { GvButton, GvCard, GvBadge, GvTag } from '@/components'
 import { useTheme } from '@/composables'
 
 const { actualTheme, toggleTheme } = useTheme()
