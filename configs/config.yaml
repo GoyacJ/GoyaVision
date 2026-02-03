@@ -2,7 +2,7 @@ server:
   port: 8080
 
 db:
-  dsn: "host=localhost user=goyavision password=goyavision dbname=goyavision port=5432 sslmode=disable"
+  dsn: "host=39.105.2.5 user=goya password=goya123 dbname=goya_vision port=14210 sslmode=disable"
 
 ffmpeg:
   bin: "ffmpeg"
@@ -30,12 +30,12 @@ jwt:
   issuer: "goyavision"
 
 mediamtx:
-  api_address: "http://localhost:9997"
-  rtsp_address: "rtsp://localhost:8554"
-  rtmp_address: "rtmp://localhost:1935"
-  hls_address: "http://localhost:8888"
-  webrtc_address: "http://localhost:8889"
-  playback_address: "http://localhost:9996"
-  record_path: "./data/recordings/%path/%Y-%m-%d_%H-%M-%S"
+  api_address: "http://39.105.2.5:9997"
+  rtsp_address: "rtsp://39.105.2.5:8554"
+  rtmp_address: "rtmp://39.105.2.5:1935"
+  hls_address: "http://39.105.2.5:8888"
+  webrtc_address: "http://39.105.2.5:8889"
+  playback_address: "http://39.105.2.5:9996"
+  record_path: "/nas/mediamtx/recordings/%path/%Y-%m-%d_%H-%M-%S"
   record_format: "fmp4"
   segment_duration: "1h"
