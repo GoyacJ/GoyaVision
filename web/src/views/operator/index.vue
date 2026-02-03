@@ -1,186 +1,209 @@
 <template>
-  <div class="page-container">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>算子中心</span>
-          <div class="header-actions">
-            <el-input
-              v-model="searchKeyword"
-              placeholder="搜索算子"
-              clearable
-              style="width: 200px; margin-right: 10px"
-              @change="loadOperators"
-            >
-              <template #prefix>
-                <el-icon><Search /></el-icon>
-              </template>
-            </el-input>
-            <el-button type="primary" @click="showCreateDialog = true">
+  <GvContainer max-width="full">
+    <!-- 页面头部 -->
+    <PageHeader
+      title="算子中心"
+      description="管理 AI 算子，包括内置和自定义算子"
+    >
+      <template #actions>
+        <GvSpace>
+          <SearchBar
+            v-model="searchKeyword"
+            placeholder="搜索算子"
+            class="w-80"
+            immediate
+            @search="loadOperators"
+          />
+          <GvButton @click="showCreateDialog = true">
+            <template #icon>
               <el-icon><Plus /></el-icon>
-              添加算子
-            </el-button>
-          </div>
-        </div>
+            </template>
+            添加算子
+          </GvButton>
+        </GvSpace>
       </template>
+    </PageHeader>
 
-      <div class="filter-bar">
-        <el-space wrap>
-          <el-select v-model="filterCategory" placeholder="分类" clearable @change="loadOperators" style="width: 120px">
-            <el-option label="分析" value="analysis" />
-            <el-option label="处理" value="processing" />
-            <el-option label="生成" value="generation" />
-          </el-select>
-          <el-select v-model="filterStatus" placeholder="状态" clearable @change="loadOperators" style="width: 120px">
-            <el-option label="草稿" value="draft" />
-            <el-option label="测试中" value="testing" />
-            <el-option label="已发布" value="published" />
-            <el-option label="已废弃" value="deprecated" />
-          </el-select>
-          <el-checkbox v-model="showBuiltin" @change="loadOperators">仅显示内置算子</el-checkbox>
-        </el-space>
-      </div>
+    <!-- 筛选栏 -->
+    <FilterBar
+      v-model="filters"
+      :fields="filterFields"
+      :loading="loading"
+      @filter="loadOperators"
+      @reset="handleResetFilter"
+    />
 
-      <el-table :data="operators" v-loading="loading" stripe>
-        <el-table-column prop="name" label="名称" min-width="150" show-overflow-tooltip />
-        <el-table-column prop="code" label="代码" width="150" />
-        <el-table-column prop="category" label="分类" width="100">
-          <template #default="{ row }">
-            <el-tag :type="getCategoryColor(row.category)" size="small">
-              {{ getCategoryLabel(row.category) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="type" label="类型" width="120" />
-        <el-table-column prop="version" label="版本" width="80" />
-        <el-table-column label="内置" width="80">
-          <template #default="{ row }">
-            <el-tag v-if="row.is_builtin" type="info" size="small">内置</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="getStatusColor(row.status)" size="small">
-              {{ getStatusLabel(row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="160">
-          <template #default="{ row }">
-            {{ formatDate(row.created_at) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="260" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" size="small" @click="handleView(row)">查看</el-button>
-            <el-button link type="primary" size="small" @click="handleEdit(row)" :disabled="row.is_builtin">编辑</el-button>
-            <el-button
-              v-if="row.status === 'published'"
-              link
-              type="warning"
-              size="small"
-              @click="handleDisable(row)"
-            >
-              禁用
-            </el-button>
-            <el-button
-              v-else
-              link
-              type="success"
-              size="small"
-              @click="handleEnable(row)"
-            >
-              启用
-            </el-button>
-            <el-button link type="danger" size="small" @click="handleDelete(row)" :disabled="row.is_builtin">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+    <!-- 数据表格 -->
+    <GvTable
+      :data="operators"
+      :columns="columns"
+      :loading="loading"
+      border
+      stripe
+      pagination
+      :pagination-config="paginationConfig"
+      @current-change="handlePageChange"
+      @size-change="handleSizeChange"
+    >
+      <template #category="{ row }">
+        <GvTag :color="getCategoryColor(row.category)" size="small">
+          {{ getCategoryLabel(row.category) }}
+        </GvTag>
+      </template>
+      
+      <template #is_builtin="{ row }">
+        <GvTag v-if="row.is_builtin" color="info" size="small" variant="tonal">
+          内置
+        </GvTag>
+        <span v-else class="text-text-tertiary">-</span>
+      </template>
+      
+      <template #status="{ row }">
+        <StatusBadge :status="mapStatus(row.status)" />
+      </template>
+      
+      <template #created_at="{ row }">
+        {{ formatDate(row.created_at) }}
+      </template>
+      
+      <template #actions="{ row }">
+        <GvSpace size="xs">
+          <GvButton size="small" variant="tonal" @click="handleView(row)">
+            查看
+          </GvButton>
+          <GvButton
+            size="small"
+            @click="handleEdit(row)"
+            :disabled="row.is_builtin"
+          >
+            编辑
+          </GvButton>
+          <GvButton
+            v-if="row.status === 'published'"
+            size="small"
+            variant="text"
+            @click="handleDisable(row)"
+          >
+            禁用
+          </GvButton>
+          <GvButton
+            v-else
+            size="small"
+            variant="text"
+            @click="handleEnable(row)"
+          >
+            启用
+          </GvButton>
+          <GvButton
+            size="small"
+            variant="text"
+            @click="handleDelete(row)"
+            :disabled="row.is_builtin"
+          >
+            删除
+          </GvButton>
+        </GvSpace>
+      </template>
+    </GvTable>
 
-      <div class="pagination">
-        <el-pagination
-          v-model:current-page="pagination.page"
-          v-model:page-size="pagination.page_size"
-          :total="pagination.total"
-          :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="loadOperators"
-          @current-change="loadOperators"
-        />
-      </div>
-    </el-card>
-
-    <el-dialog v-model="showCreateDialog" title="添加算子" width="600px">
+    <!-- 创建对话框 -->
+    <GvModal
+      v-model="showCreateDialog"
+      title="添加算子"
+      size="large"
+      :confirm-loading="creating"
+      @confirm="handleCreate"
+      @cancel="showCreateDialog = false"
+    >
       <el-form ref="createFormRef" :model="createForm" :rules="createRules" label-width="100px">
         <el-form-item label="算子代码" prop="code">
-          <el-input v-model="createForm.code" placeholder="唯一标识，如：frame_extract" />
+          <GvInput v-model="createForm.code" placeholder="唯一标识，如：frame_extract" />
         </el-form-item>
         <el-form-item label="算子名称" prop="name">
-          <el-input v-model="createForm.name" placeholder="算子显示名称" />
+          <GvInput v-model="createForm.name" placeholder="算子显示名称" />
         </el-form-item>
         <el-form-item label="描述" prop="description">
-          <el-input v-model="createForm.description" type="textarea" :rows="2" />
+          <GvInput v-model="createForm.description" type="textarea" :rows="2" />
         </el-form-item>
         <el-form-item label="分类" prop="category">
-          <el-select v-model="createForm.category" style="width: 100%">
-            <el-option label="分析" value="analysis" />
-            <el-option label="处理" value="processing" />
-            <el-option label="生成" value="generation" />
-          </el-select>
+          <GvSelect
+            v-model="createForm.category"
+            :options="categoryOptions"
+          />
         </el-form-item>
         <el-form-item label="类型" prop="type">
-          <el-input v-model="createForm.type" placeholder="如：object_detection, frame_extract" />
+          <GvInput v-model="createForm.type" placeholder="如：object_detection, frame_extract" />
         </el-form-item>
         <el-form-item label="端点地址" prop="endpoint">
-          <el-input v-model="createForm.endpoint" placeholder="http://..." />
+          <GvInput v-model="createForm.endpoint" placeholder="http://..." />
         </el-form-item>
         <el-form-item label="HTTP方法" prop="method">
-          <el-select v-model="createForm.method" style="width: 100%">
-            <el-option label="POST" value="POST" />
-            <el-option label="GET" value="GET" />
-          </el-select>
+          <GvSelect
+            v-model="createForm.method"
+            :options="methodOptions"
+          />
         </el-form-item>
       </el-form>
-      <template #footer>
-        <el-button @click="showCreateDialog = false">取消</el-button>
-        <el-button type="primary" :loading="creating" @click="handleCreate">确定</el-button>
-      </template>
-    </el-dialog>
+    </GvModal>
 
-    <el-dialog v-model="showViewDialog" title="算子详情" width="700px">
+    <!-- 详情对话框 -->
+    <GvModal
+      v-model="showViewDialog"
+      title="算子详情"
+      size="large"
+      :show-confirm="false"
+      cancel-text="关闭"
+    >
       <el-descriptions v-if="currentOperator" :column="2" border>
         <el-descriptions-item label="ID" :span="2">{{ currentOperator.id }}</el-descriptions-item>
         <el-descriptions-item label="代码">{{ currentOperator.code }}</el-descriptions-item>
         <el-descriptions-item label="名称">{{ currentOperator.name }}</el-descriptions-item>
         <el-descriptions-item label="分类">
-          <el-tag :type="getCategoryColor(currentOperator.category)" size="small">
+          <GvTag :color="getCategoryColor(currentOperator.category)" size="small">
             {{ getCategoryLabel(currentOperator.category) }}
-          </el-tag>
+          </GvTag>
         </el-descriptions-item>
         <el-descriptions-item label="类型">{{ currentOperator.type }}</el-descriptions-item>
         <el-descriptions-item label="版本">{{ currentOperator.version }}</el-descriptions-item>
         <el-descriptions-item label="状态">
-          <el-tag :type="getStatusColor(currentOperator.status)" size="small">
-            {{ getStatusLabel(currentOperator.status) }}
-          </el-tag>
+          <StatusBadge :status="mapStatus(currentOperator.status)" />
         </el-descriptions-item>
         <el-descriptions-item label="端点地址" :span="2">{{ currentOperator.endpoint }}</el-descriptions-item>
         <el-descriptions-item label="HTTP方法">{{ currentOperator.method }}</el-descriptions-item>
         <el-descriptions-item label="内置">
-          <el-tag v-if="currentOperator.is_builtin" type="info" size="small">是</el-tag>
+          <GvTag v-if="currentOperator.is_builtin" color="info" size="small" variant="tonal">
+            是
+          </GvTag>
           <span v-else>否</span>
         </el-descriptions-item>
         <el-descriptions-item label="描述" :span="2">{{ currentOperator.description || '-' }}</el-descriptions-item>
         <el-descriptions-item label="创建时间" :span="2">{{ formatDate(currentOperator.created_at) }}</el-descriptions-item>
       </el-descriptions>
-    </el-dialog>
-  </div>
+    </GvModal>
+  </GvContainer>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
+import { Plus } from '@element-plus/icons-vue'
 import { operatorApi, type Operator, type OperatorCreateReq } from '@/api/operator'
+import {
+  GvContainer,
+  GvTable,
+  GvModal,
+  GvButton,
+  GvSpace,
+  GvTag,
+  GvInput,
+  GvSelect,
+  PageHeader,
+  FilterBar,
+  SearchBar,
+  StatusBadge,
+  type TableColumn,
+  type FilterField
+} from '@/components'
 
 const loading = ref(false)
 const creating = ref(false)
@@ -191,9 +214,12 @@ const currentOperator = ref<Operator | null>(null)
 const createFormRef = ref<FormInstance>()
 
 const searchKeyword = ref('')
-const filterCategory = ref('')
-const filterStatus = ref('')
-const showBuiltin = ref(false)
+
+const filters = ref({
+  category: '',
+  status: '',
+  is_builtin: ''
+})
 
 const pagination = reactive({
   page: 1,
@@ -219,6 +245,69 @@ const createRules: FormRules = {
   endpoint: [{ required: true, message: '请输入端点地址', trigger: 'blur' }]
 }
 
+const categoryOptions = [
+  { label: '分析', value: 'analysis' },
+  { label: '处理', value: 'processing' },
+  { label: '生成', value: 'generation' }
+]
+
+const statusOptions = [
+  { label: '草稿', value: 'draft' },
+  { label: '测试中', value: 'testing' },
+  { label: '已发布', value: 'published' },
+  { label: '已废弃', value: 'deprecated' }
+]
+
+const methodOptions = [
+  { label: 'POST', value: 'POST' },
+  { label: 'GET', value: 'GET' }
+]
+
+const filterFields: FilterField[] = [
+  {
+    key: 'category',
+    label: '分类',
+    type: 'select',
+    placeholder: '选择分类',
+    options: categoryOptions
+  },
+  {
+    key: 'status',
+    label: '状态',
+    type: 'select',
+    placeholder: '选择状态',
+    options: statusOptions
+  },
+  {
+    key: 'is_builtin',
+    label: '内置',
+    type: 'select',
+    placeholder: '是否内置',
+    options: [
+      { label: '内置算子', value: 'true' },
+      { label: '自定义算子', value: 'false' }
+    ]
+  }
+]
+
+const columns: TableColumn[] = [
+  { prop: 'name', label: '名称', minWidth: '150', showOverflowTooltip: true },
+  { prop: 'code', label: '代码', width: '150' },
+  { prop: 'category', label: '分类', width: '100' },
+  { prop: 'type', label: '类型', width: '120' },
+  { prop: 'version', label: '版本', width: '80' },
+  { prop: 'is_builtin', label: '内置', width: '80' },
+  { prop: 'status', label: '状态', width: '120' },
+  { prop: 'created_at', label: '创建时间', width: '160' },
+  { prop: 'actions', label: '操作', width: '320', fixed: 'right' }
+]
+
+const paginationConfig = computed(() => ({
+  currentPage: pagination.page,
+  pageSize: pagination.page_size,
+  total: pagination.total
+}))
+
 onMounted(() => {
   loadOperators()
 })
@@ -228,9 +317,9 @@ async function loadOperators() {
   try {
     const response = await operatorApi.list({
       keyword: searchKeyword.value || undefined,
-      category: filterCategory.value as any,
-      status: filterStatus.value as any,
-      is_builtin: showBuiltin.value || undefined,
+      category: filters.value.category as any,
+      status: filters.value.status as any,
+      is_builtin: filters.value.is_builtin ? filters.value.is_builtin === 'true' : undefined,
       page: pagination.page,
       page_size: pagination.page_size
     })
@@ -305,6 +394,22 @@ async function handleDelete(row: Operator) {
   }
 }
 
+function handlePageChange(page: number) {
+  pagination.page = page
+  loadOperators()
+}
+
+function handleSizeChange(size: number) {
+  pagination.page_size = size
+  pagination.page = 1
+  loadOperators()
+}
+
+function handleResetFilter() {
+  searchKeyword.value = ''
+  loadOperators()
+}
+
 function getCategoryLabel(category: string) {
   const map: Record<string, string> = {
     analysis: '分析',
@@ -315,32 +420,22 @@ function getCategoryLabel(category: string) {
 }
 
 function getCategoryColor(category: string) {
-  const map: Record<string, any> = {
+  const map: Record<string, string> = {
     analysis: 'primary',
     processing: 'success',
     generation: 'warning'
   }
-  return map[category] || ''
+  return map[category] || 'neutral'
 }
 
-function getStatusLabel(status: string) {
+function mapStatus(status: string): any {
   const map: Record<string, string> = {
-    draft: '草稿',
-    testing: '测试中',
-    published: '已发布',
-    deprecated: '已废弃'
+    draft: 'pending',
+    testing: 'processing',
+    published: 'active',
+    deprecated: 'disabled'
   }
-  return map[status] || status
-}
-
-function getStatusColor(status: string) {
-  const map: Record<string, any> = {
-    draft: 'info',
-    testing: 'warning',
-    published: 'success',
-    deprecated: 'danger'
-  }
-  return map[status] || ''
+  return map[status] || 'inactive'
 }
 
 function formatDate(dateStr: string): string {
@@ -351,28 +446,23 @@ function formatDate(dateStr: string): string {
 </script>
 
 <style scoped>
-.page-container {
-  padding: 0;
+:deep(.el-descriptions) {
+  @apply rounded-lg overflow-hidden;
 }
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+:deep(.el-descriptions__label) {
+  @apply font-semibold bg-neutral-50;
 }
 
-.header-actions {
-  display: flex;
-  align-items: center;
+:deep(.el-descriptions__content) {
+  @apply text-text-primary;
 }
 
-.filter-bar {
-  margin-bottom: 20px;
+.dark :deep(.el-descriptions__label) {
+  @apply bg-neutral-800 text-text-inverse;
 }
 
-.pagination {
-  margin-top: 20px;
-  display: flex;
-  justify-content: flex-end;
+.dark :deep(.el-descriptions__content) {
+  @apply bg-surface-dark text-text-inverse;
 }
 </style>
