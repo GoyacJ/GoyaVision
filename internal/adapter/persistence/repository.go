@@ -32,8 +32,6 @@ func (r *repository) checkDB() error {
 
 func AutoMigrate(db *gorm.DB) error {
 	if err := db.AutoMigrate(
-		&domain.Stream{},
-		&domain.RecordSession{},
 		&domain.User{},
 		&domain.Role{},
 		&domain.Permission{},
@@ -49,40 +47,6 @@ func AutoMigrate(db *gorm.DB) error {
 		return err
 	}
 
-	if err := addIndexesAndConstraints(db); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func addIndexesAndConstraints(db *gorm.DB) error {
-	if db.Migrator().HasIndex(&domain.RecordSession{}, "idx_record_sessions_stream_running") {
-		return nil
-	}
-
-	if err := db.Exec(`
-		CREATE UNIQUE INDEX IF NOT EXISTS idx_record_sessions_stream_running 
-		ON record_sessions (stream_id) 
-		WHERE status = 'running'
-	`).Error; err != nil {
-		return err
-	}
-
-	if err := db.Exec(`
-		CREATE INDEX IF NOT EXISTS idx_inference_results_stream_ts 
-		ON inference_results (stream_id, ts DESC)
-	`).Error; err != nil {
-		return err
-	}
-
-	if err := db.Exec(`
-		CREATE INDEX IF NOT EXISTS idx_inference_results_binding_ts 
-		ON inference_results (algorithm_binding_id, ts DESC)
-	`).Error; err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -90,102 +54,6 @@ func ensureID(id *uuid.UUID) {
 	if *id == uuid.Nil {
 		*id = uuid.New()
 	}
-}
-
-func (r *repository) CreateStream(ctx context.Context, s *domain.Stream) error {
-	if err := r.checkDB(); err != nil {
-		return err
-	}
-	ensureID(&s.ID)
-	return r.db.WithContext(ctx).Create(s).Error
-}
-
-func (r *repository) GetStream(ctx context.Context, id uuid.UUID) (*domain.Stream, error) {
-	if err := r.checkDB(); err != nil {
-		return nil, err
-	}
-	var s domain.Stream
-	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&s).Error; err != nil {
-		return nil, err
-	}
-	return &s, nil
-}
-
-func (r *repository) ListStreams(ctx context.Context, enabled *bool) ([]*domain.Stream, error) {
-	if err := r.checkDB(); err != nil {
-		return nil, err
-	}
-	var list []*domain.Stream
-	q := r.db.WithContext(ctx)
-	if enabled != nil {
-		q = q.Where("enabled = ?", *enabled)
-	}
-	if err := q.Find(&list).Error; err != nil {
-		return nil, err
-	}
-	return list, nil
-}
-
-func (r *repository) UpdateStream(ctx context.Context, s *domain.Stream) error {
-	if err := r.checkDB(); err != nil {
-		return err
-	}
-	return r.db.WithContext(ctx).Save(s).Error
-}
-
-func (r *repository) DeleteStream(ctx context.Context, id uuid.UUID) error {
-	if err := r.checkDB(); err != nil {
-		return err
-	}
-	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.Stream{}).Error
-}
-
-func (r *repository) CreateRecordSession(ctx context.Context, rec *domain.RecordSession) error {
-	if err := r.checkDB(); err != nil {
-		return err
-	}
-	ensureID(&rec.ID)
-	return r.db.WithContext(ctx).Create(rec).Error
-}
-
-func (r *repository) GetRecordSession(ctx context.Context, id uuid.UUID) (*domain.RecordSession, error) {
-	if err := r.checkDB(); err != nil {
-		return nil, err
-	}
-	var rec domain.RecordSession
-	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&rec).Error; err != nil {
-		return nil, err
-	}
-	return &rec, nil
-}
-
-func (r *repository) GetRunningRecordSessionByStream(ctx context.Context, streamID uuid.UUID) (*domain.RecordSession, error) {
-	if err := r.checkDB(); err != nil {
-		return nil, err
-	}
-	var rec domain.RecordSession
-	if err := r.db.WithContext(ctx).Where("stream_id = ? AND status = ?", streamID, domain.RecordStatusRunning).First(&rec).Error; err != nil {
-		return nil, err
-	}
-	return &rec, nil
-}
-
-func (r *repository) ListRecordSessionsByStream(ctx context.Context, streamID uuid.UUID) ([]*domain.RecordSession, error) {
-	if err := r.checkDB(); err != nil {
-		return nil, err
-	}
-	var list []*domain.RecordSession
-	if err := r.db.WithContext(ctx).Where("stream_id = ?", streamID).Order("started_at DESC").Find(&list).Error; err != nil {
-		return nil, err
-	}
-	return list, nil
-}
-
-func (r *repository) UpdateRecordSession(ctx context.Context, rec *domain.RecordSession) error {
-	if err := r.checkDB(); err != nil {
-		return err
-	}
-	return r.db.WithContext(ctx).Save(rec).Error
 }
 
 // User methods

@@ -51,7 +51,7 @@ func main() {
 	log.Println("1. 更新菜单和权限（V1.0 新功能）")
 	log.Println("2. 迁移 streams → media_assets（作为媒体源）")
 	log.Println("3. 迁移 algorithms → operators")
-	log.Println("4. 清理废弃表（algorithm_bindings、inference_results）")
+	log.Println("4. 清理废弃表（algorithm_bindings、inference_results、streams、record_sessions）")
 
 	if !confirm("\n是否继续？") && !*dryRun {
 		log.Println("已取消")
@@ -81,6 +81,17 @@ func main() {
 	log.Println("\n✅ 迁移完成！")
 }
 
+// LegacyStream 旧流结构（用于迁移）
+type LegacyStream struct {
+	ID      uuid.UUID `gorm:"type:uuid;primaryKey"`
+	URL     string
+	Name    string
+	Type    string
+	Enabled bool
+}
+
+func (LegacyStream) TableName() string { return "streams" }
+
 // LegacyAlgorithm 旧算法结构（用于迁移）
 type LegacyAlgorithm struct {
 	ID          uuid.UUID `gorm:"type:uuid;primaryKey"`
@@ -105,12 +116,29 @@ func updateMenusAndPermissions(ctx context.Context, db *gorm.DB) error {
 	}
 
 	log.Println("  清理旧菜单...")
-	oldMenuCodes := []string{"stream", "algorithm", "inference"}
+	oldMenuCodes := []string{"stream", "algorithm", "inference", "legacy", "legacy:stream"}
 	for _, code := range oldMenuCodes {
 		if err := db.Where("code = ?", code).Delete(&domain.Menu{}).Error; err != nil {
 			log.Printf("  ⚠️  删除旧菜单 %s 失败: %v", code, err)
 		} else {
 			log.Printf("  ✓ 删除旧菜单: %s", code)
+		}
+	}
+
+	log.Println("  清理旧权限...")
+	oldPermCodes := []string{
+		"stream:list", "stream:create", "stream:update", "stream:delete",
+		"record:start", "record:stop", "record:list",
+		"preview:start", "preview:stop",
+		"algorithm:list", "algorithm:create", "algorithm:update", "algorithm:delete",
+		"binding:list", "binding:create", "binding:update", "binding:delete",
+		"inference:list",
+	}
+	for _, code := range oldPermCodes {
+		if err := db.Where("code = ?", code).Delete(&domain.Permission{}).Error; err != nil {
+			log.Printf("  ⚠️  删除旧权限 %s 失败: %v", code, err)
+		} else {
+			log.Printf("  ✓ 删除旧权限: %s", code)
 		}
 	}
 
@@ -178,20 +206,6 @@ func updateMenusAndPermissions(ctx context.Context, db *gorm.DB) error {
 			Component:  "",
 			Permission: "",
 			Sort:       90,
-			Visible:    true,
-			Status:     1,
-		},
-		{
-			ID:       uuid.MustParse("00000000-0000-0000-0000-000000000051"),
-			ParentID: ptrUUID("00000000-0000-0000-0000-000000000050"),
-			Code:     "legacy:stream",
-			Name:     "视频流（旧）",
-			Type:     2,
-			Path:     "/streams",
-			Icon:     "Monitor",
-			Component: "stream/index",
-			Permission: "stream:list",
-			Sort:       1,
 			Visible:    true,
 			Status:     1,
 		},
@@ -302,7 +316,7 @@ func ptrUUID(s string) *uuid.UUID {
 func migrateStreamsToAssets(ctx context.Context, db *gorm.DB) error {
 	log.Println("\n[2/4] 迁移 Streams → MediaAssets")
 
-	var streams []domain.Stream
+	var streams []LegacyStream
 	if err := db.Find(&streams).Error; err != nil {
 		return err
 	}
@@ -403,6 +417,8 @@ func cleanupOldTables(db *gorm.DB) error {
 	tables := []string{
 		"algorithm_bindings",
 		"inference_results",
+		"streams",
+		"record_sessions",
 	}
 
 	for _, table := range tables {

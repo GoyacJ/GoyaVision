@@ -27,22 +27,16 @@ func RegisterRouter(e *echo.Echo, d HandlerDeps, webFS fs.FS) {
 
 	api.Use(authMiddleware.LoadUserPermissions(d.Repo))
 
-	handler.RegisterStream(api, d)
 	handler.RegisterAsset(api, d)
 	handler.RegisterOperator(api, d)
 	handler.RegisterWorkflow(api, d)
 	handler.RegisterTask(api, d)
 	handler.RegisterArtifact(api, d)
-	handler.RegisterRecord(api, d)
-	handler.RegisterPreview(api, d)
-	handler.RegisterPlayback(api, d)
 
 	admin := api.Group("")
 	handler.RegisterUser(admin, d)
 	handler.RegisterRole(admin, d)
 	handler.RegisterMenu(admin, d)
-
-	e.Static("/live", "./data/hls")
 
 	RegisterStatic(e, webFS)
 }

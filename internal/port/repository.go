@@ -9,20 +9,6 @@ import (
 )
 
 type Repository interface {
-	// Stream（作为媒体源保留）
-	CreateStream(ctx context.Context, s *domain.Stream) error
-	GetStream(ctx context.Context, id uuid.UUID) (*domain.Stream, error)
-	ListStreams(ctx context.Context, enabled *bool) ([]*domain.Stream, error)
-	UpdateStream(ctx context.Context, s *domain.Stream) error
-	DeleteStream(ctx context.Context, id uuid.UUID) error
-
-	// RecordSession
-	CreateRecordSession(ctx context.Context, r *domain.RecordSession) error
-	GetRecordSession(ctx context.Context, id uuid.UUID) (*domain.RecordSession, error)
-	GetRunningRecordSessionByStream(ctx context.Context, streamID uuid.UUID) (*domain.RecordSession, error)
-	ListRecordSessionsByStream(ctx context.Context, streamID uuid.UUID) ([]*domain.RecordSession, error)
-	UpdateRecordSession(ctx context.Context, r *domain.RecordSession) error
-
 	// User
 	CreateUser(ctx context.Context, u *domain.User) error
 	GetUser(ctx context.Context, id uuid.UUID) (*domain.User, error)

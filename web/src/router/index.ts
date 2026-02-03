@@ -2,13 +2,10 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 
 const Layout = () => import('../layout/index.vue')
 const Login = () => import('../views/login/index.vue')
-const StreamList = () => import('../views/stream/index.vue')
 const AssetList = () => import('../views/asset/index.vue')
 const OperatorList = () => import('../views/operator/index.vue')
 const WorkflowList = () => import('../views/workflow/index.vue')
 const TaskList = () => import('../views/task/index.vue')
-const AlgorithmList = () => import('../views/algorithm/index.vue')
-const InferenceResultList = () => import('../views/inference/index.vue')
 const UserList = () => import('../views/system/user/index.vue')
 const RoleList = () => import('../views/system/role/index.vue')
 const MenuList = () => import('../views/system/menu/index.vue')
@@ -48,24 +45,6 @@ export const constantRoutes: RouteRecordRaw[] = [
         name: 'TaskList',
         component: TaskList,
         meta: { title: '任务中心', icon: 'List' }
-      },
-      {
-        path: 'streams',
-        name: 'StreamList',
-        component: StreamList,
-        meta: { title: '媒体源（旧）', icon: 'Monitor' }
-      },
-      {
-        path: 'algorithms',
-        name: 'AlgorithmList',
-        component: AlgorithmList,
-        meta: { title: '算法（旧）', icon: 'Cpu' }
-      },
-      {
-        path: 'inference-results',
-        name: 'InferenceResultList',
-        component: InferenceResultList,
-        meta: { title: '推理结果（旧）', icon: 'DataAnalysis' }
       },
       {
         path: 'system/user',
