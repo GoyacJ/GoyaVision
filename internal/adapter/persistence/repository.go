@@ -486,7 +486,8 @@ func (r *repository) ListMediaAssets(ctx context.Context, filter domain.MediaAss
 		q = q.Where("status = ?", *filter.Status)
 	}
 	if len(filter.Tags) > 0 {
-		q = q.Where("tags @> ?", filter.Tags)
+		tagsJSON, _ := json.Marshal(filter.Tags)
+		q = q.Where("tags @> ?::jsonb", string(tagsJSON))
 	}
 	if filter.From != nil {
 		q = q.Where("created_at >= ?", *filter.From)
@@ -631,7 +632,8 @@ func (r *repository) ListOperators(ctx context.Context, filter domain.OperatorFi
 		q = q.Where("is_builtin = ?", *filter.IsBuiltin)
 	}
 	if len(filter.Tags) > 0 {
-		q = q.Where("tags @> ?", filter.Tags)
+		tagsJSON, _ := json.Marshal(filter.Tags)
+		q = q.Where("tags @> ?::jsonb", string(tagsJSON))
 	}
 	if filter.Keyword != "" {
 		keyword := "%" + filter.Keyword + "%"
@@ -748,7 +750,8 @@ func (r *repository) ListWorkflows(ctx context.Context, filter domain.WorkflowFi
 		q = q.Where("trigger_type = ?", *filter.TriggerType)
 	}
 	if len(filter.Tags) > 0 {
-		q = q.Where("tags @> ?", filter.Tags)
+		tagsJSON, _ := json.Marshal(filter.Tags)
+		q = q.Where("tags @> ?::jsonb", string(tagsJSON))
 	}
 	if filter.Keyword != "" {
 		keyword := "%" + filter.Keyword + "%"

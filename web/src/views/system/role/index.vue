@@ -129,17 +129,15 @@ import type { ElTree } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { roleApi, permissionApi, type Role, type Permission } from '../../../api/role'
 import { menuApi, type Menu } from '../../../api/menu'
-import {
-  GvContainer,
-  GvTable,
-  GvModal,
-  GvButton,
-  GvSpace,
-  GvInput,
-  PageHeader,
-  StatusBadge,
-  type TableColumn
-} from '@/components'
+import GvContainer from '@/components/layout/GvContainer/index.vue'
+import GvTable from '@/components/base/GvTable/index.vue'
+import GvModal from '@/components/base/GvModal/index.vue'
+import GvButton from '@/components/base/GvButton/index.vue'
+import GvSpace from '@/components/layout/GvSpace/index.vue'
+import GvInput from '@/components/base/GvInput/index.vue'
+import PageHeader from '@/components/business/PageHeader/index.vue'
+import StatusBadge from '@/components/business/StatusBadge/index.vue'
+import type { TableColumn } from '@/components/base/GvTable/types'
 
 const loading = ref(false)
 const tableData = ref<Role[]>([])

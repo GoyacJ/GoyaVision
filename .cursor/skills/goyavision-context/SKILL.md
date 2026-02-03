@@ -59,7 +59,7 @@ web/                 Vue 3 前端（src/, dist/）
   src/views/asset/   资产库页面（源、资产、录制、点播）
   src/views/operator/ 算子中心页面（算子市场、配置）
   src/views/workflow/ 任务中心页面（工作流、任务、产物）
-  src/views/system/  系统管理页面（用户、角色、菜单）
+  src/views/system/  系统管理页面（用户、角色、菜单、文件管理）
   src/layout/        动态菜单布局
   src/directives/    权限指令（v-permission）
   src/router/guard.ts 路由守卫
@@ -335,6 +335,11 @@ docs/               需求、开发进度、架构文档、API 文档、部署�
 - `GET/POST /menus`：列表、创建
 - `GET/PUT/DELETE /menus/:id`：详情、更新、删除
 - `GET /menus/tree`：获取菜单树
+
+### 文件管理（Files，系统管理子模块）
+- `GET/POST /files`：列表、上传（支持过滤：type、status、search）
+- `GET/PUT/DELETE /files/:id`：详情、更新、删除
+- `GET /files/:id/download`：下载（重定向到文件 URL）
 
 ### 权限（Permissions）
 - `GET /permissions`：列出所有权限

@@ -162,21 +162,19 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
 import { taskApi, type Task, type TaskStats } from '@/api/task'
-import {
-  GvContainer,
-  GvGrid,
-  GvCard,
-  GvTable,
-  GvModal,
-  GvButton,
-  GvSpace,
-  GvAlert,
-  PageHeader,
-  FilterBar,
-  StatusBadge,
-  type TableColumn,
-  type FilterField
-} from '@/components'
+import GvContainer from '@/components/layout/GvContainer/index.vue'
+import GvGrid from '@/components/layout/GvGrid/index.vue'
+import GvCard from '@/components/base/GvCard/index.vue'
+import GvTable from '@/components/base/GvTable/index.vue'
+import GvModal from '@/components/base/GvModal/index.vue'
+import GvButton from '@/components/base/GvButton/index.vue'
+import GvSpace from '@/components/layout/GvSpace/index.vue'
+import GvAlert from '@/components/base/GvAlert/index.vue'
+import PageHeader from '@/components/business/PageHeader/index.vue'
+import FilterBar from '@/components/business/FilterBar/index.vue'
+import StatusBadge from '@/components/business/StatusBadge/index.vue'
+import type { TableColumn } from '@/components/base/GvTable/types'
+import type { FilterField } from '@/components/business/FilterBar/types'
 
 const loading = ref(false)
 const tasks = ref<Task[]>([])

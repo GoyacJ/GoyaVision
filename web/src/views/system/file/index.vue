@@ -249,27 +249,25 @@ import {
   Upload,
   Refresh
 } from '@element-plus/icons-vue'
-import { fileApi, type File, type FileListQuery } from '@/api/file'
-import {
-  GvContainer,
-  GvCard,
-  GvModal,
-  GvButton,
-  GvSpace,
-  GvTag,
-  GvLoading,
-  GvTable,
-  GvUpload,
-  SearchBar,
-  StatusBadge
-} from '@/components'
+import { fileApi, type FileInfo, type FileListQuery } from '@/api/file'
+import GvContainer from '@/components/layout/GvContainer/index.vue'
+import GvCard from '@/components/base/GvCard/index.vue'
+import GvModal from '@/components/base/GvModal/index.vue'
+import GvButton from '@/components/base/GvButton/index.vue'
+import GvSpace from '@/components/layout/GvSpace/index.vue'
+import GvTag from '@/components/base/GvTag/index.vue'
+import GvLoading from '@/components/base/GvLoading/index.vue'
+import GvTable from '@/components/base/GvTable/index.vue'
+import GvUpload from '@/components/base/GvUpload/index.vue'
+import SearchBar from '@/components/business/SearchBar/index.vue'
+import StatusBadge from '@/components/business/StatusBadge/index.vue'
 
 const loading = ref(false)
 const uploading = ref(false)
-const files = ref<File[]>([])
+const files = ref<FileInfo[]>([])
 const showUploadDialog = ref(false)
 const showViewDialog = ref(false)
-const currentFile = ref<File | null>(null)
+const currentFile = ref<FileInfo | null>(null)
 const uploadRef = ref()
 const uploadFileList = ref<UploadFile[]>([])
 
@@ -398,16 +396,16 @@ async function handleUpload() {
   }
 }
 
-function handleView(file: File) {
+function handleView(file: FileInfo) {
   currentFile.value = file
   showViewDialog.value = true
 }
 
-function handleDownload(file: File) {
+function handleDownload(file: FileInfo) {
   window.open(file.url, '_blank')
 }
 
-async function handleDelete(file: File) {
+async function handleDelete(file: FileInfo) {
   try {
     await ElMessageBox.confirm('确定要删除此文件吗？', '提示', {
       type: 'warning'

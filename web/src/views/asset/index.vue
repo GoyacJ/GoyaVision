@@ -147,12 +147,14 @@
             class="mb-6"
           >
             <template #type="{ row }">
-              <div :class="['type-tag', `type-tag--${row.type}`]">
-                <el-icon :size="14">
-                  <component :is="getTypeIcon(row.type)" />
-                </el-icon>
-                <span>{{ getTypeLabel(row.type) }}</span>
-              </div>
+              <GvTag :color="getTypeColor(row.type)" size="small" variant="tonal">
+                <span class="inline-flex items-center gap-1">
+                  <el-icon :size="14">
+                    <component :is="getTypeIcon(row.type)" />
+                  </el-icon>
+                  {{ getTypeLabel(row.type) }}
+                </span>
+              </GvTag>
             </template>
             <template #source_type="{ row }">
               <GvTag color="info" size="small" variant="tonal">
@@ -447,24 +449,22 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type UploadFile, type UploadFiles } from 'element-plus'
 import { Upload, VideoCamera, Picture, Headset, Connection, Refresh, FolderOpened, Grid, List } from '@element-plus/icons-vue'
 import { assetApi, type MediaAsset, type AssetCreateReq, type AssetUpdateReq } from '@/api/asset'
-import {
-  GvContainer,
-  GvCard,
-  GvModal,
-  GvButton,
-  GvSpace,
-  GvTag,
-  GvBadge,
-  GvInput,
-  GvSelect,
-  GvLoading,
-  GvTable,
-  GvUpload,
-  PageHeader,
-  SearchBar,
-  StatusBadge,
-  AssetCard
-} from '@/components'
+import GvContainer from '@/components/layout/GvContainer/index.vue'
+import GvCard from '@/components/base/GvCard/index.vue'
+import GvModal from '@/components/base/GvModal/index.vue'
+import GvButton from '@/components/base/GvButton/index.vue'
+import GvSpace from '@/components/layout/GvSpace/index.vue'
+import GvTag from '@/components/base/GvTag/index.vue'
+import GvBadge from '@/components/base/GvBadge/index.vue'
+import GvInput from '@/components/base/GvInput/index.vue'
+import GvSelect from '@/components/base/GvSelect/index.vue'
+import GvLoading from '@/components/base/GvLoading/index.vue'
+import GvTable from '@/components/base/GvTable/index.vue'
+import GvUpload from '@/components/base/GvUpload/index.vue'
+import PageHeader from '@/components/business/PageHeader/index.vue'
+import SearchBar from '@/components/business/SearchBar/index.vue'
+import StatusBadge from '@/components/business/StatusBadge/index.vue'
+import AssetCard from '@/components/business/AssetCard/index.vue'
 
 const loading = ref(false)
 const uploading = ref(false)
@@ -870,39 +870,6 @@ function formatDate(dateStr: string): string {
 
 .view-switch-btn.active:hover::before {
   opacity: 0;
-}
-
-/* 列表视图类型标签样式 */
-.type-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-  color: white;
-  white-space: nowrap;
-}
-
-.type-tag--video {
-  background: linear-gradient(135deg, rgba(124, 58, 237, 0.95) 0%, rgba(109, 40, 217, 0.95) 100%);
-  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
-}
-
-.type-tag--image {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.95) 0%, rgba(5, 150, 105, 0.95) 100%);
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
-}
-
-.type-tag--audio {
-  background: linear-gradient(135deg, rgba(251, 146, 60, 0.95) 0%, rgba(249, 115, 22, 0.95) 100%);
-  box-shadow: 0 2px 8px rgba(251, 146, 60, 0.3);
-}
-
-.type-tag--stream {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.95) 0%, rgba(37, 99, 235, 0.95) 100%);
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
 }
 
 /* 资产详情两栏布局 */

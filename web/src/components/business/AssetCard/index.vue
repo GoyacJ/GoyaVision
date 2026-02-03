@@ -32,14 +32,16 @@
         </div>
       </div>
 
-      <!-- 类型标识 -->
+      <!-- 类型标识（与标签同款 GvTag 样式） -->
       <div class="asset-card__type-badge">
-        <div :class="['type-badge', `type-badge--${asset.type}`]">
-          <el-icon :size="14">
-            <component :is="getTypeIcon(asset.type)" />
-          </el-icon>
-          <span>{{ getTypeLabel(asset.type) }}</span>
-        </div>
+        <GvTag :color="getTypeColor(asset.type)" size="small" variant="tonal">
+          <span class="inline-flex items-center gap-1">
+            <el-icon :size="14">
+              <component :is="getTypeIcon(asset.type)" />
+            </el-icon>
+            {{ getTypeLabel(asset.type) }}
+          </span>
+        </GvTag>
       </div>
 
       <!-- 时长标识（视频/音频） -->

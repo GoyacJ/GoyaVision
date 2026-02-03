@@ -143,17 +143,15 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { menuApi, type Menu } from '../../../api/menu'
-import {
-  GvContainer,
-  GvCard,
-  GvModal,
-  GvButton,
-  GvSpace,
-  GvTag,
-  GvInput,
-  PageHeader,
-  StatusBadge
-} from '@/components'
+import GvContainer from '@/components/layout/GvContainer/index.vue'
+import GvCard from '@/components/base/GvCard/index.vue'
+import GvModal from '@/components/base/GvModal/index.vue'
+import GvButton from '@/components/base/GvButton/index.vue'
+import GvSpace from '@/components/layout/GvSpace/index.vue'
+import GvTag from '@/components/base/GvTag/index.vue'
+import GvInput from '@/components/base/GvInput/index.vue'
+import PageHeader from '@/components/business/PageHeader/index.vue'
+import StatusBadge from '@/components/business/StatusBadge/index.vue'
 
 const loading = ref(false)
 const tableData = ref<Menu[]>([])

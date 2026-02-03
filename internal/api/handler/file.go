@@ -8,7 +8,6 @@ import (
 	"goyavision/internal/api/middleware"
 	"goyavision/internal/app"
 	"goyavision/internal/domain"
-	"goyavision/pkg/storage"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"

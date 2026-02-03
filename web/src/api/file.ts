@@ -1,6 +1,6 @@
 import apiClient from './client'
 
-export interface File {
+export interface FileInfo {
   id: string
   name: string
   original_name: string
@@ -30,7 +30,7 @@ export interface FileListQuery {
 }
 
 export interface FileListResponse {
-  items: File[]
+  items: FileInfo[]
   total: number
 }
 
@@ -44,11 +44,11 @@ export const fileApi = {
   /**
    * 上传文件
    */
-  upload(file: File, onProgress?: (progress: number) => void) {
+  upload(file: globalThis.File, onProgress?: (progress: number) => void) {
     const formData = new FormData()
     formData.append('file', file)
 
-    return apiClient.post<File>('/files', formData, {
+    return apiClient.post<FileInfo>('/files', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       },
@@ -72,14 +72,14 @@ export const fileApi = {
    * 获取文件详情
    */
   get(id: string) {
-    return apiClient.get<File>(`/files/${id}`)
+    return apiClient.get<FileInfo>(`/files/${id}`)
   },
 
   /**
    * 更新文件
    */
   update(id: string, data: FileUpdateReq) {
-    return apiClient.put<File>(`/files/${id}`, data)
+    return apiClient.put<FileInfo>(`/files/${id}`, data)
   },
 
   /**

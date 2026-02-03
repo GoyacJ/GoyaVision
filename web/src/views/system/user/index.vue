@@ -121,19 +121,17 @@ import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'elem
 import { Plus } from '@element-plus/icons-vue'
 import { userApi, type User } from '../../../api/user'
 import { roleApi, type Role } from '../../../api/role'
-import {
-  GvContainer,
-  GvTable,
-  GvModal,
-  GvButton,
-  GvSpace,
-  GvTag,
-  GvInput,
-  GvSelect,
-  PageHeader,
-  StatusBadge,
-  type TableColumn
-} from '@/components'
+import GvContainer from '@/components/layout/GvContainer/index.vue'
+import GvTable from '@/components/base/GvTable/index.vue'
+import GvModal from '@/components/base/GvModal/index.vue'
+import GvButton from '@/components/base/GvButton/index.vue'
+import GvSpace from '@/components/layout/GvSpace/index.vue'
+import GvTag from '@/components/base/GvTag/index.vue'
+import GvInput from '@/components/base/GvInput/index.vue'
+import GvSelect from '@/components/base/GvSelect/index.vue'
+import PageHeader from '@/components/business/PageHeader/index.vue'
+import StatusBadge from '@/components/business/StatusBadge/index.vue'
+import type { TableColumn } from '@/components/base/GvTable/types'
 
 const loading = ref(false)
 const tableData = ref<User[]>([])

@@ -7,6 +7,58 @@
 
 ## [未发布]
 
+### 资产与构建优化 - 2026-02-03
+
+#### 🐛 Bug 修复
+
+**媒体资产按标签筛选报错修复：**
+- 修复点击左侧标签后查询报错 `invalid input syntax for type json (SQLSTATE 22P02)`
+- 原因：`tags @> ?` 传入 Go 的 `[]string` 时，GORM 绑定为非 JSON 格式，PostgreSQL jsonb 无法解析
+- 处理：持久层将 `filter.Tags` 用 `json.Marshal` 转为 JSON 字符串，SQL 使用 `tags @> ?::jsonb` 绑定
+- 涉及：`ListMediaAssets`、`ListOperators`、`ListWorkflows` 三处（`internal/adapter/persistence/repository.go`）
+
+**Go 构建错误修复：**
+- 移除 `internal/api/handler/file.go` 中未使用的 `goyavision/pkg/storage` 导入
+
+#### 🎨 UI/UX 改进
+
+**资产展示类型与标签样式统一：**
+- 网格视图（AssetCard）：右上角类型标识由自定义渐变色 div 改为与标签同款的 `GvTag`（`variant="tonal"`、按类型着色）
+- 列表视图：表格「类型」列由 `.type-tag` 渐变色改为 `GvTag`，与标签列视觉一致
+- 移除已废弃的 `.type-tag` / `.type-tag--*` 样式（`web/src/views/asset/index.vue`）
+
+#### 🔄 重构与配置
+
+**文件管理迁移至系统管理：**
+- 路由：`/files` → `/system/file`，页面移至 `web/src/views/system/file/index.vue`
+- 菜单：在系统管理下新增「文件管理」子菜单（编码 `system:file`，权限 `file:list`）
+- 权限：初始化数据中新增 `file:list`、`file:create`、`file:update`、`file:delete`、`file:download`
+- 文件管理页按钮增加 `v-permission` 控制（上传/下载/删除）
+
+**前端构建与依赖：**
+- Vite：配置 `manualChunks`（element-plus、vue-vendor、vendor）与 `chunkSizeWarningLimit: 600`
+- 消除 Rollup 循环依赖警告：各视图页从 `@/components` 聚合导入改为直接导入组件（asset、operator、workflow、task、system/user、system/role、system/menu、system/file）
+
+#### 📝 文件修改清单
+
+**后端：**
+- `internal/adapter/persistence/repository.go` - 标签筛选 JSON 绑定修复（3 处）
+- `internal/adapter/persistence/init_data.go` - 文件管理菜单与权限（此前迭代已含）
+- `internal/api/handler/file.go` - 移除未使用导入
+
+**前端：**
+- `web/src/views/asset/index.vue` - 类型列改为 GvTag，移除 .type-tag 样式
+- `web/src/components/business/AssetCard/index.vue` - 右上角类型改为 GvTag
+- `web/vite.config.ts` - manualChunks、chunkSizeWarningLimit
+- 各视图页 - 组件直接导入（见上文）
+
+#### 📊 文档更新
+
+- `docs/development-progress.md` - 系统管理增加文件管理、媒体资产页说明与变更记录
+- `CHANGELOG.md` - 本条目
+
+---
+
 ### 资产管理深度优化 - 2026-02-03
 
 #### 🐛 Bug 修复
