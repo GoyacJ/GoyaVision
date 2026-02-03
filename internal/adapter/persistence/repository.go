@@ -129,6 +129,11 @@ func (r *repository) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
+	
+	if err := r.db.WithContext(ctx).Exec("DELETE FROM user_roles WHERE user_id = ?", id).Error; err != nil {
+		return err
+	}
+	
 	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.User{}).Error
 }
 
@@ -218,6 +223,19 @@ func (r *repository) DeleteRole(ctx context.Context, id uuid.UUID) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
+	
+	if err := r.db.WithContext(ctx).Exec("DELETE FROM role_permissions WHERE role_id = ?", id).Error; err != nil {
+		return err
+	}
+	
+	if err := r.db.WithContext(ctx).Exec("DELETE FROM role_menus WHERE role_id = ?", id).Error; err != nil {
+		return err
+	}
+	
+	if err := r.db.WithContext(ctx).Exec("DELETE FROM user_roles WHERE role_id = ?", id).Error; err != nil {
+		return err
+	}
+	
 	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.Role{}).Error
 }
 
@@ -309,6 +327,11 @@ func (r *repository) DeletePermission(ctx context.Context, id uuid.UUID) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
+	
+	if err := r.db.WithContext(ctx).Exec("DELETE FROM role_permissions WHERE permission_id = ?", id).Error; err != nil {
+		return err
+	}
+	
 	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.Permission{}).Error
 }
 
@@ -389,6 +412,11 @@ func (r *repository) DeleteMenu(ctx context.Context, id uuid.UUID) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
+	
+	if err := r.db.WithContext(ctx).Exec("DELETE FROM role_menus WHERE menu_id = ?", id).Error; err != nil {
+		return err
+	}
+	
 	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.Menu{}).Error
 }
 
