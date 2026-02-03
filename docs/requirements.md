@@ -239,13 +239,21 @@
 #### 3.1.2 媒体资产管理
 
 - **CRUD**：创建、查询、更新、删除媒体资产
-- **类型支持**：视频（video）、图片（image）、音频（audio）
+- **类型支持**：视频（video）、图片（image）、音频（audio）、流媒体（stream）
 - **来源追踪**：记录资产来源（source_id、parent_id）
 - **元数据管理**：分辨率、帧率、编码、时长、大小
 - **标签系统**：支持多标签分类
 - **搜索过滤**：按类型、来源、标签、时间范围搜索
 - **预览**：支持多协议预览（HLS、RTSP、RTMP、WebRTC）
 - **下载导出**：支持资产下载
+
+**添加资产 - 流媒体接入**（设计，结合 MediaMTX，详见 `docs/stream-asset-mediamtx-design.md`、`docs/asset-stream-ingestion.md`）：
+
+- **原则**：本平台与 MediaMTX 深度集成，作为 MediaMTX 客户端；**创建流媒体资产时必须接入 MediaMTX**，不提供“仅登记流地址、不接入 MediaMTX”的模式。**建 MediaSource 表**，与 MediaMTX path 一一对应；流媒体资产通过 `source_id` 关联 MediaSource。
+- **方式一：新建流并创建资产**（主入口）
+  - 用户输入流地址、资产名称、标签；系统生成 path name，调用 MediaMTX AddPath(source=流地址)，创建 MediaSource(path_name, url, type=pull, …)，再创建 MediaAsset(type=stream, source_type=live, source_id=MediaSource.ID, path=path_name)。具备完整预览、状态、录制、点播能力。
+- **方式二：从已有媒体源创建资产**
+  - 用户选择已有 MediaSource、填写资产名称、标签；系统创建 MediaAsset(type=stream, source_type=live, source_id=MediaSource.ID, path=MediaSource.path_name)。同一路流可对应多个资产（不同标签/用途）。
 
 #### 3.1.3 录制管理
 

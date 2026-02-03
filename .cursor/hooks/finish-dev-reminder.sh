@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# GoyaVision 完成开发提醒：在 Cursor 任务结束（stop）时输出检查清单，便于更新文档并提交。
+# 路径：.cursor/hooks/finish-dev-reminder.sh
+
+echo ""
+echo "=============================================="
+echo "  GoyaVision 完成开发检查清单"
+echo "=============================================="
+echo ""
+echo "请按顺序完成以下步骤后再关闭会话或提交："
+echo ""
+echo "  1. 更新开发进度"
+echo "     文件: docs/development-progress.md"
+echo "     操作: 更新功能状态（✅/🚧/⏸️）与说明"
+echo ""
+echo "  2. 更新变更日志"
+echo "     文件: CHANGELOG.md"
+echo "     操作: 在 [未发布] 下按类型添加条目"
+echo ""
+echo "  3. 按需更新其他文档"
+echo "     API 变更 -> docs/api.md"
+echo "     需求/架构变更 -> docs/requirements.md, docs/architecture.md"
+echo "     用户/部署影响 -> README.md, docs/DEPLOYMENT.md"
+echo ""
+echo "  4. Git 提交"
+echo "     格式: <type>(<scope>): <subject>"
+echo "     示例: feat(asset): 实现媒体资产管理"
+echo "     自检: 已测试、已格式化、文档已更新"
+echo ""
+echo "详细步骤见: .cursor/skills/development-workflow/SKILL.md"
+echo "规则说明: .cursor/rules/development-workflow.mdc"
+echo "=============================================="
+echo ""
+
+exit 0

@@ -462,6 +462,7 @@ goyavision/
 - [API 文档](docs/api.md) - RESTful API 详细文档
 - [部署指南](docs/DEPLOYMENT.md) - 部署和运维
 - [变更日志](CHANGELOG.md) - 版本更新记录
+- [Cursor 开发工作流](.cursor/rules/development-workflow.mdc) - 新需求前查阅文档、开发中遵循 Rules/Skills、完成后更新文档并提交（配合 `.cursor/skills/development-workflow/SKILL.md` 与 `.cursor/hooks.json`）
 
 ## 🤝 贡献
 

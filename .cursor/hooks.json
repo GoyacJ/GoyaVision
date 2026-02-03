@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "hooks": {
+    "stop": [
+      {
+        "command": "hooks/finish-dev-reminder.sh"
+      }
+    ]
+  }
+}

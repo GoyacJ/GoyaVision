@@ -56,6 +56,8 @@ func main() {
 	} else {
 		log.Printf("mediamtx connected: %s", cfg.MediaMTX.APIAddress)
 	}
+	mtxPathSync := mediamtx.NewPathSync(mtxCli)
+	mediaSourceService := app.NewMediaSourceService(repo, mtxPathSync)
 
 	minioClient, err := storage.NewMinIOClient(
 		cfg.MinIO.Endpoint,
@@ -95,11 +97,12 @@ func main() {
 	}
 
 	deps := api.HandlerDeps{
-		Repo:              repo,
-		Cfg:               cfg,
-		MtxCli:            mtxCli,
-		MinIOClient:       minioClient,
-		WorkflowScheduler: workflowScheduler,
+		Repo:               repo,
+		Cfg:                cfg,
+		MtxCli:             mtxCli,
+		MediaSourceService:  mediaSourceService,
+		MinIOClient:        minioClient,
+		WorkflowScheduler:  workflowScheduler,
 	}
 	api.RegisterRouter(e, deps, webDist)
 

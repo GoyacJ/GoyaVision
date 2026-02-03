@@ -1,0 +1,67 @@
+---
+description: GoyaVision 开发工作流规范：需求前查阅文档、开发中遵循 rules/skills、完成后更新文档并提交
+alwaysApply: true
+---
+
+# GoyaVision 开发工作流规范
+
+本规则与 Cursor Rules、Skills 及 Hooks 配合，确保每次开发都遵循统一流程。
+
+## 1. 新需求开始前：熟悉项目
+
+在开始任何新需求或功能开发前，**必须**先查阅以下内容以熟悉当前项目状态：
+
+- **项目文档体系**
+  - 需求与架构：`docs/requirements.md`、`docs/architecture.md`
+  - 开发进度与路线：`docs/development-progress.md`
+  - API 约定：`docs/api.md`
+  - 部署与配置：`docs/DEPLOYMENT.md`、`configs/config.yaml`
+- **变更与历史**
+  - 变更日志：`CHANGELOG.md`（重点关注 `[未发布]` 章节）
+- **上下文 Skill**
+  - 使用或引用 `.cursor/skills/goyavision-context/SKILL.md` 以获取项目结构、实体、API 与开发状态
+
+目的：避免与已有设计冲突、复用现有能力、保持文档与实现一致。
+
+## 2. 开发开始：使用 Rules 与 Skills
+
+- **始终遵循**本仓库的 Cursor Rules（`.cursor/rules/*.mdc`），尤其是：
+  - `goyavision.mdc`：分层、领域概念、算子协议、工作流引擎、Go/前端规范、错误处理、Git 提交规范
+  - `frontend-components.mdc`：前端组件与样式约定（涉及前端时）
+- **开发过程中**依据：
+  - 项目文档（`docs/`、`CHANGELOG.md`）
+  - 上述 Rules 与 Skills
+  - 项目既定规范（命名、分层、API 设计、提交格式）
+
+不得在未查阅相关规则与文档的情况下引入与现有架构或约定相悖的实现。
+
+## 3. 开发进行中：依据文档与规范
+
+- 实现需符合 `docs/architecture.md` 的分层与依赖关系。
+- API 变更需与 `docs/api.md` 一致，并在完成后更新该文档。
+- 代码风格、错误处理、安全与并发要求见 `goyavision.mdc`。
+- 涉及前端时遵循 `frontend-components.mdc` 与 `web/` 下既有结构。
+
+## 4. 功能完成或问题修复后：更新文档并提交
+
+每次完成功能开发或问题修复后，**必须**按顺序完成：
+
+1. **更新开发进度**
+   - 编辑 `docs/development-progress.md`：更新对应功能状态（✅/🚧/⏸️）、说明与迭代进度。
+2. **更新变更日志**
+   - 编辑 `CHANGELOG.md`：在 `[未发布]` 下按类型（新增/变更/修复/弃用/移除/安全）记录本次变更，描述清晰。
+3. **按需更新其他项目文档**
+   - 若新增或修改了 API：更新 `docs/api.md`。
+   - 若需求或架构有变更：更新 `docs/requirements.md` 或 `docs/architecture.md`。
+   - 若影响用户使用或配置：更新 `README.md` 或 `docs/DEPLOYMENT.md`。
+4. **Git 提交**
+   - 将本次代码与文档变更一并提交。
+   - 提交信息须符合 Conventional Commits：`<type>(<scope>): <subject>`（如 `feat(asset): 实现媒体资产管理`、`fix(workflow): 修复 DAG 验证死循环`、`docs: 更新开发进度与 CHANGELOG`）。
+   - 提交前自检：代码已测试、已格式化、无调试代码、文档已更新。
+
+Agent 在完成任务（如实现功能、修复 Bug）后，应主动执行上述 1～4 步，或明确提示用户执行并给出具体修改建议。
+
+## 与 Hooks / Skills 的关系
+
+- **Cursor Hooks**（`.cursor/hooks.json`）：在任务结束（`stop`）时可触发提醒脚本，输出「完成开发」检查清单，便于人工或 Agent 核对。
+- **Development Workflow Skill**（`.cursor/skills/development-workflow/SKILL.md`）：可通过 @ 引用，获取「开始开发」与「完成开发」的详细步骤与文件列表，用于一次性对照执行。

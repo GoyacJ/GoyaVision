@@ -405,6 +405,12 @@ API Layer       → App Layer
 - ❌ `algorithm_bindings`（由 `workflows` 替代）
 - ❌ `inference_results`（由 `artifacts` 替代）
 
+## 开发工作流（与 Rules / Skills / Hooks 配合）
+
+- **新需求前**：查阅项目文档体系与开发进度（`docs/development-progress.md`、`CHANGELOG.md`、`docs/requirements.md`、`docs/architecture.md`、`docs/api.md`），并使用 `.cursor/skills/goyavision-context` 熟悉当前状态。
+- **开发中**：遵循本规则及 `.cursor/rules/development-workflow.mdc`、`.cursor/rules/frontend-components.mdc`（涉及前端时）。
+- **完成后**：更新开发进度、变更日志与相关项目文档，再执行 Git 提交；任务结束时会触发 `.cursor/hooks.json` 的 `stop` 提醒脚本，详细步骤见 `.cursor/skills/development-workflow/SKILL.md`。
+
 ## 文档与版本控制规范
 
 ### 文档同步要求
