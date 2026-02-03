@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	"goyavision/internal/port"
 
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -97,6 +99,24 @@ func (s *MediaAssetService) Create(ctx context.Context, req *CreateMediaAssetReq
 		status = req.Status
 	}
 
+	var tagsJSON datatypes.JSON
+	if len(req.Tags) > 0 {
+		tagsBytes, err := json.Marshal(req.Tags)
+		if err != nil {
+			return nil, errors.New("failed to marshal tags: " + err.Error())
+		}
+		tagsJSON = datatypes.JSON(tagsBytes)
+	}
+
+	var metadataJSON datatypes.JSON
+	if req.Metadata != nil && len(req.Metadata) > 0 {
+		metadataBytes, err := json.Marshal(req.Metadata)
+		if err != nil {
+			return nil, errors.New("failed to marshal metadata: " + err.Error())
+		}
+		metadataJSON = datatypes.JSON(metadataBytes)
+	}
+
 	asset := &domain.MediaAsset{
 		Type:       req.Type,
 		SourceType: req.SourceType,
@@ -107,7 +127,9 @@ func (s *MediaAssetService) Create(ctx context.Context, req *CreateMediaAssetReq
 		Duration:   req.Duration,
 		Size:       req.Size,
 		Format:     req.Format,
+		Metadata:   metadataJSON,
 		Status:     status,
+		Tags:       tagsJSON,
 	}
 
 	if err := s.repo.CreateMediaAsset(ctx, asset); err != nil {
@@ -166,6 +188,20 @@ func (s *MediaAssetService) Update(ctx context.Context, id uuid.UUID, req *Updat
 	}
 	if req.Status != nil {
 		asset.Status = *req.Status
+	}
+	if req.Metadata != nil {
+		metadataBytes, err := json.Marshal(req.Metadata)
+		if err != nil {
+			return nil, errors.New("failed to marshal metadata: " + err.Error())
+		}
+		asset.Metadata = datatypes.JSON(metadataBytes)
+	}
+	if req.Tags != nil {
+		tagsBytes, err := json.Marshal(req.Tags)
+		if err != nil {
+			return nil, errors.New("failed to marshal tags: " + err.Error())
+		}
+		asset.Tags = datatypes.JSON(tagsBytes)
 	}
 
 	if err := s.repo.UpdateMediaAsset(ctx, asset); err != nil {
