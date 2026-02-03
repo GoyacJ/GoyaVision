@@ -67,7 +67,7 @@
             :show-button="false"
             @search="loadFiles"
           />
-          <GvButton @click="showUploadDialog = true">
+          <GvButton @click="showUploadDialog = true" v-permission="'file:create'">
             <template #icon>
               <el-icon><Upload /></el-icon>
             </template>
@@ -109,8 +109,8 @@
           <template #actions="{ row }">
             <GvSpace size="xs">
               <GvButton variant="text" size="small" @click="handleView(row)">查看</GvButton>
-              <GvButton variant="text" size="small" @click="handleDownload(row)">下载</GvButton>
-              <GvButton variant="text" size="small" color="error" @click="handleDelete(row)">删除</GvButton>
+              <GvButton variant="text" size="small" @click="handleDownload(row)" v-permission="'file:download'">下载</GvButton>
+              <GvButton variant="text" size="small" color="error" @click="handleDelete(row)" v-permission="'file:delete'">删除</GvButton>
             </GvSpace>
           </template>
         </GvTable>
