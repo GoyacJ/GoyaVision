@@ -80,6 +80,11 @@ func initPermissions(ctx context.Context, repo *repository) error {
 		{"menu:create", "创建菜单", "POST", "/api/v1/menus", ""},
 		{"menu:update", "更新菜单", "PUT", "/api/v1/menus/*", ""},
 		{"menu:delete", "删除菜单", "DELETE", "/api/v1/menus/*", ""},
+		{"file:list", "查看文件列表", "GET", "/api/v1/files", ""},
+		{"file:create", "上传文件", "POST", "/api/v1/files", ""},
+		{"file:update", "更新文件", "PUT", "/api/v1/files/*", ""},
+		{"file:delete", "删除文件", "DELETE", "/api/v1/files/*", ""},
+		{"file:download", "下载文件", "GET", "/api/v1/files/*/download", ""},
 	}
 
 	for _, p := range permissions {
@@ -125,6 +130,7 @@ func initMenus(ctx context.Context, repo *repository) error {
 		{uuid.MustParse("00000000-0000-0000-0000-000000000002"), ptrUUID("00000000-0000-0000-0000-000000000001"), "system:user", "用户管理", 2, "/system/user", "User", "system/user/index", "user:list", 1, true},
 		{uuid.MustParse("00000000-0000-0000-0000-000000000003"), ptrUUID("00000000-0000-0000-0000-000000000001"), "system:role", "角色管理", 2, "/system/role", "UserFilled", "system/role/index", "role:list", 2, true},
 		{uuid.MustParse("00000000-0000-0000-0000-000000000004"), ptrUUID("00000000-0000-0000-0000-000000000001"), "system:menu", "菜单管理", 2, "/system/menu", "Menu", "system/menu/index", "menu:list", 3, true},
+		{uuid.MustParse("00000000-0000-0000-0000-000000000005"), ptrUUID("00000000-0000-0000-0000-000000000001"), "system:file", "文件管理", 2, "/system/file", "Document", "system/file/index", "file:list", 4, true},
 	}
 
 	for _, m := range menus {
