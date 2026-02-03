@@ -12,6 +12,7 @@ export { default as GvAlert } from './base/GvAlert/index.vue'
 export { default as GvModal } from './base/GvModal/index.vue'
 export { default as GvSelect } from './base/GvSelect/index.vue'
 export { default as GvLoading } from './base/GvLoading/index.vue'
+export { default as GvDrawer } from './base/GvDrawer/index.vue'
 
 // 布局组件
 export { default as GvContainer } from './layout/GvContainer/index.vue'
@@ -26,4 +27,5 @@ export type * from './base/GvAlert/types'
 export type * from './base/GvModal/types'
 export type * from './base/GvSelect/types'
 export type * from './base/GvLoading/types'
+export type * from './base/GvDrawer/types'
 export type * from './layout/GvContainer/types'
