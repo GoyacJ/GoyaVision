@@ -1,16 +1,22 @@
 <template>
-  <div class="page-container">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>菜单管理</span>
-          <el-button type="primary" @click="handleAdd()" v-permission="'menu:create'">
+  <GvContainer max-width="full">
+    <!-- 页面头部 -->
+    <PageHeader
+      title="菜单管理"
+      description="管理系统菜单，配置路由和权限"
+    >
+      <template #actions>
+        <GvButton @click="handleAdd()" v-permission="'menu:create'">
+          <template #icon>
             <el-icon><Plus /></el-icon>
-            新增菜单
-          </el-button>
-        </div>
+          </template>
+          新增菜单
+        </GvButton>
       </template>
+    </PageHeader>
 
+    <!-- 树形表格 -->
+    <GvCard>
       <el-table
         :data="tableData"
         v-loading="loading"
@@ -27,7 +33,9 @@
         </el-table-column>
         <el-table-column prop="type" label="类型" width="80">
           <template #default="{ row }">
-            <el-tag :type="getTypeTag(row.type)">{{ getTypeName(row.type) }}</el-tag>
+            <GvTag :color="getTypeColor(row.type)" size="small">
+              {{ getTypeName(row.type) }}
+            </GvTag>
           </template>
         </el-table-column>
         <el-table-column prop="path" label="路由路径" width="150" />
@@ -39,36 +47,43 @@
             {{ row.visible ? '是' : '否' }}
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" width="80">
+        <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-              {{ row.status === 1 ? '启用' : '禁用' }}
-            </el-tag>
+            <StatusBadge :status="row.status === 1 ? 'enabled' : 'disabled'" />
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="150" fixed="right">
+        <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" size="small" @click="handleAdd(row.id)" v-permission="'menu:create'">
-              新增
-            </el-button>
-            <el-button link type="primary" size="small" @click="handleEdit(row)" v-permission="'menu:update'">
-              编辑
-            </el-button>
-            <el-button
-              link
-              type="danger"
-              size="small"
-              @click="handleDelete(row)"
-              v-permission="'menu:delete'"
-            >
-              删除
-            </el-button>
+            <GvSpace size="xs">
+              <GvButton size="small" variant="tonal" @click="handleAdd(row.id)" v-permission="'menu:create'">
+                新增
+              </GvButton>
+              <GvButton size="small" @click="handleEdit(row)" v-permission="'menu:update'">
+                编辑
+              </GvButton>
+              <GvButton
+                size="small"
+                variant="text"
+                @click="handleDelete(row)"
+                v-permission="'menu:delete'"
+              >
+                删除
+              </GvButton>
+            </GvSpace>
           </template>
         </el-table-column>
       </el-table>
-    </el-card>
+    </GvCard>
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="550px">
+    <!-- 新增/编辑对话框 -->
+    <GvModal
+      v-model="dialogVisible"
+      :title="dialogTitle"
+      size="large"
+      :confirm-loading="submitLoading"
+      @confirm="handleSubmit"
+      @cancel="dialogVisible = false"
+    >
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
         <el-form-item label="上级菜单" prop="parent_id">
           <el-tree-select
@@ -89,22 +104,22 @@
           </el-radio-group>
         </el-form-item>
         <el-form-item label="编码" prop="code">
-          <el-input v-model="form.code" :disabled="isEdit" placeholder="唯一标识" />
+          <GvInput v-model="form.code" :disabled="isEdit" placeholder="唯一标识" />
         </el-form-item>
         <el-form-item label="名称" prop="name">
-          <el-input v-model="form.name" placeholder="显示名称" />
+          <GvInput v-model="form.name" placeholder="显示名称" />
         </el-form-item>
         <el-form-item v-if="form.type !== 3" label="图标" prop="icon">
-          <el-input v-model="form.icon" placeholder="Element Plus 图标名称" />
+          <GvInput v-model="form.icon" placeholder="Element Plus 图标名称" />
         </el-form-item>
         <el-form-item v-if="form.type !== 3" label="路由路径" prop="path">
-          <el-input v-model="form.path" placeholder="/system/user" />
+          <GvInput v-model="form.path" placeholder="/system/user" />
         </el-form-item>
         <el-form-item v-if="form.type === 2" label="组件路径" prop="component">
-          <el-input v-model="form.component" placeholder="system/user/index" />
+          <GvInput v-model="form.component" placeholder="system/user/index" />
         </el-form-item>
         <el-form-item label="权限标识" prop="permission">
-          <el-input v-model="form.permission" placeholder="user:list" />
+          <GvInput v-model="form.permission" placeholder="user:list" />
         </el-form-item>
         <el-form-item label="排序" prop="sort">
           <el-input-number v-model="form.sort" :min="0" />
@@ -119,20 +134,26 @@
           </el-radio-group>
         </el-form-item>
       </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitLoading" @click="handleSubmit">
-          确定
-        </el-button>
-      </template>
-    </el-dialog>
-  </div>
+    </GvModal>
+  </GvContainer>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
+import { Plus } from '@element-plus/icons-vue'
 import { menuApi, type Menu } from '../../../api/menu'
+import {
+  GvContainer,
+  GvCard,
+  GvModal,
+  GvButton,
+  GvSpace,
+  GvTag,
+  GvInput,
+  PageHeader,
+  StatusBadge
+} from '@/components'
 
 const loading = ref(false)
 const tableData = ref<Menu[]>([])
@@ -183,9 +204,9 @@ function getTypeName(type: number): string {
   }
 }
 
-function getTypeTag(type: number): '' | 'success' | 'warning' | 'info' | 'danger' {
+function getTypeColor(type: number): string {
   switch (type) {
-    case 1: return ''
+    case 1: return 'neutral'
     case 2: return 'success'
     case 3: return 'warning'
     default: return 'info'
@@ -302,13 +323,4 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.page-container {
-  padding: 0;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
 </style>
