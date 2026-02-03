@@ -23,6 +23,10 @@ export { default as GvFlex } from './layout/GvFlex/index.vue'
 export { default as GvDivider } from './layout/GvDivider/index.vue'
 export { default as GvSpace } from './layout/GvSpace/index.vue'
 
+// 业务组件
+export { default as StatusBadge } from './business/StatusBadge/index.vue'
+export { default as SearchBar } from './business/SearchBar/index.vue'
+
 // 类型导出
 export type * from './base/GvButton/types'
 export type * from './base/GvCard/types'
@@ -41,3 +45,5 @@ export type * from './layout/GvGrid/types'
 export type * from './layout/GvFlex/types'
 export type * from './layout/GvDivider/types'
 export type * from './layout/GvSpace/types'
+export type * from './business/StatusBadge/types'
+export type * from './business/SearchBar/types'
