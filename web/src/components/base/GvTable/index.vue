@@ -183,7 +183,7 @@ defineExpose({
 <style>
 /* 自定义 Element Plus Table 样式 */
 .gv-table__table {
-  @apply rounded-xl overflow-hidden;
+  @apply overflow-hidden;
 }
 
 .gv-table__table .el-table__header-wrapper {
@@ -208,7 +208,7 @@ defineExpose({
 }
 
 .gv-table__table.el-table--border {
-  @apply border border-neutral-200 rounded-xl;
+  @apply border border-neutral-200;
 }
 
 .gv-table__table.el-table--border th,

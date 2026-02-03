@@ -10,6 +10,7 @@ services:
     depends_on:
       - postgres
       - mediamtx
+      - minio
     environment:
       - GOYAVISION_DB_DSN=host=postgres user=goyavision password=goyavision dbname=goyavision port=5432 sslmode=disable
       - GOYAVISION_MEDIAMTX_API_ADDRESS=http://mediamtx:9997
@@ -18,6 +19,11 @@ services:
       - GOYAVISION_MEDIAMTX_HLS_ADDRESS=http://mediamtx:8888
       - GOYAVISION_MEDIAMTX_WEBRTC_ADDRESS=http://mediamtx:8889
       - GOYAVISION_MEDIAMTX_PLAYBACK_ADDRESS=http://mediamtx:9996
+      - GOYAVISION_MINIO_ENDPOINT=minio:9000
+      - GOYAVISION_MINIO_ACCESS_KEY=minioadmin
+      - GOYAVISION_MINIO_SECRET_KEY=minioadmin
+      - GOYAVISION_MINIO_BUCKET_NAME=goyavision
+      - GOYAVISION_MINIO_USE_SSL=false
     volumes:
       - ./data:/app/data
     restart: unless-stopped
@@ -48,5 +54,19 @@ services:
       - "5432:5432"
     restart: unless-stopped
 
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    volumes:
+      - miniodata:/data
+    restart: unless-stopped
+
 volumes:
   pgdata:
+  miniodata:

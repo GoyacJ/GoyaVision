@@ -240,6 +240,8 @@ async function handleChangePassword() {
   position: relative;
   margin: 0 4px;
   border-radius: 8px;
+  display: flex;
+  align-items: center;
 }
 
 .layout-menu :deep(.el-menu-item:hover),

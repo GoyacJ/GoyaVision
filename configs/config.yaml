@@ -39,3 +39,10 @@ mediamtx:
   record_path: "/nas/mediamtx/recordings/%path/%Y-%m-%d_%H-%M-%S"
   record_format: "fmp4"
   segment_duration: "1h"
+
+minio:
+  endpoint: "39.105.2.5:14250"
+  access_key: "goyaminio"
+  secret_key: "goyaminio"
+  bucket_name: "goya-vision"
+  use_ssl: false

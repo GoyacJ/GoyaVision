@@ -7,6 +7,70 @@
 
 ## [未发布]
 
+### 资产模块重构 - 2026-02-03
+
+#### ✨ 新增功能
+
+**后端：**
+- 添加流媒体类型（stream）支持到 MediaAsset
+- 实现标签系统 API（GET /api/v1/assets/tags）
+- 集成 MinIO 对象存储服务
+- 实现文件上传 API（POST /api/v1/upload）
+- 支持四种资产类型：video、image、audio、stream
+- 支持六种来源类型：upload、stream_capture、operator_output、live、vod、generated
+
+**前端：**
+- 创建 AssetCard 组件（卡片式展示）
+- 重构资产管理页面为左右布局：
+  - 左侧：媒体类型筛选 + 标签筛选（256px 固定宽度）
+  - 右侧：4 列网格展示 + 分页
+- 实现双模式上传：
+  - URL 地址模式
+  - 文件上传模式（MinIO）
+- 动态标签管理（可创建新标签）
+- 支持流媒体类型筛选和展示
+
+**基础设施：**
+- 添加 MinIO 服务到 Docker Compose
+- 配置 MinIO 环境变量和数据卷
+- 创建 pkg/storage/minio.go 客户端封装
+
+#### 🔧 优化改进
+
+- 优化资产列表加载性能
+- 改进文件上传用户体验
+- 统一媒体类型图标显示
+- 完善标签筛选交互
+
+#### 📝 文件清单
+
+**后端新增/修改：**
+- `pkg/storage/minio.go` - MinIO 客户端封装（新增）
+- `internal/domain/media_asset.go` - 添加 stream 类型
+- `internal/port/repository.go` - 添加 GetAllAssetTags 接口
+- `internal/adapter/persistence/repository.go` - 实现标签聚合查询
+- `internal/app/media_asset.go` - 添加 GetAllTags 服务
+- `internal/api/handler/asset.go` - 添加 tags 端点
+- `internal/api/handler/upload.go` - 文件上传处理器（新增）
+- `internal/api/handler/deps.go` - 添加 MinIOClient 依赖
+- `internal/api/router.go` - 注册上传路由
+- `cmd/server/main.go` - 初始化 MinIO 客户端
+- `config/config.go` - 添加 MinIO 配置
+- `configs/config.yaml` - MinIO 配置项
+
+**前端新增/修改：**
+- `web/src/components/business/AssetCard/types.ts` - 组件类型定义（新增）
+- `web/src/components/business/AssetCard/index.vue` - 资产卡片组件（新增）
+- `web/src/components/index.ts` - 导出 AssetCard
+- `web/src/api/asset.ts` - 添加 stream 类型、getTags、upload 方法
+- `web/src/views/asset/index.vue` - 完全重构为左右布局
+
+**基础设施：**
+- `docker-compose.yml` - 添加 MinIO 服务
+
+**文档：**
+- `docs/development-progress.md` - 更新变更记录
+
 ### 前端重构 - 2026-02-03
 
 #### ✨ Phase 1: 基础设施搭建完成

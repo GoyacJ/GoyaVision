@@ -2,8 +2,8 @@ import apiClient from './client'
 
 export interface MediaAsset {
   id: string
-  type: 'video' | 'image' | 'audio'
-  source_type: 'upload' | 'stream_capture' | 'operator_output'
+  type: 'video' | 'image' | 'audio' | 'stream' // ✅ 添加 stream 类型
+  source_type: 'upload' | 'stream_capture' | 'operator_output' | 'live' | 'vod' | 'generated'
   source_id?: string
   parent_id?: string
   name: string
@@ -19,20 +19,20 @@ export interface MediaAsset {
 }
 
 export interface AssetListQuery {
-  type?: 'video' | 'image' | 'audio'
-  source_type?: 'upload' | 'stream_capture' | 'operator_output'
+  type?: 'video' | 'image' | 'audio' | 'stream' // ✅ 添加 stream 类型
+  source_type?: 'upload' | 'stream_capture' | 'operator_output' | 'live' | 'vod' | 'generated'
   source_id?: string
   parent_id?: string
   status?: 'pending' | 'ready' | 'processing' | 'error'
-  tags?: string[]
+  tags?: string
   name?: string
   page?: number
   page_size?: number
 }
 
 export interface AssetCreateReq {
-  type: 'video' | 'image' | 'audio'
-  source_type: 'upload' | 'stream_capture' | 'operator_output'
+  type: 'video' | 'image' | 'audio' | 'stream' // ✅ 添加 stream 类型
+  source_type: 'upload' | 'stream_capture' | 'operator_output' | 'live' | 'vod' | 'generated'
   source_id?: string
   parent_id?: string
   name: string
@@ -81,5 +81,28 @@ export const assetApi = {
 
   listChildren(id: string, params?: AssetListQuery) {
     return apiClient.get<AssetListResponse>(`/assets/${id}/children`, { params })
+  },
+
+  getTags() {
+    return apiClient.get<{ tags: string[] }>('/assets/tags')
+  },
+
+  // 文件上传
+  upload(file: File, type: string, name?: string, tags?: string[]) {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('type', type)
+    if (name) {
+      formData.append('name', name)
+    }
+    if (tags && tags.length > 0) {
+      formData.append('tags', JSON.stringify(tags))
+    }
+
+    return apiClient.post<MediaAsset>('/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
   }
 }

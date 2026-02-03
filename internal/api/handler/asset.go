@@ -21,6 +21,7 @@ func RegisterAsset(g *echo.Group, d Deps) {
 	g.PUT("/assets/:id", h.Update)
 	g.DELETE("/assets/:id", h.Delete)
 	g.GET("/assets/:id/children", h.ListChildren)
+	g.GET("/assets/tags", h.GetAllTags) // 获取所有标签
 }
 
 type assetHandler struct {
@@ -214,4 +215,15 @@ func (h *assetHandler) ListChildren(c echo.Context) error {
 	}
 
 	return c.JSON(200, dto.AssetsToResponse(children))
+}
+
+func (h *assetHandler) GetAllTags(c echo.Context) error {
+	tags, err := h.svc.GetAllTags(c.Request().Context())
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(200, map[string]interface{}{
+		"tags": tags,
+	})
 }

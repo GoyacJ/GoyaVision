@@ -17,6 +17,7 @@ import (
 	"goyavision/internal/adapter/persistence"
 	"goyavision/internal/api"
 	"goyavision/internal/app"
+	"goyavision/pkg/storage"
 
 	"github.com/labstack/echo/v4"
 	"gorm.io/driver/postgres"
@@ -56,6 +57,18 @@ func main() {
 		log.Printf("mediamtx connected: %s", cfg.MediaMTX.APIAddress)
 	}
 
+	minioClient, err := storage.NewMinIOClient(
+		cfg.MinIO.Endpoint,
+		cfg.MinIO.AccessKey,
+		cfg.MinIO.SecretKey,
+		cfg.MinIO.BucketName,
+		cfg.MinIO.UseSSL,
+	)
+	if err != nil {
+		log.Fatalf("create minio client: %v", err)
+	}
+	log.Printf("minio connected: %s/%s", cfg.MinIO.Endpoint, cfg.MinIO.BucketName)
+
 	var workflowScheduler *app.WorkflowScheduler
 	if db != nil {
 		ctx := context.Background()
@@ -85,6 +98,7 @@ func main() {
 		Repo:              repo,
 		Cfg:               cfg,
 		MtxCli:            mtxCli,
+		MinIOClient:       minioClient,
 		WorkflowScheduler: workflowScheduler,
 	}
 	api.RegisterRouter(e, deps, webDist)

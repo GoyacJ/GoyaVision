@@ -16,6 +16,7 @@ type Config struct {
 	AI       AI
 	JWT      JWT
 	MediaMTX MediaMTX
+	MinIO    MinIO
 }
 
 type MediaMTX struct {
@@ -66,6 +67,14 @@ type Record struct {
 type AI struct {
 	Timeout time.Duration
 	Retry   int
+}
+
+type MinIO struct {
+	Endpoint   string
+	AccessKey  string
+	SecretKey  string
+	BucketName string
+	UseSSL     bool
 }
 
 func (s Server) Addr() string {
@@ -124,6 +133,13 @@ func Load() (*Config, error) {
 			RecordFormat:    v.GetString("mediamtx.record_format"),
 			SegmentDuration: v.GetString("mediamtx.segment_duration"),
 		},
+		MinIO: MinIO{
+			Endpoint:   v.GetString("minio.endpoint"),
+			AccessKey:  v.GetString("minio.access_key"),
+			SecretKey:  v.GetString("minio.secret_key"),
+			BucketName: v.GetString("minio.bucket_name"),
+			UseSSL:     v.GetBool("minio.use_ssl"),
+		},
 	}
 	if cfg.Server.Port == 0 {
 		cfg.Server.Port = 8080
@@ -166,6 +182,18 @@ func Load() (*Config, error) {
 	}
 	if cfg.MediaMTX.SegmentDuration == "" {
 		cfg.MediaMTX.SegmentDuration = "1h"
+	}
+	if cfg.MinIO.Endpoint == "" {
+		cfg.MinIO.Endpoint = "localhost:9000"
+	}
+	if cfg.MinIO.AccessKey == "" {
+		cfg.MinIO.AccessKey = "minioadmin"
+	}
+	if cfg.MinIO.SecretKey == "" {
+		cfg.MinIO.SecretKey = "minioadmin"
+	}
+	if cfg.MinIO.BucketName == "" {
+		cfg.MinIO.BucketName = "goyavision"
 	}
 	return cfg, nil
 }

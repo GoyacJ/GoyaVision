@@ -2,6 +2,7 @@ package persistence
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"goyavision/internal/domain"
@@ -540,6 +541,41 @@ func (r *repository) ListMediaAssetsByParent(ctx context.Context, parentID uuid.
 		return nil, err
 	}
 	return list, nil
+}
+
+func (r *repository) GetAllAssetTags(ctx context.Context) ([]string, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+
+	var assets []*domain.MediaAsset
+	if err := r.db.WithContext(ctx).Select("tags").Where("tags IS NOT NULL AND tags != '[]'").Find(&assets).Error; err != nil {
+		return nil, err
+	}
+
+	// 提取所有唯一标签
+	tagSet := make(map[string]bool)
+	for _, asset := range assets {
+		if asset.Tags == nil {
+			continue
+		}
+		var tags []string
+		if err := json.Unmarshal(asset.Tags, &tags); err == nil {
+			for _, tag := range tags {
+				if tag != "" {
+					tagSet[tag] = true
+				}
+			}
+		}
+	}
+
+	// 转换为切片
+	result := make([]string, 0, len(tagSet))
+	for tag := range tagSet {
+		result = append(result, tag)
+	}
+
+	return result, nil
 }
 
 // Operator methods

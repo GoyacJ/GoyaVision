@@ -75,7 +75,7 @@ func (s *MediaAssetService) Create(ctx context.Context, req *CreateMediaAssetReq
 		return nil, errors.New("path is required")
 	}
 
-	if req.Type != domain.AssetTypeVideo && req.Type != domain.AssetTypeImage && req.Type != domain.AssetTypeAudio {
+	if req.Type != domain.AssetTypeVideo && req.Type != domain.AssetTypeImage && req.Type != domain.AssetTypeAudio && req.Type != domain.AssetTypeStream {
 		return nil, errors.New("invalid asset type")
 	}
 
@@ -203,4 +203,9 @@ func (s *MediaAssetService) ListChildren(ctx context.Context, parentID uuid.UUID
 		return nil, err
 	}
 	return s.repo.ListMediaAssetsByParent(ctx, parentID)
+}
+
+// GetAllTags 获取所有资产标签
+func (s *MediaAssetService) GetAllTags(ctx context.Context) ([]string, error) {
+	return s.repo.GetAllAssetTags(ctx)
 }

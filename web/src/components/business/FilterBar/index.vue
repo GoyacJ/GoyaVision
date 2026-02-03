@@ -1,95 +1,86 @@
 <template>
-  <GvCard class="filter-bar">
-    <!-- 折叠按钮 -->
-    <GvFlex v-if="collapsible" justify="between" align="center" class="mb-4">
-      <h3 class="text-base font-semibold">筛选条件</h3>
-      <GvButton variant="text" size="small" @click="toggleExpanded">
-        {{ expanded ? '收起' : '展开' }}
-        <template #suffix>
-          <el-icon>
-            <ArrowUp v-if="expanded" />
-            <ArrowDown v-else />
-          </el-icon>
-        </template>
-      </GvButton>
-    </GvFlex>
-    
-    <!-- 筛选表单 -->
-    <div v-show="!collapsible || expanded">
-      <GvGrid :cols="columns" gap="lg" class="mb-4">
-        <!-- 动态渲染筛选字段 -->
-        <template v-for="field in fields" :key="field.key">
-          <!-- 输入框 -->
+  <GvCard class="filter-bar" shadow="sm" padding="md">
+    <!-- 筛选表单 - 横向布局 -->
+    <GvFlex align="center" gap="md" wrap>
+      <!-- 动态渲染筛选字段 -->
+      <template v-for="field in fields" :key="field.key">
+        <!-- 输入框 -->
+        <div v-if="field.type === 'input' || !field.type" class="filter-item">
           <GvInput
-            v-if="field.type === 'input' || !field.type"
             :model-value="localValue[field.key]"
-            :label="field.label"
-            :placeholder="field.placeholder"
+            :placeholder="field.placeholder || field.label"
+            size="small"
             @update:model-value="handleFieldChange(field.key, $event)"
           />
-          
-          <!-- 选择器 -->
+        </div>
+
+        <!-- 选择器 -->
+        <div v-else-if="field.type === 'select'" class="filter-item">
           <GvSelect
-            v-else-if="field.type === 'select'"
             :model-value="localValue[field.key]"
-            :label="field.label"
-            :placeholder="field.placeholder"
+            :placeholder="field.placeholder || field.label"
             :options="field.options || []"
+            size="small"
             @update:model-value="handleFieldChange(field.key, $event)"
           />
-          
-          <!-- 日期范围 -->
+        </div>
+
+        <!-- 日期范围 -->
+        <div v-else-if="field.type === 'daterange'" class="filter-item-wide">
           <GvDatePicker
-            v-else-if="field.type === 'daterange'"
             :model-value="localValue[field.key]"
             type="daterange"
-            :label="field.label"
             :start-placeholder="field.startPlaceholder || '开始日期'"
             :end-placeholder="field.endPlaceholder || '结束日期'"
+            size="small"
             @update:model-value="handleFieldChange(field.key, $event)"
           />
-          
-          <!-- 日期 -->
+        </div>
+
+        <!-- 日期 -->
+        <div v-else-if="field.type === 'date'" class="filter-item">
           <GvDatePicker
-            v-else-if="field.type === 'date'"
             :model-value="localValue[field.key]"
             type="date"
-            :label="field.label"
-            :placeholder="field.placeholder"
+            :placeholder="field.placeholder || field.label"
+            size="small"
             @update:model-value="handleFieldChange(field.key, $event)"
           />
-          
-          <!-- 日期时间 -->
+        </div>
+
+        <!-- 日期时间 -->
+        <div v-else-if="field.type === 'datetime'" class="filter-item">
           <GvDatePicker
-            v-else-if="field.type === 'datetime'"
             :model-value="localValue[field.key]"
             type="datetime"
-            :label="field.label"
-            :placeholder="field.placeholder"
+            :placeholder="field.placeholder || field.label"
+            size="small"
             @update:model-value="handleFieldChange(field.key, $event)"
           />
-        </template>
-      </GvGrid>
-      
+        </div>
+      </template>
+
       <!-- 操作按钮 -->
-      <GvFlex justify="end">
-        <GvSpace>
+      <div class="filter-actions">
+        <GvSpace size="xs">
           <GvButton
-            v-if="showReset"
-            variant="text"
-            @click="handleReset"
-          >
-            {{ resetText }}
-          </GvButton>
-          <GvButton
+            size="small"
             :loading="loading"
             @click="handleFilter"
           >
             {{ filterText }}
           </GvButton>
+          <GvButton
+            v-if="showReset"
+            variant="text"
+            size="small"
+            @click="handleReset"
+          >
+            {{ resetText }}
+          </GvButton>
         </GvSpace>
-      </GvFlex>
-    </div>
+      </div>
+    </GvFlex>
   </GvCard>
 </template>
 
@@ -164,3 +155,21 @@ const toggleExpanded = () => {
   expanded.value = !expanded.value
 }
 </script>
+
+<style scoped>
+.filter-bar {
+  @apply mb-4;
+}
+
+.filter-item {
+  @apply min-w-[180px];
+}
+
+.filter-item-wide {
+  @apply min-w-[280px];
+}
+
+.filter-actions {
+  @apply ml-auto;
+}
+</style>

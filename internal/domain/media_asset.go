@@ -11,9 +11,10 @@ import (
 type AssetType string
 
 const (
-	AssetTypeVideo AssetType = "video"
-	AssetTypeImage AssetType = "image"
-	AssetTypeAudio AssetType = "audio"
+	AssetTypeVideo  AssetType = "video"
+	AssetTypeImage  AssetType = "image"
+	AssetTypeAudio  AssetType = "audio"
+	AssetTypeStream AssetType = "stream" // 流媒体类型
 )
 
 // AssetSourceType 资产来源类型
@@ -69,6 +70,11 @@ func (a *MediaAsset) IsImage() bool {
 // IsAudio 判断是否为音频资产
 func (a *MediaAsset) IsAudio() bool {
 	return a.Type == AssetTypeAudio
+}
+
+// IsStream 判断是否为流媒体资产
+func (a *MediaAsset) IsStream() bool {
+	return a.Type == AssetTypeStream
 }
 
 // HasParent 判断是否有父资产（派生资产）

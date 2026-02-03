@@ -56,6 +56,7 @@ type Repository interface {
 	DeleteMediaAsset(ctx context.Context, id uuid.UUID) error
 	ListMediaAssetsBySource(ctx context.Context, sourceID uuid.UUID) ([]*domain.MediaAsset, error)
 	ListMediaAssetsByParent(ctx context.Context, parentID uuid.UUID) ([]*domain.MediaAsset, error)
+	GetAllAssetTags(ctx context.Context) ([]string, error) // 获取所有标签
 
 	// Operator
 	CreateOperator(ctx context.Context, o *domain.Operator) error

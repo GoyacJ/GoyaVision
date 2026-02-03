@@ -72,17 +72,17 @@ const handleBack = () => {
 
 <style scoped>
 .page-header {
-  @apply mb-6;
+  @apply mb-4;
 }
 
 .page-header__title {
-  @apply text-3xl font-bold text-text-primary;
+  @apply text-xl font-semibold text-text-primary;
   @apply m-0;
 }
 
 .page-header__description {
-  @apply text-text-secondary text-base;
-  @apply m-0 mt-2;
+  @apply text-text-secondary text-sm;
+  @apply m-0 mt-1;
 }
 
 .page-header__actions {
