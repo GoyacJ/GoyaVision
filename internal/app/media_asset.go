@@ -35,7 +35,7 @@ type UpdateMediaAssetRequest struct {
 	Name     *string                `json:"name,omitempty"`
 	Status   *domain.AssetStatus    `json:"status,omitempty"`
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
-	Tags     []string               `json:"tags,omitempty"`
+	Tags     *[]string              `json:"tags,omitempty"`
 }
 
 // ListMediaAssetsRequest 列出媒体资产请求
@@ -197,7 +197,7 @@ func (s *MediaAssetService) Update(ctx context.Context, id uuid.UUID, req *Updat
 		asset.Metadata = datatypes.JSON(metadataBytes)
 	}
 	if req.Tags != nil {
-		tagsBytes, err := json.Marshal(req.Tags)
+		tagsBytes, err := json.Marshal(*req.Tags)
 		if err != nil {
 			return nil, errors.New("failed to marshal tags: " + err.Error())
 		}

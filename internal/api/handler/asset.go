@@ -166,7 +166,11 @@ func (h *assetHandler) Update(c echo.Context) error {
 	updateReq := &app.UpdateMediaAssetRequest{
 		Name:     req.Name,
 		Metadata: req.Metadata,
-		Tags:     req.Tags,
+	}
+
+	if req.Tags != nil {
+		tags := req.Tags
+		updateReq.Tags = &tags
 	}
 
 	if req.Status != nil {
