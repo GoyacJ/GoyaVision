@@ -1,0 +1,666 @@
+# GoyaVision 前端组件使用规范
+
+> 本文档为 AI 辅助开发提供组件调用指南
+
+## 技术栈
+
+- **框架**: Vue 3 + TypeScript + Vite
+- **UI 库**: Element Plus + 自定义组件库（GoyaVision Components）
+- **样式**: Tailwind CSS + Material Design 3
+- **状态管理**: Pinia
+- **路由**: Vue Router 4
+
+## 组件导入规范
+
+```typescript
+// ✅ 推荐：从组件库统一导入
+import { GvButton, GvCard, GvBadge } from '@/components'
+
+// ✅ Element Plus 组件按需导入（已全局注册）
+// 直接使用 <el-table>、<el-form> 等，无需导入
+
+// ✅ 业务组件直接导入
+import AssetCard from '@/components/business/AssetCard/index.vue'
+
+// ❌ 避免：不要从 node_modules 导入
+import { ElButton } from 'element-plus'
+```
+
+## 基础组件库
+
+### GvButton - 按钮
+
+**Material Design 3 变体**:
+- `filled` - 主要按钮（默认）
+- `tonal` - 次要按钮
+- `outlined` - 边框按钮
+- `text` - 文本按钮
+
+**使用示例**:
+```vue
+<!-- 主要操作 -->
+<GvButton variant="filled" color="primary" @click="handleSubmit">
+  提交
+</GvButton>
+
+<!-- 次要操作 -->
+<GvButton variant="tonal" color="secondary" @click="handleCancel">
+  取消
+</GvButton>
+
+<!-- 危险操作 -->
+<GvButton variant="outlined" color="error" @click="handleDelete">
+  删除
+</GvButton>
+
+<!-- 加载状态 -->
+<GvButton variant="filled" :loading="isLoading">
+  保存中...
+</GvButton>
+
+<!-- 带图标 -->
+<GvButton variant="filled" icon="add" icon-position="left">
+  新建
+</GvButton>
+```
+
+### GvCard - 卡片
+
+**使用示例**:
+```vue
+<GvCard shadow="md" padding="lg" hoverable>
+  <template #header>
+    <div class="flex justify-between items-center">
+      <h3 class="text-lg font-semibold">卡片标题</h3>
+      <GvBadge>NEW</GvBadge>
+    </div>
+  </template>
+  
+  <p class="text-text-secondary">卡片内容</p>
+  
+  <template #footer>
+    <div class="flex justify-end gap-2">
+      <GvButton variant="text">查看详情</GvButton>
+    </div>
+  </template>
+</GvCard>
+```
+
+### GvBadge - 徽章
+
+```vue
+<!-- 状态徽章 -->
+<GvBadge color="success">运行中</GvBadge>
+<GvBadge color="warning">待处理</GvBadge>
+<GvBadge color="error">失败</GvBadge>
+
+<!-- 数字徽章 -->
+<GvBadge :value="5" max="99" />
+
+<!-- 点状徽章 -->
+<GvBadge dot />
+```
+
+### GvTag - 标签
+
+```vue
+<!-- 可关闭标签 -->
+<GvTag closable @close="handleClose">标签名称</GvTag>
+
+<!-- 不同颜色 -->
+<GvTag color="primary">主要</GvTag>
+<GvTag color="success">成功</GvTag>
+<GvTag color="warning">警告</GvTag>
+```
+
+### GvInput - 输入框
+
+```vue
+<GvInput
+  v-model="value"
+  label="姓名"
+  placeholder="请输入姓名"
+  clearable
+/>
+
+<!-- 带图标 -->
+<GvInput
+  v-model="searchText"
+  prefix-icon="search"
+  placeholder="搜索..."
+/>
+
+<!-- 文本域 -->
+<GvTextarea
+  v-model="description"
+  label="描述"
+  rows="4"
+  maxlength="500"
+  show-word-limit
+/>
+```
+
+### GvSelect - 选择器
+
+```vue
+<GvSelect
+  v-model="selectedType"
+  label="资产类型"
+  :options="typeOptions"
+  clearable
+/>
+
+<script setup lang="ts">
+const typeOptions = [
+  { label: '视频', value: 'video' },
+  { label: '图片', value: 'image' },
+  { label: '音频', value: 'audio' }
+]
+</script>
+```
+
+### GvModal - 模态框
+
+```vue
+<GvModal
+  v-model="visible"
+  title="新建资产"
+  width="600px"
+  @confirm="handleConfirm"
+>
+  <p>模态框内容</p>
+</GvModal>
+```
+
+## 布局组件
+
+### GvContainer - 容器
+
+```vue
+<!-- 最大宽度容器（居中） -->
+<GvContainer max-width="xl">
+  <p>内容自动居中，最大宽度 1280px</p>
+</GvContainer>
+
+<!-- 全宽容器 -->
+<GvContainer max-width="full" padding>
+  <p>全宽内容</p>
+</GvContainer>
+```
+
+### GvGrid - 栅格
+
+```vue
+<GvGrid :cols="{ xs: 1, md: 2, lg: 3, xl: 4 }" gap="4">
+  <div>栏目 1</div>
+  <div>栏目 2</div>
+  <div>栏目 3</div>
+  <div>栏目 4</div>
+</GvGrid>
+```
+
+### GvFlex - 弹性布局
+
+```vue
+<GvFlex justify="between" align="center">
+  <h2>页面标题</h2>
+  <GvButton>操作</GvButton>
+</GvFlex>
+```
+
+## 业务组件
+
+### AssetCard - 资产卡片
+
+```vue
+<template>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <AssetCard
+      v-for="asset in assets"
+      :key="asset.id"
+      :asset="asset"
+      @click="handleAssetClick"
+    />
+  </div>
+</template>
+
+<script setup lang="ts">
+import AssetCard from '@/components/business/AssetCard/index.vue'
+import type { MediaAsset } from '@/api/asset'
+
+const assets = ref<MediaAsset[]>([])
+</script>
+```
+
+### TaskCard - 任务卡片
+
+```vue
+<TaskCard
+  :task="taskData"
+  @click="handleTaskClick"
+  @retry="handleRetry"
+  @cancel="handleCancel"
+/>
+```
+
+### FilterBar - 筛选栏
+
+```vue
+<FilterBar v-model="filters" @search="handleSearch">
+  <template #filters>
+    <GvSelect
+      v-model="filters.type"
+      label="类型"
+      :options="typeOptions"
+    />
+    <GvSelect
+      v-model="filters.status"
+      label="状态"
+      :options="statusOptions"
+    />
+  </template>
+</FilterBar>
+```
+
+### DataTable - 数据表格
+
+```vue
+<DataTable
+  :data="tableData"
+  :columns="columns"
+  :loading="loading"
+  @refresh="loadData"
+>
+  <template #actions="{ row }">
+    <GvButton variant="text" size="small" @click="handleEdit(row)">
+      编辑
+    </GvButton>
+    <GvButton variant="text" size="small" color="error" @click="handleDelete(row)">
+      删除
+    </GvButton>
+  </template>
+</DataTable>
+```
+
+## Element Plus 组件
+
+保留使用 Element Plus 的复杂组件：
+
+### ElTable - 表格
+
+```vue
+<el-table :data="tableData" stripe>
+  <el-table-column prop="name" label="名称" />
+  <el-table-column prop="type" label="类型" />
+  <el-table-column label="操作" width="200">
+    <template #default="{ row }">
+      <GvButton variant="text" size="small" @click="handleEdit(row)">
+        编辑
+      </GvButton>
+    </template>
+  </el-table-column>
+</el-table>
+```
+
+### ElForm - 表单
+
+```vue
+<el-form
+  ref="formRef"
+  :model="form"
+  :rules="rules"
+  label-width="100px"
+>
+  <el-form-item label="名称" prop="name">
+    <el-input v-model="form.name" />
+  </el-form-item>
+  
+  <el-form-item>
+    <GvButton variant="filled" @click="handleSubmit">提交</GvButton>
+    <GvButton variant="tonal" @click="handleCancel">取消</GvButton>
+  </el-form-item>
+</el-form>
+```
+
+### ElDatePicker - 日期选择
+
+```vue
+<el-date-picker
+  v-model="dateRange"
+  type="daterange"
+  start-placeholder="开始日期"
+  end-placeholder="结束日期"
+/>
+```
+
+## Tailwind CSS 工具类
+
+### 常用类名
+
+```vue
+<!-- 布局 -->
+<div class="flex items-center justify-between gap-4">
+<div class="grid grid-cols-3 gap-6">
+
+<!-- 间距 -->
+<div class="p-4">           <!-- padding: 1rem -->
+<div class="px-6 py-4">     <!-- padding-x: 1.5rem, padding-y: 1rem -->
+<div class="mt-8 mb-4">     <!-- margin-top: 2rem, margin-bottom: 1rem -->
+<div class="space-y-4">     <!-- 子元素垂直间距 1rem -->
+
+<!-- 文字 -->
+<h1 class="text-3xl font-bold text-text-primary">
+<p class="text-sm text-text-secondary">
+
+<!-- 颜色 -->
+<div class="bg-primary-600 text-white">
+<div class="bg-surface shadow-md rounded-lg">
+
+<!-- 响应式 -->
+<div class="w-full md:w-1/2 lg:w-1/3">
+<div class="hidden md:block">           <!-- 中等屏幕及以上显示 -->
+<div class="block md:hidden">           <!-- 小屏幕显示 -->
+
+<!-- 状态 -->
+<button class="hover:bg-primary-700 active:bg-primary-800">
+<div class="transition-all duration-300">
+```
+
+### Material Design 3 工具类
+
+```vue
+<!-- 表面容器 -->
+<div class="surface">                    <!-- 基础表面 -->
+<div class="surface-container">          <!-- 容器表面 -->
+
+<!-- 阴影 -->
+<div class="shadow-sm">                  <!-- 层级 1 -->
+<div class="shadow-md">                  <!-- 层级 3 -->
+<div class="shadow-lg">                  <!-- 层级 4 -->
+<div class="shadow-primary">             <!-- 彩色阴影 -->
+
+<!-- 圆角 -->
+<div class="rounded-lg">                 <!-- 16px -->
+<div class="rounded-xl">                 <!-- 24px -->
+
+<!-- 文字省略 -->
+<p class="text-ellipsis-1">              <!-- 单行省略 -->
+<p class="text-ellipsis-2">              <!-- 两行省略 -->
+```
+
+## 组合式函数（Composables）
+
+### useTheme - 主题切换
+
+```typescript
+import { useTheme } from '@/composables/useTheme'
+
+const { theme, isDark, toggleTheme } = useTheme()
+
+// 切换主题
+toggleTheme()
+```
+
+### useBreakpoint - 响应式断点
+
+```typescript
+import { useBreakpoint } from '@/composables/useBreakpoint'
+
+const { isMobile, isTablet, isDesktop } = useBreakpoint()
+
+// 根据屏幕尺寸显示不同内容
+if (isMobile.value) {
+  // 移动端逻辑
+}
+```
+
+### useModal - 模态框管理
+
+```typescript
+import { useModal } from '@/composables/useModal'
+
+const { visible, open, close, confirm } = useModal()
+
+// 打开模态框
+open()
+
+// 确认回调
+confirm(async () => {
+  await saveData()
+})
+```
+
+## 常见页面模式
+
+### 列表页面
+
+```vue
+<template>
+  <GvContainer>
+    <!-- 页面头部 -->
+    <GvFlex justify="between" align="center" class="mb-6">
+      <h1 class="text-2xl font-bold">资产管理</h1>
+      <GvButton variant="filled" icon="add" @click="handleCreate">
+        新建资产
+      </GvButton>
+    </GvFlex>
+    
+    <!-- 筛选栏 -->
+    <FilterBar v-model="filters" class="mb-6">
+      <template #filters>
+        <GvSelect v-model="filters.type" label="类型" :options="typeOptions" />
+        <GvSelect v-model="filters.status" label="状态" :options="statusOptions" />
+      </template>
+    </FilterBar>
+    
+    <!-- 数据列表 -->
+    <GvGrid :cols="{ xs: 1, md: 2, lg: 3 }" gap="6">
+      <AssetCard
+        v-for="asset in assets"
+        :key="asset.id"
+        :asset="asset"
+        @click="handleAssetClick(asset)"
+      />
+    </GvGrid>
+    
+    <!-- 分页 -->
+    <GvPagination
+      v-model:page="page"
+      v-model:pageSize="pageSize"
+      :total="total"
+      class="mt-6"
+    />
+  </GvContainer>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { assetApi, type MediaAsset } from '@/api/asset'
+
+const assets = ref<MediaAsset[]>([])
+const filters = ref({ type: '', status: '' })
+const page = ref(1)
+const pageSize = ref(20)
+const total = ref(0)
+
+const loadData = async () => {
+  const res = await assetApi.list({
+    ...filters.value,
+    page: page.value,
+    page_size: pageSize.value
+  })
+  assets.value = res.data.items
+  total.value = res.data.total
+}
+
+onMounted(() => {
+  loadData()
+})
+</script>
+```
+
+### 表单页面
+
+```vue
+<template>
+  <GvContainer max-width="md">
+    <GvCard>
+      <template #header>
+        <h2 class="text-xl font-semibold">新建资产</h2>
+      </template>
+      
+      <el-form
+        ref="formRef"
+        :model="form"
+        :rules="rules"
+        label-width="100px"
+        class="space-y-4"
+      >
+        <el-form-item label="名称" prop="name">
+          <el-input v-model="form.name" placeholder="请输入资产名称" />
+        </el-form-item>
+        
+        <el-form-item label="类型" prop="type">
+          <el-select v-model="form.type" placeholder="请选择类型" class="w-full">
+            <el-option label="视频" value="video" />
+            <el-option label="图片" value="image" />
+            <el-option label="音频" value="audio" />
+          </el-select>
+        </el-form-item>
+        
+        <el-form-item label="描述" prop="description">
+          <el-input
+            v-model="form.description"
+            type="textarea"
+            rows="4"
+            placeholder="请输入描述"
+          />
+        </el-form-item>
+      </el-form>
+      
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <GvButton variant="tonal" @click="handleCancel">取消</GvButton>
+          <GvButton variant="filled" :loading="loading" @click="handleSubmit">
+            提交
+          </GvButton>
+        </div>
+      </template>
+    </GvCard>
+  </GvContainer>
+</template>
+
+<script setup lang="ts">
+import { ref, reactive } from 'vue'
+import { ElMessage, type FormInstance } from 'element-plus'
+import { assetApi } from '@/api/asset'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+const formRef = ref<FormInstance>()
+const loading = ref(false)
+
+const form = reactive({
+  name: '',
+  type: '',
+  description: ''
+})
+
+const rules = {
+  name: [{ required: true, message: '请输入名称', trigger: 'blur' }],
+  type: [{ required: true, message: '请选择类型', trigger: 'change' }]
+}
+
+const handleSubmit = async () => {
+  if (!formRef.value) return
+  
+  await formRef.value.validate(async (valid) => {
+    if (!valid) return
+    
+    loading.value = true
+    try {
+      await assetApi.create(form)
+      ElMessage.success('创建成功')
+      router.push('/assets')
+    } catch (error) {
+      ElMessage.error('创建失败')
+    } finally {
+      loading.value = false
+    }
+  })
+}
+
+const handleCancel = () => {
+  router.back()
+}
+</script>
+```
+
+## 开发规范
+
+### 1. 组件选择原则
+
+- ✅ **优先使用自定义组件**: Button、Card、Badge、Tag 等基础组件
+- ✅ **保留 Element Plus 复杂组件**: Table、Form、DatePicker、Upload 等
+- ✅ **业务组件优先**: 有现成的业务组件就不要重复开发
+
+### 2. 样式编写原则
+
+- ✅ **优先使用 Tailwind 类名**: 避免手写 CSS
+- ✅ **使用 Design Token**: 颜色、间距、圆角统一使用设计令牌
+- ✅ **响应式优先**: 使用 `sm:`、`md:`、`lg:` 前缀
+
+### 3. 类型安全
+
+- ✅ **所有 Props 必须定义类型**
+- ✅ **所有 Emits 必须定义类型**
+- ✅ **使用 `type` 导入类型**: `import type { xxx } from 'xxx'`
+
+### 4. 命名规范
+
+- ✅ **组件名**: PascalCase（如 `GvButton`、`AssetCard`）
+- ✅ **文件名**: kebab-case（如 `gv-button.vue`、`asset-card.vue`）
+- ✅ **变量名**: camelCase（如 `assetData`、`handleClick`）
+- ✅ **常量名**: UPPER_SNAKE_CASE（如 `API_BASE_URL`）
+
+## 注意事项
+
+1. **不要修改 Element Plus 原生组件样式**: 使用封装组件或 Tailwind 覆盖
+2. **不要在组件内硬编码颜色值**: 使用设计令牌（如 `text-primary-600`）
+3. **不要重复开发已有组件**: 先查看组件库是否已实现
+4. **不要忽略 TypeScript 类型错误**: 必须修复所有类型错误
+5. **不要忘记响应式设计**: 所有页面必须适配移动端
+
+## 快速参考
+
+### 颜色类名
+
+| 用途 | Tailwind 类名 |
+|------|---------------|
+| 主色 | `text-primary-600` `bg-primary-600` |
+| 辅助色 | `text-secondary-600` `bg-secondary-600` |
+| 成功 | `text-success-600` `bg-success-600` |
+| 错误 | `text-error-600` `bg-error-600` |
+| 警告 | `text-warning-600` `bg-warning-600` |
+| 正文 | `text-text-primary` |
+| 次要文字 | `text-text-secondary` |
+
+### 间距类名
+
+| 间距 | Tailwind 类名 |
+|------|---------------|
+| 4px | `p-1` `m-1` `gap-1` |
+| 8px | `p-2` `m-2` `gap-2` |
+| 12px | `p-3` `m-3` `gap-3` |
+| 16px | `p-4` `m-4` `gap-4` |
+| 24px | `p-6` `m-6` `gap-6` |
+| 32px | `p-8` `m-8` `gap-8` |
+
+### 圆角类名
+
+| 圆角 | Tailwind 类名 |
+|------|---------------|
+| 8px | `rounded-lg` |
+| 12px | `rounded-xl` |
+| 16px | `rounded-2xl` |
+| 完全圆形 | `rounded-full` |
