@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 
@@ -48,6 +49,15 @@ func (h *uploadHandler) Upload(c echo.Context) error {
 		name = file.Filename
 	}
 
+	// 处理标签
+	tagsStr := c.FormValue("tags")
+	var tags []string
+	if tagsStr != "" {
+		if err := json.Unmarshal([]byte(tagsStr), &tags); err != nil {
+			tags = []string{} // 解析失败时使用空数组
+		}
+	}
+
 	src, err := file.Open()
 	if err != nil {
 		return c.JSON(500, dto.ErrorResponse{
@@ -86,6 +96,7 @@ func (h *uploadHandler) Upload(c echo.Context) error {
 		Size:       file.Size,
 		Format:     format,
 		Status:     domain.AssetStatusReady,
+		Tags:       tags,
 	}
 
 	asset, err := h.svc.Create(c.Request().Context(), createReq)

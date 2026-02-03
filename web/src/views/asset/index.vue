@@ -3,6 +3,11 @@
     <div class="flex h-full gap-4">
       <!-- 左侧：类型和标签筛选 -->
       <aside class="w-64 flex-shrink-0">
+        <!-- 页面标题 -->
+        <div class="mb-4">
+          <h1 class="text-2xl font-bold text-text-primary">媒体资产库</h1>
+        </div>
+
         <GvCard shadow="sm" padding="md" class="sticky top-4">
           <!-- 媒体类型筛选 -->
           <div class="mb-6">
@@ -74,46 +79,41 @@
 
       <!-- 右侧：资产列表 -->
       <main class="flex-1 min-w-0">
-        <!-- 页面头部 -->
-        <PageHeader
-          title="媒体资产库"
-          description="管理所有媒体资产，支持视频、图片、音频、流媒体等多种格式"
-        >
-          <template #actions>
-            <GvSpace>
-              <SearchBar
-                v-model="searchName"
-                placeholder="搜索资产名称"
-                class="w-80"
-                immediate
-                :show-button="false"
-                @search="loadAssets"
-              />
-              <div class="view-switch-group">
-                <button
-                  :class="['view-switch-btn', { active: viewMode === 'grid' }]"
-                  @click="viewMode = 'grid'"
-                  title="网格视图"
-                >
-                  <el-icon :size="18"><Grid /></el-icon>
-                </button>
-                <button
-                  :class="['view-switch-btn', { active: viewMode === 'list' }]"
-                  @click="viewMode = 'list'"
-                  title="列表视图"
-                >
-                  <el-icon :size="18"><List /></el-icon>
-                </button>
-              </div>
-              <GvButton @click="showUploadDialog = true">
-                <template #icon>
-                  <el-icon><Upload /></el-icon>
-                </template>
-                添加资产
-              </GvButton>
-            </GvSpace>
-          </template>
-        </PageHeader>
+        <!-- 操作栏 -->
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <SearchBar
+              v-model="searchName"
+              placeholder="搜索资产名称"
+              class="w-80"
+              immediate
+              :show-button="false"
+              @search="loadAssets"
+            />
+            <div class="view-switch-group">
+              <button
+                :class="['view-switch-btn', { active: viewMode === 'grid' }]"
+                @click="viewMode = 'grid'"
+                title="网格视图"
+              >
+                <el-icon :size="18"><Grid /></el-icon>
+              </button>
+              <button
+                :class="['view-switch-btn', { active: viewMode === 'list' }]"
+                @click="viewMode = 'list'"
+                title="列表视图"
+              >
+                <el-icon :size="18"><List /></el-icon>
+              </button>
+            </div>
+          </div>
+          <GvButton @click="showUploadDialog = true">
+            <template #icon>
+              <el-icon><Upload /></el-icon>
+            </template>
+            添加资产
+          </GvButton>
+        </div>
 
         <!-- 资产展示 -->
         <div v-if="loading" class="flex justify-center items-center py-20">
@@ -147,9 +147,12 @@
             class="mb-6"
           >
             <template #type="{ row }">
-              <GvTag :color="getTypeColor(row.type)" size="small">
-                {{ getTypeLabel(row.type) }}
-              </GvTag>
+              <div :class="['type-tag', `type-tag--${row.type}`]">
+                <el-icon :size="14">
+                  <component :is="getTypeIcon(row.type)" />
+                </el-icon>
+                <span>{{ getTypeLabel(row.type) }}</span>
+              </div>
             </template>
             <template #source_type="{ row }">
               <GvTag color="info" size="small" variant="tonal">
@@ -322,37 +325,123 @@
           :show-confirm="false"
           cancel-text="关闭"
         >
-          <el-descriptions v-if="currentAsset" :column="2" border>
-            <el-descriptions-item label="ID" :span="2">{{ currentAsset.id }}</el-descriptions-item>
-            <el-descriptions-item label="名称" :span="2">{{ currentAsset.name }}</el-descriptions-item>
-            <el-descriptions-item label="类型">
-              <GvTag :color="getTypeColor(currentAsset.type)" size="small">
-                {{ getTypeLabel(currentAsset.type) }}
-              </GvTag>
-            </el-descriptions-item>
-            <el-descriptions-item label="来源">
-              <GvTag color="info" size="small" variant="tonal">
-                {{ getSourceTypeLabel(currentAsset.source_type) }}
-              </GvTag>
-            </el-descriptions-item>
-            <el-descriptions-item label="路径" :span="2">{{ currentAsset.path }}</el-descriptions-item>
-            <el-descriptions-item label="格式">{{ currentAsset.format || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="大小">{{ formatSize(currentAsset.size) }}</el-descriptions-item>
-            <el-descriptions-item label="时长">{{ currentAsset.duration ? formatDuration(currentAsset.duration) : '-' }}</el-descriptions-item>
-            <el-descriptions-item label="状态">
-              <StatusBadge :status="mapStatus(currentAsset.status)" />
-            </el-descriptions-item>
-            <el-descriptions-item label="标签" :span="2">
-              <GvSpace v-if="currentAsset.tags && currentAsset.tags.length > 0" size="xs" wrap>
-                <GvTag v-for="tag in currentAsset.tags" :key="tag" size="small" color="primary" variant="tonal">
-                  {{ tag }}
-                </GvTag>
-              </GvSpace>
-              <span v-else class="text-text-tertiary">-</span>
-            </el-descriptions-item>
-            <el-descriptions-item label="创建时间">{{ formatDate(currentAsset.created_at) }}</el-descriptions-item>
-            <el-descriptions-item label="更新时间">{{ formatDate(currentAsset.updated_at) }}</el-descriptions-item>
-          </el-descriptions>
+          <div v-if="currentAsset" class="asset-detail-container">
+            <!-- 左侧：资产信息 -->
+            <div class="asset-detail-info">
+              <div class="info-section">
+                <div class="info-item">
+                  <span class="info-label">名称</span>
+                  <span class="info-value">{{ currentAsset.name }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">类型</span>
+                  <GvTag :color="getTypeColor(currentAsset.type)" size="small">
+                    {{ getTypeLabel(currentAsset.type) }}
+                  </GvTag>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">来源</span>
+                  <GvTag color="info" size="small" variant="tonal">
+                    {{ getSourceTypeLabel(currentAsset.source_type) }}
+                  </GvTag>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">格式</span>
+                  <span class="info-value">{{ currentAsset.format || '-' }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">大小</span>
+                  <span class="info-value">{{ formatSize(currentAsset.size) }}</span>
+                </div>
+                <div v-if="currentAsset.duration" class="info-item">
+                  <span class="info-label">时长</span>
+                  <span class="info-value">{{ formatDuration(currentAsset.duration) }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">状态</span>
+                  <StatusBadge :status="mapStatus(currentAsset.status)" />
+                </div>
+                <div v-if="currentAsset.tags && currentAsset.tags.length > 0" class="info-item">
+                  <span class="info-label">标签</span>
+                  <GvSpace size="xs" wrap>
+                    <GvTag v-for="tag in currentAsset.tags" :key="tag" size="small" color="primary" variant="tonal">
+                      {{ tag }}
+                    </GvTag>
+                  </GvSpace>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">创建时间</span>
+                  <span class="info-value text-xs">{{ formatDate(currentAsset.created_at) }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">ID</span>
+                  <span class="info-value text-xs text-text-tertiary">{{ currentAsset.id }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 右侧：资源预览 -->
+            <div class="asset-detail-preview">
+              <!-- 视频预览 -->
+              <div v-if="currentAsset.type === 'video'" class="preview-container">
+                <video
+                  :src="currentAsset.path"
+                  controls
+                  class="preview-media"
+                >
+                  您的浏览器不支持视频播放
+                </video>
+              </div>
+
+              <!-- 图片预览 -->
+              <div v-else-if="currentAsset.type === 'image'" class="preview-container">
+                <img
+                  :src="currentAsset.path"
+                  :alt="currentAsset.name"
+                  class="preview-media"
+                />
+              </div>
+
+              <!-- 音频预览 -->
+              <div v-else-if="currentAsset.type === 'audio'" class="preview-container audio-preview">
+                <div class="audio-icon">
+                  <el-icon :size="80" class="text-primary-500">
+                    <Headset />
+                  </el-icon>
+                </div>
+                <audio
+                  :src="currentAsset.path"
+                  controls
+                  class="audio-player"
+                >
+                  您的浏览器不支持音频播放
+                </audio>
+              </div>
+
+              <!-- 流媒体预览 -->
+              <div v-else-if="currentAsset.type === 'stream'" class="preview-container stream-preview">
+                <div class="stream-info">
+                  <el-icon :size="80" class="text-info-500 mb-4">
+                    <Connection />
+                  </el-icon>
+                  <p class="text-text-secondary mb-2">流媒体地址</p>
+                  <p class="text-sm text-text-primary font-mono bg-neutral-50 px-3 py-2 rounded break-all">
+                    {{ currentAsset.path }}
+                  </p>
+                </div>
+              </div>
+
+              <!-- 未知类型 -->
+              <div v-else class="preview-container">
+                <div class="text-center text-text-tertiary">
+                  <el-icon :size="80" class="mb-4">
+                    <FolderOpened />
+                  </el-icon>
+                  <p>暂无预览</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </GvModal>
       </main>
     </div>
@@ -567,11 +656,20 @@ async function handleUpload() {
           selectedFile.value.raw,
           uploadForm.type,
           uploadForm.name,
-          uploadForm.tags
+          uploadForm.tags || []
         )
       } else {
-        // URL 模式
-        await assetApi.create(uploadForm)
+        // URL 模式 - 确保包含所有必需字段
+        const createData = {
+          type: uploadForm.type,
+          source_type: uploadForm.source_type,
+          name: uploadForm.name,
+          path: uploadForm.path,
+          size: uploadForm.size || 0,
+          format: uploadForm.format || '',
+          tags: uploadForm.tags || []
+        }
+        await assetApi.create(createData)
       }
       ElMessage.success('添加成功')
       showUploadDialog.value = false
@@ -641,6 +739,16 @@ async function handleDelete(asset: MediaAsset) {
       ElMessage.error(error.response?.data?.message || '删除失败')
     }
   }
+}
+
+function getTypeIcon(type: string) {
+  const iconMap: Record<string, any> = {
+    video: VideoCamera,
+    image: Picture,
+    audio: Headset,
+    stream: Connection
+  }
+  return iconMap[type] || Picture
 }
 
 function getTypeLabel(type: string) {
@@ -760,23 +868,149 @@ function formatDate(dateStr: string): string {
   opacity: 0;
 }
 
-:deep(.el-descriptions) {
-  @apply rounded-lg overflow-hidden;
+/* 列表视图类型标签样式 */
+.type-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: white;
+  white-space: nowrap;
 }
 
-:deep(.el-descriptions__label) {
-  @apply font-semibold bg-neutral-50;
+.type-tag--video {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.95) 0%, rgba(109, 40, 217, 0.95) 100%);
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
 }
 
-:deep(.el-descriptions__content) {
-  @apply text-text-primary;
+.type-tag--image {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.95) 0%, rgba(5, 150, 105, 0.95) 100%);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
 }
 
-.dark :deep(.el-descriptions__label) {
-  @apply bg-neutral-800 text-text-inverse;
+.type-tag--audio {
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.95) 0%, rgba(249, 115, 22, 0.95) 100%);
+  box-shadow: 0 2px 8px rgba(251, 146, 60, 0.3);
 }
 
-.dark :deep(.el-descriptions__content) {
-  @apply bg-surface-dark text-text-inverse;
+.type-tag--stream {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.95) 0%, rgba(37, 99, 235, 0.95) 100%);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+/* 资产详情两栏布局 */
+.asset-detail-container {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 24px;
+  min-height: 400px;
+}
+
+/* 左侧信息区域 */
+.asset-detail-info {
+  border-right: 1px solid #e5e7eb;
+  padding-right: 24px;
+}
+
+.info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.info-label {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.info-value {
+  font-size: 14px;
+  color: #111827;
+  word-break: break-all;
+}
+
+/* 右侧预览区域 */
+.asset-detail-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f9fafb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.preview-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.preview-media {
+  max-width: 100%;
+  max-height: 500px;
+  width: auto;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* 音频预览 */
+.audio-preview {
+  flex-direction: column;
+  gap: 24px;
+}
+
+.audio-icon {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.audio-player {
+  width: 100%;
+  max-width: 400px;
+}
+
+/* 流媒体预览 */
+.stream-preview {
+  padding: 40px;
+}
+
+.stream-info {
+  text-align: center;
+  max-width: 500px;
+}
+
+/* 深色模式 */
+.dark .asset-detail-info {
+  border-right-color: #374151;
+}
+
+.dark .info-value {
+  color: #f3f4f6;
+}
+
+.dark .asset-detail-preview {
+  background: #1f2937;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 </style>

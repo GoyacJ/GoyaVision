@@ -34,9 +34,12 @@
 
       <!-- 类型标识 -->
       <div class="asset-card__type-badge">
-        <GvBadge :color="getTypeColor(asset.type)" size="small">
-          {{ getTypeLabel(asset.type) }}
-        </GvBadge>
+        <div :class="['type-badge', `type-badge--${asset.type}`]">
+          <el-icon :size="14">
+            <component :is="getTypeIcon(asset.type)" />
+          </el-icon>
+          <span>{{ getTypeLabel(asset.type) }}</span>
+        </div>
       </div>
 
       <!-- 时长标识（视频/音频） -->
@@ -124,11 +127,6 @@
             +{{ asset.tags.length - 2 }}
           </GvTag>
         </GvSpace>
-      </div>
-
-      <!-- 状态 -->
-      <div class="asset-card__status">
-        <StatusBadge :status="mapStatus(asset.status)" size="small" />
       </div>
     </div>
   </GvCard>
