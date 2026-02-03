@@ -86,12 +86,6 @@ func (s *MediaAssetService) Create(ctx context.Context, req *CreateMediaAssetReq
 		return nil, errors.New("invalid source type")
 	}
 
-	if req.SourceID != nil {
-		if _, err := s.repo.GetStream(ctx, *req.SourceID); err != nil {
-			return nil, errors.New("source not found")
-		}
-	}
-
 	if req.ParentID != nil {
 		if _, err := s.repo.GetMediaAsset(ctx, *req.ParentID); err != nil {
 			return nil, errors.New("parent asset not found")
@@ -200,9 +194,6 @@ func (s *MediaAssetService) Delete(ctx context.Context, id uuid.UUID) error {
 
 // ListBySource 列出指定媒体源的所有资产
 func (s *MediaAssetService) ListBySource(ctx context.Context, sourceID uuid.UUID) ([]*domain.MediaAsset, error) {
-	if _, err := s.repo.GetStream(ctx, sourceID); err != nil {
-		return nil, errors.New("source not found")
-	}
 	return s.repo.ListMediaAssetsBySource(ctx, sourceID)
 }
 
