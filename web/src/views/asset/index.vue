@@ -58,12 +58,12 @@
             <div v-else-if="tags.length === 0" class="text-center py-4 text-text-tertiary text-sm">
               暂无标签
             </div>
-            <div v-else class="space-y-2 max-h-64 overflow-y-auto">
+            <div v-else class="flex flex-wrap gap-2 max-h-64 overflow-y-auto">
               <div
                 v-for="tag in tags"
                 :key="tag"
                 :class="[
-                  'px-3 py-2 rounded-lg cursor-pointer transition-all text-sm',
+                  'px-3 py-1.5 rounded-lg cursor-pointer transition-all text-sm whitespace-nowrap',
                   selectedTag === tag
                     ? 'bg-primary-50 text-primary-600 font-medium'
                     : 'hover:bg-neutral-50 text-text-secondary'
