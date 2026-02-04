@@ -1,159 +1,101 @@
 ---
-name: goyavision-context
-description: GoyaVision V1.0 项目结构、核心概念、API 约定与开发状态。在实现或评审 GoyaVision 功能时使用，以便遵循既定分层、数据模型和标准协议。
+skill: goyavision-context
+description: 获取 GoyaVision 项目架构、核心概念、API 端点和开发状态的完整上下文
 ---
 
-# GoyaVision V1.0 项目上下文
+# GoyaVision 项目上下文
+
+提供 GoyaVision V1.0 智能媒体处理平台的完整项目上下文，包括架构设计、核心概念、API 约定和开发状态。
 
 ## 何时使用
 
-- 在 GoyaVision 仓库中实现新功能、修改 handler/app/domain/adapter 时
-- 需要确认实体、API 路径、配置项或开发状态时
-- 需要了解已实现的功能和代码结构时
-- 需要遵循算子标准协议或工作流编排规范时
+✅ **推荐场景**：
+- 开始实现新功能前，需要了解项目整体架构
+- 修改 handler/app/domain/adapter 层代码时
+- 需要查询 API 端点、实体定义或配置项
+- 遵循算子标准协议或工作流编排规范时
+- 新团队成员快速了解项目
 
-## 版本说明
+❌ **不适用场景**：
+- 只需要查看单个文件内容（使用 Read 工具）
+- 执行具体开发任务（使用 development-workflow skill）
 
-**当前版本**：V1.0（架构重构版本）
+## 核心概念
 
-**核心变更**：
-- 引入全新核心概念：MediaAsset、MediaSource、Operator、Workflow、Task、Artifact
-- 废弃：AlgorithmBinding、InferenceResult
-- 模块重命名：资产库、算子中心、任务中心、控制台
-- **不向后兼容**
-
-## 项目结构（核心）
+### 数据流
 
 ```
-cmd/server/          入口；config、GORM、Echo、Router、Scheduler、embed、初始化数据
-config/              配置加载（Viper + YAML）
-configs/             配置文件（config.yaml、mediamtx.yml）
+MediaSource → MediaAsset → Operator → Workflow → Task → Artifact
+   (媒体源)    (媒体资产)    (算子)     (工作流)   (任务)   (产物)
+```
+
+### 关键实体
+
+| 实体 | 作用 | 属性示例 |
+|------|------|----------|
+| **MediaSource** | 媒体来源（流/上传） | type(pull/push/upload), protocol(rtsp/rtmp/hls/webrtc/file) |
+| **MediaAsset** | 媒体资产管理 | type(video/image/audio), source_type, parent_id(派生追踪), tags |
+| **Operator** | AI/媒体处理单元 | category(analyze/edit/generate/transform), endpoint, input_spec, output_spec |
+| **Workflow** | DAG 编排 | trigger(manual/schedule/event), nodes, edges |
+| **Task** | 工作流执行实例 | status(pending/running/completed/failed), progress, current_node |
+| **Artifact** | 算子输出产物 | type(asset/result/timeline/diagnostic), data |
+
+### 废弃概念（V1.0 不再使用）
+
+- ❌ Stream → 升级为 MediaSource
+- ❌ Algorithm → 升级为 Operator
+- ❌ AlgorithmBinding → 由 Workflow 替代
+- ❌ InferenceResult → 由 Artifact 替代
+
+## 分层架构（Clean Architecture）
+
+```
 internal/
-  domain/            MediaSource, MediaAsset, Operator, Workflow, WorkflowNode, WorkflowEdge,
-                     Task, Artifact, User, Role, Permission, Menu
-  port/              Repository, OperatorPort, WorkflowEngine, MediaMTXClient
-  app/               MediaSourceService, MediaAssetService, OperatorService,
-                     WorkflowService, TaskService, ArtifactService, Scheduler,
-                     RecordService, PlaybackService,
-                     AuthService, UserService, RoleService, MenuService
-  adapter/
-    persistence/     Repository 实现（GORM）、初始化数据（init_data.go）
-    mediamtx/        MediaMTX HTTP API 客户端
-    workflow/        WorkflowEngine 实现（DAG 执行）
-    ai/              OperatorPort 实现（HTTP 客户端）
-  api/
-    handler/         source, asset, operator, workflow, task, artifact,
-                     record, playback, auth, user, role, menu
-    dto/             source, asset, operator, workflow, task, artifact,
-                     record, playback, auth, user, role, menu
-    middleware/      auth.go（JWT 认证、权限校验）
-    errors.go        统一错误处理
-    static.go        前端静态文件服务（embed）
-    router.go        路由注册（公开路由、认证路由、管理路由）
-pkg/
-  ffmpeg/            Pool（进程池）、Manager（抽帧，用于 AI 推理）
-  storage/           Manager（文件管理）、Lifecycle（生命周期）
-web/                 Vue 3 前端（src/, dist/）
-  src/store/         Pinia 状态管理（用户、权限）
-  src/views/login/   登录页面
-  src/views/asset/   资产库页面（源、资产、录制、点播）
-  src/views/operator/ 算子中心页面（算子市场、配置）
-  src/views/workflow/ 任务中心页面（工作流、任务、产物）
-  src/views/system/  系统管理页面（用户、角色、菜单、文件管理）
-  src/layout/        动态菜单布局
-  src/directives/    权限指令（v-permission）
-  src/router/guard.ts 路由守卫
-docs/               需求、开发进度、架构文档、API 文档、部署指南
+├── domain/      # 核心实体（无外部依赖）
+│   └── 实体：MediaSource, MediaAsset, Operator, Workflow, Task, Artifact, User, Role, Menu
+│
+├── port/        # 接口定义（契约）
+│   └── 接口：Repository, OperatorPort, WorkflowEngine, MediaMTXClient
+│
+├── app/         # 业务服务（用例编排）
+│   └── 服务：MediaSourceService, WorkflowService, TaskService, AuthService, UserService
+│
+├── adapter/     # 基础设施实现
+│   ├── persistence/   # GORM + PostgreSQL
+│   ├── mediamtx/      # MediaMTX HTTP 客户端
+│   ├── engine/        # DAG 工作流引擎
+│   └── ai/            # 算子 HTTP 客户端
+│
+└── api/         # HTTP 表现层
+    ├── handler/       # 请求处理器
+    ├── dto/           # 数据传输对象
+    ├── middleware/    # 中间件（JWT 认证、权限校验）
+    └── router.go      # 路由注册
 ```
 
-## 核心概念（V1.0）
+### 依赖规则（严格遵守）
 
-### 资产类
+```
+✅ 正确：App → Port Interface → Adapter Implementation
+❌ 错误：App → Adapter directly
 
-#### MediaSource（媒体源）
-- **作用**：媒体的来源（流、上传）
-- **类型**：
-  - `pull`：拉流（从外部地址拉取）
-  - `push`：推流（等待外部推送）
-  - `upload`：文件上传
-- **协议**：rtsp、rtmp、hls、webrtc、file
-- **状态**：ready、online、offline
-
-#### MediaAsset（媒体资产）
-- **作用**：统一管理视频、图片、音频资产
-- **类型**：video、image、audio
-- **来源类型**：
-  - `live`：实时流录制或抽帧
-  - `vod`：点播视频
-  - `upload`：用户上传
-  - `generated`：算子生成
-- **关键属性**：
-  - `source_id`：关联的媒体源
-  - `parent_id`：派生自哪个资产（资产派生追踪）
-  - `tags`：标签数组
-  - `metadata`：扩展元数据（分辨率、帧率、时长等）
-
-### 算子与工作流类
-
-#### Operator（算子）
-- **作用**：AI/媒体处理的能力单元
-- **分类**：
-  - `analyze`（分析）：检测、识别、分类、追踪、OCR、ASR
-  - `edit`（编辑）：剪辑、裁剪、打码、去水印、字幕、水印
-  - `generate`（生成）：TTS、配音、摘要、高光
-  - `transform`（转换）：转码、压缩、分辨率调整、增强
-- **标准化协议**：统一的输入输出格式（见下文）
-- **关键属性**：
-  - `code`：唯一编码
-  - `version`：版本号
-  - `input_spec`：输入规格
-  - `output_spec`：输出规格
-  - `endpoint`：HTTP 服务端点
-  - `is_builtin`：内置 vs 自定义
-
-#### Workflow（工作流）
-- **作用**：通过 DAG 编排算子，实现复杂业务流程
-- **触发器**：
-  - `manual`：手动触发
-  - `schedule`：定时触发（cron 表达式）
-  - `event`：事件触发（新资产、录制完成、流上线）
-- **组成**：
-  - `nodes`：工作流节点（operator_id、params、retry、timeout）
-  - `edges`：节点连接（from、to、condition）
-
-#### Task（任务）
-- **作用**：工作流的执行实例
-- **状态**：pending、running、completed、failed、cancelled
-- **关键属性**：
-  - `workflow_id`：关联的工作流
-  - `input_assets`：输入资产列表
-  - `progress`：进度（0-100）
-  - `current_node`：当前执行节点
-
-#### Artifact（产物）
-- **作用**：算子/工作流的输出结果
-- **类型**：
-  - `asset`：新生成的媒体资产
-  - `result`：结构化结果（检测框、标签、文本）
-  - `timeline`：时间轴片段（事件、高光、镜头切分）
-  - `diagnostic`：诊断信息（性能指标、模型版本）
-- **关联**：task_id、node_id、operator_id、asset_id
-
-### 废弃概念（不再使用）
-- ❌ `Stream`：升级为 MediaSource
-- ❌ `Algorithm`：升级为 Operator
-- ❌ `AlgorithmBinding`：由 Workflow 替代
-- ❌ `InferenceResult`：由 Artifact 替代
+依赖流：
+- Domain: 不依赖任何层
+- Port: 可依赖 Domain
+- App: 可依赖 Domain + Port（禁止依赖 Adapter）
+- Adapter: 实现 Port，可依赖 Domain
+- API: 可依赖 App + Port + Domain（禁止依赖 Adapter）
+```
 
 ## 算子标准协议
 
-所有算子必须遵循统一的输入输出协议。
+所有算子必须遵循统一的 I/O 协议，确保互操作性。
 
 ### 输入格式
 
 ```json
 {
-  "asset_id": "资产 ID",
+  "asset_id": "资产 UUID",
   "params": {
     "key": "value"
   }
@@ -196,159 +138,76 @@ docs/               需求、开发进度、架构文档、API 文档、部署�
 }
 ```
 
-## 已实现功能（V1.0 开发状态）
+### 产物类型说明
 
-### ✅ 已完成（从旧版本保留）
+- **output_assets**: 新生成的媒体资产（剪辑视频、检测结果图片）
+- **results**: 结构化结果（检测框、分类标签、OCR 文本）
+- **timeline**: 时间轴片段（事件、高光、镜头切分）
+- **diagnostics**: 诊断信息（性能指标、模型版本）
 
-#### 流媒体基础
-- MediaMTX 集成（多协议支持：RTSP/RTMP/HLS/WebRTC）
-- 媒体源管理（拉流/推流）
-- 实时状态查询
-- 多协议预览
-- 录制与点播（集成 MediaMTX）
-- 录制文件索引
-
-#### 认证授权
-- JWT 认证（Access Token + Refresh Token 双 Token 机制）
-- RBAC 权限模型
-- 用户管理、角色管理、菜单管理
-- 权限中间件
-- 前端：Pinia 状态管理、登录页面、路由守卫、权限指令、动态菜单
-
-#### 基础设施
-- 分层架构（Domain、Port、App、Adapter、API）
-- 配置管理（Viper + YAML）
-- 数据库持久化（GORM + PostgreSQL）
-- 统一错误处理
-- FFmpeg 抽帧管理
-- Docker Compose 部署
-
-### 🚧 进行中（V1.0 核心功能）
-
-#### 资产库
-- [ ] 媒体资产管理（CRUD、搜索、派生追踪）
-- [ ] 存储配置（生命周期管理）
-
-#### 算子中心
-- [ ] 算子管理（CRUD、分类、版本管理）
-- [ ] 内置算子（抽帧、目标检测 - 需要重构为算子）
-- [ ] 算子监控（调用统计、性能指标）
-
-#### 任务中心
-- [ ] 工作流管理（CRUD、DAG 验证）
-- [ ] 简化工作流（Phase 1：单算子任务）
-- [ ] 任务管理（创建、执行、查询、控制）
-- [ ] 任务调度（定时调度、事件触发）
-- [ ] 产物管理（查询、关联）
-
-#### 前端
-- [ ] 媒体资产页面
-- [ ] 算子中心页面
-- [ ] 工作流编排页面
-- [ ] 任务列表页面
-- [ ] 产物列表页面
-
-### ⏸️ 待开始（V1.0 后续）
-
-- 可视化工作流设计器
-- 更多内置算子（编辑、生成、转换类）
-- 复杂工作流（DAG 编排、并行执行、条件分支）
-- 自定义算子（Docker 镜像上传）
-- 多租户支持
-- 监控与告警（Prometheus + Grafana）
-
-## API 端点（V1.0）
-
-### 基础
-- **前缀**：`/api/v1`
-- **认证**：所有业务 API 需要 `Authorization: Bearer <access_token>`
+## API 端点（前缀：/api/v1）
 
 ### 认证（Auth）
-- `POST /auth/login`：登录
-- `POST /auth/refresh`：刷新 Token
-- `GET /auth/profile`：获取当前用户信息
-- `PUT /auth/password`：修改密码
-- `POST /auth/logout`：登出
+- `POST /auth/login` - 登录
+- `POST /auth/refresh` - 刷新 Token
+- `GET /auth/profile` - 获取当前用户
+- `PUT /auth/password` - 修改密码
+- `POST /auth/logout` - 登出
 
 ### 媒体源（Sources）
-- `GET/POST /sources`：列表、创建
-- `GET/PUT/DELETE /sources/:id`：详情、更新、删除
-- `POST /sources/:id/enable`：启用
-- `POST /sources/:id/disable`：禁用
-- `GET /sources/:id/status`：获取实时状态
-- `GET /sources/:id/preview`：获取预览 URL
-- `GET /sources/:id/preview/ready`：检查流就绪
+- `GET|POST /sources` - 列表、创建
+- `GET|PUT|DELETE /sources/:id` - 详情、更新、删除
+- `POST /sources/:id/enable|disable` - 启用、禁用
+- `GET /sources/:id/status` - 获取实时状态
+- `GET /sources/:id/preview` - 获取预览 URL
 
 ### 录制（Record）
-- `POST /sources/:id/record/start`：启动录制
-- `POST /sources/:id/record/stop`：停止录制
-- `GET /sources/:id/record/status`：获取录制状态
-- `GET /sources/:id/record/sessions`：列出录制会话
-- `GET /sources/:id/record/files`：列出录制文件
+- `POST /sources/:id/record/start|stop` - 启动、停止录制
+- `GET /sources/:id/record/status|sessions|files` - 状态、会话、文件列表
 
 ### 点播（Playback）
-- `GET /sources/:id/playback?start=<timestamp>`：获取点播 URL
-- `GET /sources/:id/playback/segments`：列出录制段
+- `GET /sources/:id/playback?start=<timestamp>` - 获取点播 URL
+- `GET /sources/:id/playback/segments` - 列出录制段
 
 ### 媒体资产（Assets）
-- `GET/POST /assets`：列表、创建（支持过滤：type、source_type、source_id、tags）
-- `GET/PUT/DELETE /assets/:id`：详情、更新、删除
-- `GET /assets/:id/children`：列出子资产（派生资产）
+- `GET|POST /assets` - 列表、创建（支持过滤：type, source_type, tags）
+- `GET|PUT|DELETE /assets/:id` - 详情、更新、删除
+- `GET /assets/:id/children` - 列出派生资产
 
 ### 算子（Operators）
-- `GET/POST /operators`：列表、创建（支持过滤：category、status、is_builtin）
-- `GET/PUT/DELETE /operators/:id`：详情、更新、删除
-- `POST /operators/:id/enable`：启用
-- `POST /operators/:id/disable`：禁用
-- `POST /operators/:id/test`：测试算子
+- `GET|POST /operators` - 列表、创建（支持过滤：category, status, is_builtin）
+- `GET|PUT|DELETE /operators/:id` - 详情、更新、删除
+- `POST /operators/:id/enable|disable|test` - 启用、禁用、测试
 
 ### 工作流（Workflows）
-- `GET/POST /workflows`：列表、创建（支持过滤：status）
-- `GET/PUT/DELETE /workflows/:id`：详情、更新、删除
-- `POST /workflows/:id/activate`：启用工作流
-- `POST /workflows/:id/pause`：暂停工作流
-- `POST /workflows/:id/validate`：验证工作流
+- `GET|POST /workflows` - 列表、创建
+- `GET|PUT|DELETE /workflows/:id` - 详情、更新、删除
+- `POST /workflows/:id/activate|pause|validate` - 启用、暂停、验证
 
 ### 任务（Tasks）
-- `GET/POST /tasks`：列表、创建（支持过滤：workflow_id、status、trigger_type）
-- `GET /tasks/:id`：详情
-- `POST /tasks/:id/cancel`：取消任务
-- `POST /tasks/:id/retry`：重试任务
-- `GET /tasks/:id/logs`：获取任务日志
+- `GET|POST /tasks` - 列表、创建（支持过滤：workflow_id, status, trigger_type）
+- `GET /tasks/:id` - 详情
+- `POST /tasks/:id/cancel|retry` - 取消、重试
+- `GET /tasks/:id/logs` - 获取日志
 
 ### 产物（Artifacts）
-- `GET /artifacts`：列表（支持过滤：task_id、node_id、operator_id、type）
-- `GET /artifacts/:id`：详情
-- `DELETE /artifacts/:id`：删除
-- `GET /artifacts/:id/download`：下载产物
+- `GET /artifacts` - 列表（支持过滤：task_id, node_id, operator_id, type）
+- `GET|DELETE /artifacts/:id` - 详情、删除
+- `GET /artifacts/:id/download` - 下载
 
-### 用户管理（Users）
-- `GET/POST /users`：列表、创建
-- `GET/PUT/DELETE /users/:id`：详情、更新、删除
-- `POST /users/:id/reset-password`：重置密码
+### 用户管理（Users/Roles/Menus）
+- `GET|POST /users` - 用户管理
+- `GET|POST /roles` - 角色管理
+- `GET|POST /menus` - 菜单管理
+- `GET /menus/tree` - 菜单树
+- `GET /permissions` - 权限列表
 
-### 角色管理（Roles）
-- `GET/POST /roles`：列表、创建
-- `GET/PUT/DELETE /roles/:id`：详情、更新、删除
+### 文件管理（Files）
+- `GET|POST /files` - 列表、上传
+- `GET|PUT|DELETE /files/:id` - 详情、更新、删除
+- `GET /files/:id/download` - 下载
 
-### 菜单管理（Menus）
-- `GET/POST /menus`：列表、创建
-- `GET/PUT/DELETE /menus/:id`：详情、更新、删除
-- `GET /menus/tree`：获取菜单树
-
-### 文件管理（Files，系统管理子模块）
-- `GET/POST /files`：列表、上传（支持过滤：type、status、search）
-- `GET/PUT/DELETE /files/:id`：详情、更新、删除
-- `GET /files/:id/download`：下载（重定向到文件 URL）
-
-### 权限（Permissions）
-- `GET /permissions`：列出所有权限
-
-### 静态文件
-- `/live/*`：HLS 文件服务（已废弃，使用 MediaMTX）
-- `/*`：前端 SPA
-
-## 配置项（V1.0）
+## 配置管理
 
 ### 主配置文件：`configs/config.yaml`
 
@@ -359,19 +218,10 @@ server:
 db:
   dsn: "host=localhost user=goyavision password=goyavision dbname=goyavision port=5432 sslmode=disable"
 
-ffmpeg:
-  bin: "ffmpeg"
-  max_frame: 16
-
-ai:
-  timeout: 10s
-  retry: 2
-
 jwt:
   secret: "your-secret-key-change-in-production"
   expire: 2h
   refresh_exp: 168h
-  issuer: "goyavision"
 
 mediamtx:
   api_address: "http://localhost:9997"
@@ -379,7 +229,6 @@ mediamtx:
   rtmp_address: "rtmp://localhost:1935"
   hls_address: "http://localhost:8888"
   webrtc_address: "http://localhost:8889"
-  playback_address: "http://localhost:9996"
   record_path: "./data/recordings/%path/%Y-%m-%d_%H-%M-%S"
   record_format: "fmp4"
   segment_duration: "1h"
@@ -392,77 +241,57 @@ storage:
 ```
 
 ### 环境变量覆盖
-所有配置项都可以通过环境变量覆盖，前缀为 `GOYAVISION_`。
 
-例如：
+所有配置项可通过环境变量覆盖，前缀为 `GOYAVISION_`：
+
 ```bash
 export GOYAVISION_DB_DSN="host=localhost ..."
 export GOYAVISION_JWT_SECRET="your-production-secret"
+export GOYAVISION_MEDIAMTX_API_ADDRESS="http://mediamtx:9997"
 ```
 
-## 数据模型概要（V1.0）
+## 开发状态（V1.0）
 
-### 资产库
-- `media_sources`：id, name, type, url, protocol, enabled, created_at, updated_at
-- `media_assets`：id, type, source_type, source_id, parent_id, name, path, duration, size, format, metadata, status, tags, created_at, updated_at
+### ✅ 已完成
+- MediaMTX 集成（RTSP/RTMP/HLS/WebRTC）
+- 媒体源管理（拉流/推流）
+- 录制与点播（集成 MediaMTX）
+- JWT 认证（Access Token + Refresh Token 双 Token）
+- RBAC 权限模型（用户、角色、菜单）
+- 分层架构（Domain/Port/App/Adapter/API）
+- Docker Compose 部署
 
-### 算子与工作流
-- `operators`：id, code, name, category, version, input_spec, output_spec, endpoint, config, status, is_builtin, description, icon, created_at, updated_at
-- `workflows`：id, name, description, trigger, nodes, edges, status, created_at, updated_at
-- `tasks`：id, workflow_id, trigger_type, input_assets, status, progress, current_node, started_at, completed_at, error, created_at
-- `artifacts`：id, task_id, node_id, operator_id, type, asset_id, data, created_at
+### 🚧 进行中
+- 媒体资产管理（CRUD、搜索、派生追踪）
+- 算子管理（CRUD、分类、版本管理）
+- 简化工作流（Phase 1：单算子任务）
+- 任务调度与执行
+- 产物管理
+- 前端页面（资产、算子、工作流、任务）
 
-### 认证授权
-- `users`：id, username, password, nickname, email, phone, avatar, status, created_at, updated_at
-- `roles`：id, code, name, description, status, created_at, updated_at
-- `permissions`：id, code, name, method, path, description
-- `menus`：id, parent_id, code, name, type, path, icon, component, permission, sort, visible, status, created_at, updated_at
-- `user_roles`：user_id, role_id
-- `role_permissions`：role_id, permission_id
-- `role_menus`：role_id, menu_id
-
-## 文档
-
-- **需求文档**：`docs/requirements.md`
-- **架构文档**：`docs/architecture.md`
-- **开发进度**：`docs/development-progress.md`
-- **API 文档**：`docs/api.md`
-- **部署指南**：`docs/DEPLOYMENT.md`
-- **变更日志**：`CHANGELOG.md`
-
-## 开发路线
-
-### Phase 1：核心闭环（当前 V1.0）
-- 媒体源管理（✅ 已完成）
-- 媒体资产管理（🚧 进行中）
-- 内置算子（抽帧、目标检测）（🚧 重构中）
-- 简化工作流（单算子任务）（🚧 进行中）
-- 任务调度与执行（🚧 进行中）
-- 产物管理（🚧 进行中）
-
-### Phase 2：能力扩展
-- 多媒体类型（图片、音频）
+### ⏸️ 待开始
+- 可视化工作流设计器
 - 更多内置算子（编辑、生成、转换类）
 - 复杂工作流（DAG 编排、并行、条件分支）
-- 可视化工作流设计器
-- 工作流模板市场
-
-### Phase 3：平台化
-- 自定义算子（Docker 镜像）
-- 算子市场（第三方算子）
+- 自定义算子（Docker 镜像上传）
 - 多租户支持
-- 开放 API 与 SDK
 - 监控与告警（Prometheus + Grafana）
 
-## 默认账号
+## 关键文档
 
-- **用户名**：admin
-- **密码**：admin123
-- **角色**：超级管理员（拥有所有权限）
+| 文档 | 路径 | 用途 |
+|------|------|------|
+| 需求文档 | `docs/requirements.md` | 功能规格与验收标准 |
+| 架构文档 | `docs/architecture.md` | 系统设计详细说明 |
+| 开发进度 | `docs/development-progress.md` | 实现状态追踪 |
+| API 文档 | `docs/api.md` | RESTful API 参考 |
+| 变更日志 | `CHANGELOG.md` | 版本历史（关注 [未发布] 章节） |
+| 部署指南 | `docs/DEPLOYMENT.md` | 部署与运维 |
+| Claude 指南 | `CLAUDE.md` | Claude Code 使用指南 |
 
 ## 常见开发模式
 
-### 创建新实体
+### 添加新实体
 
 1. 在 `internal/domain/` 定义实体
 2. 在 `internal/port/` 定义 Repository 接口
@@ -475,7 +304,7 @@ export GOYAVISION_JWT_SECRET="your-production-secret"
 ### 实现新算子
 
 1. 实现算子 HTTP 服务（符合标准 I/O 协议）
-2. 在算子中心注册算子（code、category、version、endpoint、input_spec、output_spec）
+2. 在算子中心注册（code、category、version、endpoint、input_spec、output_spec）
 3. 在工作流中使用算子
 
 ### 创建工作流
@@ -486,72 +315,63 @@ export GOYAVISION_JWT_SECRET="your-production-secret"
 4. 验证 DAG（无环、连通）
 5. 启用工作流
 
-## 注意事项
+## 重要注意事项
 
-1. **V1.0 不向后兼容**：旧版本数据和 API 需要手动迁移
-2. **资产派生追踪**：使用 `parent_id` 追踪资产派生关系（原始视频 → 抽帧图片 → 检测结果图片）
-3. **算子幂等性**：算子应设计为无状态、幂等执行
-4. **工作流验证**：DAG 必须无环、连通
-5. **错误传播**：节点失败不影响其他独立分支
-6. **产物关联**：产物可关联新资产（通过 asset_id）
+⚠️ **关键约束**：
+1. V1.0 不向后兼容旧版本
+2. 资产派生追踪使用 `parent_id`（原始视频 → 抽帧图片 → 检测结果图片）
+3. 算子必须无状态、幂等执行
+4. 工作流 DAG 必须无环、连通
+5. 节点失败不影响其他独立分支
+6. 产物可通过 `asset_id` 关联新资产
 
-## 开发规范
+## 默认凭证
 
-### 文档更新要求（强制）
+- **用户名**: admin
+- **密码**: admin123
+- **角色**: 超级管理员（拥有所有权限）
 
-**每次完成功能开发或修改后，必须同步更新相关文档：**
+⚠️ **安全警告**: 生产环境必须立即修改默认密码！
 
-1. **必须更新**：
-   - `docs/development-progress.md`：更新功能状态、迭代进度
-   - `docs/api.md`：新增或修改 API 时更新
-   - `CHANGELOG.md`：在 `[未发布]` 章节记录变更
+## 快速参考
 
-2. **可能需要更新**：
-   - `docs/requirements.md`：功能需求变更时
-   - `docs/architecture.md`：架构设计变更时
-   - `README.md`：影响用户使用时
+**服务端口**:
+- 8080: GoyaVision (Web UI + API)
+- 5432: PostgreSQL
+- 8554: MediaMTX RTSP
+- 1935: MediaMTX RTMP
+- 8888: MediaMTX HLS
+- 8889: MediaMTX WebRTC
+- 9997: MediaMTX API
 
-### Git 提交规范（强制）
+**构建命令**:
+- `make build` - 构建后端
+- `make build-web` - 构建前端
+- `make build-all` - 构建全部
+- `make clean` - 清理构建产物
 
-**每次完成功能开发或修改后，必须进行 Git 提交：**
+**技术栈**:
+- 后端: Go 1.22+, Echo v4, GORM, PostgreSQL, Viper, JWT
+- 流媒体: MediaMTX, FFmpeg
+- 前端: Vue 3, TypeScript, Vite, Element Plus, Tailwind CSS
+- 部署: Docker, Docker Compose
 
-#### Commit Message 格式
+## 使用示例
 
-遵循 [Conventional Commits](https://www.conventionalcommits.org/) 规范：
-
-```
-<type>(<scope>): <subject>
-```
-
-**Type 类型**：
-- `feat`：新功能
-- `fix`：Bug 修复
-- `docs`：文档变更
-- `refactor`：代码重构
-- `test`：测试相关
-- `chore`：构建、配置、依赖等
-
-**Scope 范围**（可选）：
-- `asset`、`operator`、`workflow`、`task`、`auth`、`api`、`ui`
-
-**示例**：
 ```bash
-feat(asset): 实现媒体资产管理功能
-fix(workflow): 修复 DAG 验证死循环
-docs: 更新 V1.0 架构文档
+# 在开始实现媒体资产管理功能前
+/goyavision-context
+
+# 快速查看：
+# - MediaAsset 实体定义和属性
+# - API 端点 GET|POST /assets
+# - 分层架构中的位置
+# - 已实现功能状态（🚧 进行中）
 ```
 
-#### 提交检查清单
+## 相关 Skills
 
-- [ ] 代码已测试
-- [ ] 相关文档已更新
-- [ ] 代码已格式化（gofmt / goimports）
-- [ ] Commit message 符合规范
-
-## 技术债务
-
-- AlgorithmBinding 迁移到 Workflow（高优先级）
-- InferenceResult 迁移到 Artifact（高优先级）
-- FFmpeg Pool 优化（中优先级）
-- 数据库索引优化（中优先级）
-- 前端性能优化（低优先级）
+- `/development-workflow` - 开发工作流（开始/完成开发）
+- `/create-entity` - 创建新领域实体
+- `/create-operator` - 创建新算子
+- `/review-architecture` - 架构合规性审查
