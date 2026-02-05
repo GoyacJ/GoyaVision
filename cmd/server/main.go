@@ -13,14 +13,14 @@ import (
 	"goyavision"
 	"goyavision/config"
 	"goyavision/internal/adapter/engine"
-	inframediamtx "goyavision/internal/infra/mediamtx"
-	infrapersistence "goyavision/internal/infra/persistence"
-	infraauth "goyavision/internal/infra/auth"
-	infraengine "goyavision/internal/infra/engine"
 	"goyavision/internal/adapter/mediamtx"
 	"goyavision/internal/adapter/persistence"
 	"goyavision/internal/api"
 	"goyavision/internal/app"
+	infraauth "goyavision/internal/infra/auth"
+	infraengine "goyavision/internal/infra/engine"
+	inframediamtx "goyavision/internal/infra/mediamtx"
+	infrapersistence "goyavision/internal/infra/persistence"
 	"goyavision/pkg/storage"
 
 	"github.com/labstack/echo/v4"
@@ -44,9 +44,6 @@ func main() {
 		defer sqlDB.Close()
 		if err := persistence.AutoMigrate(db); err != nil {
 			log.Fatalf("migrate: %v", err)
-		}
-		if err := persistence.InitializeData(db); err != nil {
-			log.Printf("init data: %v", err)
 		}
 	} else {
 		log.Print("db.dsn empty, skip database")

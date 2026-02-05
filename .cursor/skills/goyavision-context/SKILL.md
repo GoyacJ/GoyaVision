@@ -35,9 +35,9 @@ MediaSource → MediaAsset → Operator → Workflow → Task → Artifact
 |------|------|----------|
 | **MediaSource** | 媒体来源（流/上传） | type(pull/push/upload), protocol(rtsp/rtmp/hls/webrtc/file) |
 | **MediaAsset** | 媒体资产管理 | type(video/image/audio), source_type, parent_id(派生追踪), tags |
-| **Operator** | AI/媒体处理单元 | category(analyze/edit/generate/transform), endpoint, input_spec, output_spec |
+| **Operator** | AI/媒体处理单元 | category(analysis/processing/generation/utility), type(frame_extract/object_detection/ocr/...), endpoint, input_schema, output_spec, status(enabled/disabled/draft) |
 | **Workflow** | DAG 编排 | trigger(manual/schedule/event), nodes, edges |
-| **Task** | 工作流执行实例 | status(pending/running/completed/failed), progress, current_node |
+| **Task** | 工作流执行实例 | status(pending/running/success/failed/cancelled), progress, current_node, asset_id |
 | **Artifact** | 算子输出产物 | type(asset/result/timeline/diagnostic), data |
 
 ### 废弃概念（V1.0 不再使用）
@@ -57,8 +57,15 @@ internal/
 ├── port/        # 接口定义（契约）
 │   └── 接口：Repository, OperatorPort, WorkflowEngine, MediaMTXClient
 │
-├── app/         # 业务服务（用例编排）
-│   └── 服务：MediaSourceService, WorkflowService, TaskService, AuthService, UserService
+├── app/         # 业务服务（CQRS 模式）
+│   ├── command/    # 命令（写操作：创建、更新、删除）
+│   ├── query/      # 查询（读操作：查询、列表）
+│   ├── dto/        # 数据传输对象
+│   ├── port/       # 应用端口接口（MediaGateway, ObjectStorage, TokenService, EventBus, UnitOfWork）
+│   ├── artifact.go          # 产物管理
+│   ├── file.go              # 文件管理服务
+│   ├── user_management.go   # 用户管理服务
+│   └── workflow_scheduler.go # 工作流调度器
 │
 ├── adapter/     # 基础设施实现
 │   ├── persistence/   # GORM + PostgreSQL

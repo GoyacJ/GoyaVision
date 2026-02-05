@@ -113,8 +113,11 @@ async function handleLogin() {
         password: loginForm.password
       })
       ElMessage.success('登录成功')
+      
       const redirect = route.query.redirect as string
-      router.push(redirect || '/')
+      const targetPath = redirect || '/assets'
+      
+      await router.push(targetPath)
     } catch (error: any) {
       ElMessage.error(error.response?.data?.message || '登录失败')
     } finally {

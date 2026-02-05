@@ -15,11 +15,24 @@ router.beforeEach(async (to, _from, next) => {
       const userStore = useUserStore()
 
       if (userStore.userInfo && userStore.routesLoaded) {
-        next()
+        if (to.path === '/') {
+          next({ path: '/assets', replace: true })
+        } else {
+          next()
+        }
       } else {
         try {
           await userStore.getProfile()
-          next({ ...to, replace: true })
+          
+          if (!userStore.routesLoaded) {
+            userStore.registerDynamicRoutes()
+          }
+          
+          if (to.path === '/') {
+            next({ path: '/assets', replace: true })
+          } else {
+            next({ ...to, replace: true })
+          }
         } catch (error) {
           userStore.resetState()
           ElMessage.error('登录已过期，请重新登录')

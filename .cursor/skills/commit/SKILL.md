@@ -59,7 +59,7 @@ description: Git 提交规范指导（Conventional Commits）。用于提交前�
 git commit -m "feat(asset): 实现媒体资产管理功能
 
 - 添加 MediaAsset 实体和 Repository
-- 实现 MediaAssetService（CRUD、搜索、派生追踪）
+- 实现 CQRS 命令和查询（create/update/delete/get/list）
 - 添加 Asset Handler 和 DTO
 - 更新 API 文档和开发进度"
 ```

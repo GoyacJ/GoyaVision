@@ -6,7 +6,7 @@
 # 符合 Cursor Hooks 官方规范：
 # - 从 stdin 读取 JSON 输入
 # - 输出 JSON 格式到 stdout
-# - 使用 followup_message 自动触发后续消息
+# - 只在有未提交变更时使用 followup_message 触发提醒
 
 set -euo pipefail
 
@@ -28,6 +28,32 @@ fi
 # 检查 loop_count 是否超过限制（系统限制为 5）
 if [ "$loop_count" -ge 5 ]; then
     # 超过限制，不输出 followup_message
+    echo '{}'
+    exit 0
+fi
+
+# 检查是否有未提交的变更（避免无限循环）
+# 获取项目根目录（假设脚本在 .cursor/hooks/ 目录下）
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+project_root="$(cd "$script_dir/../.." && pwd)"
+
+# 检查 git 状态（如果不在 git 仓库中，跳过检查）
+if [ -d "$project_root/.git" ]; then
+    cd "$project_root"
+    # 检查是否有未暂存或未提交的变更
+    if ! git diff --quiet --exit-code 2>/dev/null && ! git diff --cached --quiet --exit-code 2>/dev/null; then
+        has_changes=true
+    else
+        has_changes=false
+    fi
+else
+    # 不在 git 仓库中，默认不触发（避免频繁提醒）
+    has_changes=false
+fi
+
+# 只有在有未提交变更时才触发提醒
+if [ "$has_changes" = false ]; then
+    # 没有变更，不输出 followup_message
     echo '{}'
     exit 0
 fi

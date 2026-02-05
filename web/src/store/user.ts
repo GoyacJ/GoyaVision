@@ -49,6 +49,10 @@ export const useUserStore = defineStore('user', () => {
 
     routesLoaded.value = false
 
+    if (data.user && data.user.menus) {
+      registerDynamicRoutes()
+    }
+
     return data
   }
 
@@ -67,13 +71,26 @@ export const useUserStore = defineStore('user', () => {
 
   function registerDynamicRoutes() {
     const rootRouteName = 'Root'
-    const menuRoutes = buildRoutesFromMenus(userInfo.value?.menus || [])
+    const menus = userInfo.value?.menus || []
+    
+    if (menus.length === 0) {
+      console.warn('[Router] No menus found, skipping route registration')
+      routesLoaded.value = true
+      return
+    }
+    
+    const menuRoutes = buildRoutesFromMenus(menus)
+    let registeredCount = 0
+    
     menuRoutes.forEach((route) => {
       if (!hasRouteComponent(route) && (!route.children || route.children.length === 0)) {
         return
       }
       router.addRoute(rootRouteName, route)
+      registeredCount++
     })
+    
+    console.log(`[Router] Registered ${registeredCount} dynamic routes from ${menus.length} menus`)
     routesLoaded.value = true
   }
 

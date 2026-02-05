@@ -53,14 +53,14 @@ GoyaVision 是基于 Go + Vue 3 的智能媒体处理平台。
 
 #### 算子与工作流类
 - **Operator**：算子（AI/媒体处理能力单元）
-  - 属性：`code`（唯一编码）、`category`（analyze/edit/generate/transform）、`version`、`input_spec`、`output_spec`、`endpoint`
-  - 分类：分析类、编辑类、生成类、转换类
+  - 属性：`code`（唯一编码）、`category`（analysis/processing/generation/utility）、`type`（frame_extract/object_detection/ocr/...）、`version`、`input_schema`、`output_spec`、`endpoint`、`status`（enabled/disabled/draft）
+  - 分类：分析类（analysis）、处理类（processing）、生成类（generation）、工具类（utility）
 - **Workflow**：工作流（DAG 编排）
   - 属性：`name`、`trigger`（manual/schedule/event）、`nodes`（DAG 节点）、`edges`（节点连接）
   - 节点：`WorkflowNode`（operator_id、params、retry、timeout）
   - 边：`WorkflowEdge`（from、to、condition）
 - **Task**：任务（工作流执行实例）
-  - 属性：`workflow_id`、`trigger_type`、`input_assets`、`status`（pending/running/completed/failed）、`progress`
+  - 属性：`workflow_id`、`asset_id`、`status`（pending/running/success/failed/cancelled）、`progress`、`current_node`、`input_params`、`error`
 - **Artifact**：产物（算子输出）
   - 类型：asset（新资产）、result（结构化结果）、timeline（时间轴）、diagnostic（诊断信息）
 
@@ -113,28 +113,37 @@ GoyaVision 是基于 Go + Vue 3 的智能媒体处理平台。
 - 编排 domain 与 port，实现用例
 - 不直接依赖 `adapter` 具体实现，通过 `port` 注入
 
-**服务**：
+**服务结构**：
 
-#### 资产库（Asset Library）
-- `MediaSourceService`：媒体源管理（CRUD、状态查询、流控制）
-- `MediaAssetService`：媒体资产管理（CRUD、搜索、派生追踪）
-- `RecordService`：录制管理（启停、会话管理、集成 MediaMTX）
-- `PlaybackService`：点播服务（录制段查询、URL 生成）
+App 层采用 **CQRS（命令查询职责分离）** 模式：
 
-#### 算子中心（Operator Hub）
-- `OperatorService`：算子管理（CRUD、分类、版本管理）
+#### 命令（Commands）
+- `command/` 目录：处理写操作（创建、更新、删除）
+  - 资产库：`create_source.go`、`update_source.go`、`delete_source.go`、`create_asset.go`、`update_asset.go`、`delete_asset.go`
+  - 算子中心：`create_operator.go`、`update_operator.go`、`delete_operator.go`、`enable_operator.go`
+  - 任务中心：`create_workflow.go`、`update_workflow.go`、`delete_workflow.go`、`create_task.go`、`start_task.go`、`update_task.go`、`complete_task.go`、`fail_task.go`、`cancel_task.go`、`enable_workflow.go`
+  - 控制台：`login.go`（认证命令）
 
-#### 任务中心（Task Center）
-- `WorkflowService`：工作流管理（CRUD、DAG 验证）
-- `TaskService`：任务管理（创建、执行、查询、控制）
-- `ArtifactService`：产物管理（查询、关联）
-- `Scheduler`：调度器（定时任务、事件触发，使用 gocron/v2）
+#### 查询（Queries）
+- `query/` 目录：处理读操作（查询、列表）
+  - 资产库：`get_source.go`、`list_sources.go`、`get_asset.go`、`list_assets.go`、`get_asset_tags.go`、`list_asset_children.go`
+  - 算子中心：`get_operator.go`、`get_operator_by_code.go`、`list_operators.go`
+  - 任务中心：`get_workflow.go`、`get_workflow_by_code.go`、`get_workflow_with_nodes.go`、`list_workflows.go`、`get_task.go`、`get_task_with_relations.go`、`get_task_stats.go`、`list_tasks.go`、`list_running_tasks.go`
+  - 控制台：`get_profile.go`（用户信息查询）
 
-#### 控制台（Console）
-- `AuthService`：认证服务（登录、登出、Token 刷新、密码修改）
-- `UserService`：用户管理（CRUD、角色分配）
-- `RoleService`：角色管理（CRUD、权限/菜单分配）
-- `MenuService`：菜单管理（CRUD、树形结构）
+#### 其他服务
+- `artifact.go`：产物管理（查询、关联）
+- `file.go`：文件管理服务（上传、下载、元数据）
+- `user_management.go`：用户管理服务（`UserService`，CRUD、角色分配）
+- `workflow_scheduler.go`：工作流调度器（定时任务、事件触发，使用 gocron/v2）
+
+#### 端口接口（Port）
+- `port/` 目录：定义应用边界接口
+  - `media_gateway.go`：MediaMTX 网关接口
+  - `object_storage.go`：对象存储接口（MinIO/S3）
+  - `token_service.go`：Token 服务接口
+  - `event_bus.go`：事件总线接口
+  - `unit_of_work.go`：工作单元接口（事务管理）
 
 ### 4. Adapter Layer（适配器层）
 **位置**：`internal/adapter/`
@@ -714,13 +723,14 @@ git commit -m "docs: 更新架构文档"
 
 ### 执行工作流流程
 ```
-1. 触发器激活 → WorkflowService.TriggerEvent()
-2. 创建 Task → TaskService.Create()
-3. Scheduler 调度 → WorkflowEngine.Execute()
+1. 触发器激活 → 调用 command/create_task.go
+2. 创建 Task → 通过 UnitOfWork 保存到数据库
+3. WorkflowScheduler 调度 → WorkflowEngine.Execute()
 4. 解析 DAG → 拓扑排序
 5. 执行节点 → OperatorPort.Execute()
-6. 保存 Artifact → ArtifactService.Create()
-7. 返回执行结果
+6. 保存 Artifact → artifact.go 服务处理
+7. 更新 Task 状态 → command/complete_task.go 或 command/fail_task.go
+8. 返回执行结果
 ```
 
 ## 注意事项
