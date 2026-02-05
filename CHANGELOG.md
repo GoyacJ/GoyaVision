@@ -10,6 +10,7 @@
 ### 新增
 - 增加 Cline 规范目录（`.cline/`），同步 rules、skills、hooks 与 workflows，保持与 Cursor/Claude 规则一致
 - 文档补充：README/architecture/requirements/api/deployment/development-progress 中的配置、状态与端点描述与当前实现对齐
+- 配置体系升级：按环境加载 `config.<env>.yaml`，新增 `config.dev.yaml` / `config.prod.yaml` / `config.example.yaml` / `.env.example`，配置加载增加必填校验
 
 ### 修复
 - 修复任务与工作流 Handler 的返回值处理与重复赋值导致的 Go 编译错误
@@ -546,7 +547,7 @@
 - `internal/api/router.go` - 注册上传路由
 - `cmd/server/main.go` - 初始化 MinIO 客户端
 - `config/config.go` - 添加 MinIO 配置
-- `configs/config.yaml` - MinIO 配置项
+- `configs/config.<env>.yaml` - MinIO 配置项
 
 **前端新增/修改：**
 - `web/src/components/business/AssetCard/types.ts` - 组件类型定义（新增）

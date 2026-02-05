@@ -2,12 +2,15 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
 )
 
 type Config struct {
+	Env      string
 	Server   Server
 	DB       DB
 	FFmpeg   FFmpeg
@@ -83,18 +86,24 @@ func (s Server) Addr() string {
 
 func Load() (*Config, error) {
 	v := viper.New()
-	v.SetConfigName("config")
+	env := strings.ToLower(os.Getenv("GOYAVISION_ENV"))
+	if env == "" {
+		env = "dev"
+	}
+
+	v.SetConfigName(fmt.Sprintf("config.%s", env))
 	v.SetConfigType("yaml")
 	v.AddConfigPath("./configs")
 	v.AddConfigPath(".")
 	if err := v.ReadInConfig(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read config for env %s: %w", env, err)
 	}
 
 	v.SetEnvPrefix("GOYAVISION")
 	v.AutomaticEnv()
 
 	cfg := &Config{
+		Env:    env,
 		Server: Server{Port: v.GetInt("server.port")},
 		DB:     DB{DSN: v.GetString("db.dsn")},
 		FFmpeg: FFmpeg{
@@ -144,9 +153,6 @@ func Load() (*Config, error) {
 	if cfg.Server.Port == 0 {
 		cfg.Server.Port = 8080
 	}
-	if cfg.JWT.Secret == "" {
-		cfg.JWT.Secret = "goyavision-secret-key"
-	}
 	if cfg.JWT.Expire == 0 {
 		cfg.JWT.Expire = 2 * time.Hour
 	}
@@ -156,44 +162,51 @@ func Load() (*Config, error) {
 	if cfg.JWT.Issuer == "" {
 		cfg.JWT.Issuer = "goyavision"
 	}
-	if cfg.MediaMTX.APIAddress == "" {
-		cfg.MediaMTX.APIAddress = "http://localhost:9997"
+	if cfg.AI.Timeout == 0 {
+		cfg.AI.Timeout = 10 * time.Second
 	}
-	if cfg.MediaMTX.RTSPAddress == "" {
-		cfg.MediaMTX.RTSPAddress = "rtsp://localhost:8554"
+	if cfg.AI.Retry == 0 {
+		cfg.AI.Retry = 2
 	}
-	if cfg.MediaMTX.RTMPAddress == "" {
-		cfg.MediaMTX.RTMPAddress = "rtmp://localhost:1935"
+	if cfg.Record.SegmentSec == 0 {
+		cfg.Record.SegmentSec = 300
 	}
-	if cfg.MediaMTX.HLSAddress == "" {
-		cfg.MediaMTX.HLSAddress = "http://localhost:8888"
+	if cfg.FFmpeg.MaxRecord == 0 {
+		cfg.FFmpeg.MaxRecord = 16
 	}
-	if cfg.MediaMTX.WebRTCAddress == "" {
-		cfg.MediaMTX.WebRTCAddress = "http://localhost:8889"
+	if cfg.FFmpeg.MaxFrame == 0 {
+		cfg.FFmpeg.MaxFrame = 16
 	}
-	if cfg.MediaMTX.PlaybackAddress == "" {
-		cfg.MediaMTX.PlaybackAddress = "http://localhost:9996"
+	if cfg.Preview.MaxPreview == 0 {
+		cfg.Preview.MaxPreview = 10
 	}
-	if cfg.MediaMTX.RecordPath == "" {
-		cfg.MediaMTX.RecordPath = "./data/recordings/%path/%Y-%m-%d_%H-%M-%S"
-	}
-	if cfg.MediaMTX.RecordFormat == "" {
-		cfg.MediaMTX.RecordFormat = "fmp4"
-	}
-	if cfg.MediaMTX.SegmentDuration == "" {
-		cfg.MediaMTX.SegmentDuration = "1h"
-	}
-	if cfg.MinIO.Endpoint == "" {
-		cfg.MinIO.Endpoint = "localhost:9000"
-	}
-	if cfg.MinIO.AccessKey == "" {
-		cfg.MinIO.AccessKey = "minioadmin"
-	}
-	if cfg.MinIO.SecretKey == "" {
-		cfg.MinIO.SecretKey = "minioadmin"
-	}
-	if cfg.MinIO.BucketName == "" {
-		cfg.MinIO.BucketName = "goyavision"
+	if err := cfg.Validate(); err != nil {
+		return nil, err
 	}
 	return cfg, nil
+}
+
+func (c *Config) Validate() error {
+	if c.Server.Port == 0 {
+		return fmt.Errorf("server.port is required")
+	}
+	if c.DB.DSN == "" {
+		return fmt.Errorf("db.dsn is required")
+	}
+	if c.JWT.Secret == "" {
+		return fmt.Errorf("jwt.secret is required")
+	}
+	if c.MediaMTX.APIAddress == "" {
+		return fmt.Errorf("mediamtx.api_address is required")
+	}
+	if c.MediaMTX.RTSPAddress == "" || c.MediaMTX.RTMPAddress == "" || c.MediaMTX.HLSAddress == "" || c.MediaMTX.WebRTCAddress == "" || c.MediaMTX.PlaybackAddress == "" {
+		return fmt.Errorf("mediamtx addresses are required")
+	}
+	if c.MediaMTX.RecordPath == "" || c.MediaMTX.RecordFormat == "" || c.MediaMTX.SegmentDuration == "" {
+		return fmt.Errorf("mediamtx record settings are required")
+	}
+	if c.MinIO.Endpoint == "" || c.MinIO.AccessKey == "" || c.MinIO.SecretKey == "" || c.MinIO.BucketName == "" {
+		return fmt.Errorf("minio configuration is required")
+	}
+	return nil
 }

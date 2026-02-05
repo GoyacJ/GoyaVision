@@ -15,8 +15,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Build Go binary
 go build -o bin/goyavision ./cmd/server
 
-# Run locally (reads configs/config.yaml)
-./bin/goyavision
+# Run locally (reads configs/config.<env>.yaml)
+GOYAVISION_ENV=dev ./bin/goyavision
 
 # Or run directly
 go run cmd/server/main.go
@@ -139,7 +139,7 @@ All operators MUST follow this I/O contract:
 
 ## Configuration
 
-Primary config: `configs/config.yaml`
+Primary config: `configs/config.<env>.yaml`
 
 Environment variable override pattern: `GOYAVISION_*` prefix
 - `GOYAVISION_DB_DSN` - Database connection string
@@ -351,7 +351,7 @@ PostgreSQL with GORM auto-migration on startup.
 2. **Always use DTOs in API layer**: Never expose domain entities directly in HTTP responses
 3. **Workflow DAGs must be acyclic**: Engine validates on creation, will reject cycles
 4. **Operator endpoints must follow standard protocol**: Input/output format is contract
-5. **JWT secret in production**: Default in config.yaml is for development only
+5. **JWT secret in production**: Default in config.dev.yaml is for development only
 6. **MediaMTX paths**: Recording paths follow pattern `%path/%Y-%m-%d_%H-%M-%S` (time-based segmentation)
 7. **Asset parent_id tracking**: Use for derivative assets (original video → frame → detection result)
 

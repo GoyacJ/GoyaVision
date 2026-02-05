@@ -15,7 +15,7 @@ alwaysApply: true
   - 需求与架构：`docs/requirements.md`、`docs/architecture.md`
   - 开发进度与路线：`docs/development-progress.md`
   - API 约定：`docs/api.md`
-  - 部署与配置：`docs/DEPLOYMENT.md`、`configs/config.yaml`
+- 部署与配置：`docs/DEPLOYMENT.md`、`configs/config.<env>.yaml`
 - **变更与历史**
   - 变更日志：`CHANGELOG.md`（重点关注 `[未发布]` 章节）
 - **上下文 Skill**

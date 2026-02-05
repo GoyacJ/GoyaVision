@@ -285,7 +285,7 @@ API Layer       → App Layer
 
 - 统一经 `config` 包与 Viper
 - 敏感信息不写死，使用环境变量覆盖（`GOYAVISION_*` 前缀）
-- 配置文件：`configs/config.yaml`
+- 配置文件：`configs/config.<env>.yaml`
 
 ### 并发控制
 

@@ -1,0 +1,48 @@
+server:
+  port: 8080
+
+db:
+  dsn: "${GOYAVISION_DB_DSN}"
+
+ffmpeg:
+  bin: "${GOYAVISION_FFMPEG_BIN}"
+  max_record: 16
+  max_frame: 16
+
+preview:
+  provider: "mediamtx"
+  mediamtx_bin: "${GOYAVISION_PREVIEW_MEDIAMTX_BIN}"
+  max_preview: 10
+  hls_base: "/live"
+
+record:
+  base_path: "${GOYAVISION_RECORD_BASE_PATH}"
+  segment_sec: 300
+
+ai:
+  timeout: 10s
+  retry: 2
+
+jwt:
+  secret: "${GOYAVISION_JWT_SECRET}"
+  expire: 2h
+  refresh_exp: 168h
+  issuer: "goyavision"
+
+mediamtx:
+  api_address: "${GOYAVISION_MEDIAMTX_API_ADDRESS}"
+  rtsp_address: "${GOYAVISION_MEDIAMTX_RTSP_ADDRESS}"
+  rtmp_address: "${GOYAVISION_MEDIAMTX_RTMP_ADDRESS}"
+  hls_address: "${GOYAVISION_MEDIAMTX_HLS_ADDRESS}"
+  webrtc_address: "${GOYAVISION_MEDIAMTX_WEBRTC_ADDRESS}"
+  playback_address: "${GOYAVISION_MEDIAMTX_PLAYBACK_ADDRESS}"
+  record_path: "${GOYAVISION_MEDIAMTX_RECORD_PATH}"
+  record_format: "fmp4"
+  segment_duration: "1h"
+
+minio:
+  endpoint: "${GOYAVISION_MINIO_ENDPOINT}"
+  access_key: "${GOYAVISION_MINIO_ACCESS_KEY}"
+  secret_key: "${GOYAVISION_MINIO_SECRET_KEY}"
+  bucket_name: "${GOYAVISION_MINIO_BUCKET_NAME}"
+  use_ssl: ${GOYAVISION_MINIO_USE_SSL}

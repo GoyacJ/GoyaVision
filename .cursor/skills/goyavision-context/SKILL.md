@@ -209,7 +209,7 @@ internal/
 
 ## 配置管理
 
-### 主配置文件：`configs/config.yaml`
+### 主配置文件：`configs/config.<env>.yaml`
 
 ```yaml
 server:
