@@ -13,8 +13,8 @@ router.beforeEach(async (to, _from, next) => {
     } else {
       const { useUserStore } = await import('../store/user')
       const userStore = useUserStore()
-      
-      if (userStore.userInfo) {
+
+      if (userStore.userInfo && userStore.routesLoaded) {
         next()
       } else {
         try {

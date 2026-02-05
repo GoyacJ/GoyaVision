@@ -3,11 +3,13 @@ import { ref, computed } from 'vue'
 import { authApi, type UserInfo, type MenuInfo, type LoginRequest } from '../api/auth'
 import { getToken, setToken, getRefreshToken, setRefreshToken, clearTokens } from '../utils/auth'
 import router from '../router'
+import { buildRoutesFromMenus, hasRouteComponent } from '../utils/dynamic-routes'
 
 export const useUserStore = defineStore('user', () => {
   const token = ref<string | null>(getToken())
   const refreshToken = ref<string | null>(getRefreshToken())
   const userInfo = ref<UserInfo | null>(null)
+  const routesLoaded = ref(false)
 
   const isLoggedIn = computed(() => !!token.value)
   const username = computed(() => userInfo.value?.username || '')
@@ -45,6 +47,8 @@ export const useUserStore = defineStore('user', () => {
     setToken(data.access_token)
     setRefreshToken(data.refresh_token)
 
+    routesLoaded.value = false
+
     return data
   }
 
@@ -55,7 +59,22 @@ export const useUserStore = defineStore('user', () => {
 
     const response = await authApi.getProfile()
     userInfo.value = response.data
+    if (!routesLoaded.value) {
+      registerDynamicRoutes()
+    }
     return response.data
+  }
+
+  function registerDynamicRoutes() {
+    const rootRouteName = 'Root'
+    const menuRoutes = buildRoutesFromMenus(userInfo.value?.menus || [])
+    menuRoutes.forEach((route) => {
+      if (!hasRouteComponent(route) && (!route.children || route.children.length === 0)) {
+        return
+      }
+      router.addRoute(rootRouteName, route)
+    })
+    routesLoaded.value = true
   }
 
   async function refreshAccessToken() {
@@ -92,6 +111,7 @@ export const useUserStore = defineStore('user', () => {
     token.value = null
     refreshToken.value = null
     userInfo.value = null
+    routesLoaded.value = false
     clearTokens()
 
     router.push('/login')
@@ -101,6 +121,7 @@ export const useUserStore = defineStore('user', () => {
     token.value = null
     refreshToken.value = null
     userInfo.value = null
+    routesLoaded.value = false
     clearTokens()
   }
 
@@ -114,11 +135,13 @@ export const useUserStore = defineStore('user', () => {
     roles,
     permissions,
     menus,
+    routesLoaded,
     hasPermission,
     hasAnyPermission,
     hasRole,
     login,
     getProfile,
+    registerDynamicRoutes,
     refreshAccessToken,
     logout,
     resetState

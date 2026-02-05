@@ -1,6 +1,6 @@
 import axios, { type AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios'
 import { ElMessage } from 'element-plus'
-import { getToken, clearTokens } from '../utils/auth'
+import { getToken, getRefreshToken, setToken, setRefreshToken, clearTokens } from '../utils/auth'
 import router from '../router'
 
 /**
@@ -32,6 +32,25 @@ const apiClient = axios.create({
   }
 })
 
+const refreshClient = axios.create({
+  baseURL: '/api/v1',
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
+
+let isRefreshing = false
+const pendingRequests: Array<(token: string | null) => void> = []
+
+function subscribeTokenRefresh(callback: (token: string | null) => void) {
+  pendingRequests.push(callback)
+}
+
+function onTokenRefreshed(token: string | null) {
+  pendingRequests.splice(0).forEach((callback) => callback(token))
+}
+
 /**
  * 请求拦截器
  */
@@ -59,7 +78,57 @@ apiClient.interceptors.response.use(
     // 直接返回响应（不提取 data，让调用者决定如何处理）
     return response
   },
-  (error: AxiosError<ApiError>) => {
+  async (error: AxiosError<ApiError>) => {
+    const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined
+
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+      originalRequest._retry = true
+      const refreshToken = getRefreshToken()
+
+      if (!refreshToken) {
+        handleApiError(error)
+        return Promise.reject(error)
+      }
+
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          subscribeTokenRefresh((newToken) => {
+            if (!newToken) {
+              reject(error)
+              return
+            }
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${newToken}`
+            }
+            resolve(apiClient(originalRequest))
+          })
+        })
+      }
+
+      isRefreshing = true
+      try {
+        const response = await refreshClient.post<{
+          access_token: string
+          refresh_token: string
+        }>('/auth/refresh', { refresh_token: refreshToken })
+        const data = response.data
+        setToken(data.access_token)
+        setRefreshToken(data.refresh_token)
+        onTokenRefreshed(data.access_token)
+
+        if (originalRequest.headers) {
+          originalRequest.headers.Authorization = `Bearer ${data.access_token}`
+        }
+        return apiClient(originalRequest)
+      } catch (refreshError) {
+        onTokenRefreshed(null)
+        handleApiError(error)
+        return Promise.reject(refreshError)
+      } finally {
+        isRefreshing = false
+      }
+    }
+
     // 处理各种错误情况
     handleApiError(error)
     return Promise.reject(error)

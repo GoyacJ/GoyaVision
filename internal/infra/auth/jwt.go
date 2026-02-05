@@ -22,9 +22,9 @@ type JWTService struct {
 
 // customClaims JWT 自定义声明
 type customClaims struct {
-	UserID   string `json:"user_id"`
-	Username string `json:"username"`
-	Type     string `json:"type"` // "access" or "refresh"
+	UserID    string `json:"user_id"`
+	Username  string `json:"username"`
+	TokenType string `json:"token_type"` // "access" or "refresh"
 	jwt.RegisteredClaims
 }
 
@@ -114,9 +114,9 @@ func (s *JWTService) generateToken(userID uuid.UUID, username, tokenType string,
 	now := time.Now()
 
 	claims := &customClaims{
-		UserID:   userID.String(),
-		Username: username,
-		Type:     tokenType,
+		UserID:    userID.String(),
+		Username:  username,
+		TokenType: tokenType,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    s.issuer,
 			Subject:   userID.String(),
@@ -160,8 +160,8 @@ func (s *JWTService) validateToken(tokenString, expectedType string) (*port.Toke
 		return nil, false, apperr.New(apperr.CodeTokenInvalid, "invalid token claims")
 	}
 
-	if claims.Type != expectedType {
-		return nil, false, apperr.New(apperr.CodeTokenInvalid, fmt.Sprintf("expected %s token, got %s", expectedType, claims.Type))
+	if claims.TokenType != expectedType {
+		return nil, false, apperr.New(apperr.CodeTokenInvalid, fmt.Sprintf("expected %s token, got %s", expectedType, claims.TokenType))
 	}
 
 	userID, err := uuid.Parse(claims.UserID)

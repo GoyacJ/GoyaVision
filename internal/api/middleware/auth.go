@@ -34,6 +34,7 @@ type JWTClaims struct {
 	UserID    uuid.UUID `json:"user_id"`
 	Username  string    `json:"username"`
 	TokenType string    `json:"token_type"`
+	LegacyType string   `json:"type"`
 	jwt.RegisteredClaims
 }
 
@@ -108,7 +109,11 @@ func JWTAuth(cfg config.JWT) echo.MiddlewareFunc {
 				})
 			}
 
-			if claims.TokenType != TokenTypeAccess {
+			tokenType := claims.TokenType
+			if tokenType == "" {
+				tokenType = claims.LegacyType
+			}
+			if tokenType != TokenTypeAccess {
 				return c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
 					Error:   "Unauthorized",
 					Message: "invalid token type",
