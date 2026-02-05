@@ -28,7 +28,7 @@
 
 **属性**：
 - `id`：唯一标识
-- `type`：资产类型（video、image、audio）
+- `type`：资产类型（video、image、audio、stream）
 - `source_type`：来源类型（live、vod、upload、generated）
 - `source_id`：关联的媒体源 ID
 - `parent_id`：派生自哪个资产（可选）
@@ -56,9 +56,9 @@
 **属性**：
 - `id`：唯一标识
 - `name`：源名称
-- `type`：源类型（pull、push、upload）
+- `type`：源类型（pull、push）
 - `url`：源地址（拉流地址，可选）
-- `protocol`：协议类型（rtsp、rtmp、hls、webrtc、file）
+- `protocol`：协议类型（rtsp、rtmp、hls、webrtc、srt）
 - `enabled`：是否启用
 - `status`：实时状态（ready、online、offline）
 - `metadata`：扩展元数据
@@ -68,7 +68,6 @@
 **源类型**：
 - **pull**：拉流（从外部地址拉取）
 - **push**：推流（等待外部推送）
-- **upload**：文件上传
 
 ### 2.3 Operator（算子）
 
@@ -193,9 +192,9 @@
 **属性**：
 - `id`：唯一标识
 - `workflow_id`：工作流 ID
-- `trigger_type`：触发类型（manual、schedule、event）
-- `input_assets`：输入资产 ID 列表
-- `status`：状态（pending、running、completed、failed、cancelled）
+- `asset_id`：输入资产 ID（可选）
+- `input_params`：输入参数（可选）
+- `status`：状态（pending、running、success、failed、cancelled）
 - `progress`：进度（0-100）
 - `current_node`：当前执行节点
 - `started_at`：开始时间
@@ -230,8 +229,8 @@
 #### 3.1.1 媒体源管理
 
 - **CRUD**：创建、查询、更新、删除媒体源
-- **类型支持**：拉流（pull）、推流（push）、上传（upload）
-- **协议支持**：RTSP、RTMP、HLS、WebRTC、SRT、File
+- **类型支持**：拉流（pull）、推流（push）
+- **协议支持**：RTSP、RTMP、HLS、WebRTC、SRT
 - **状态查询**：实时状态（ready、online、offline、readers、bitrate）
 - **多协议分发**：单一源自动转换为多协议
 - **启停控制**：启用/禁用媒体源
@@ -360,7 +359,7 @@
 
 - **任务列表**：查看所有任务
 - **任务详情**：查看任务执行详情、日志、产物
-- **任务控制**：启动、停止、重试任务
+- **任务控制**：启动、停止、取消任务
 - **任务搜索**：按状态、工作流、时间范围搜索
 - **任务监控**：实时查看任务执行进度
 
@@ -558,10 +557,10 @@ Role N:M Menu
 - [x] 媒体源管理（拉流、推流）
 - [x] 实时流录制与点播
 - [x] 内置算子（抽帧、目标检测）
-- [ ] 媒体资产管理
-- [ ] 简化工作流（单算子任务）
-- [ ] 任务调度与执行
-- [ ] 产物管理
+- [x] 媒体资产管理
+- [x] 简化工作流（单算子任务）
+- [x] 任务调度与执行
+- [x] 产物管理
 
 ### 8.2 Phase 2：能力扩展
 

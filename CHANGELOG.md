@@ -9,6 +9,7 @@
 
 ### 新增
 - 增加 Cline 规范目录（`.cline/`），同步 rules、skills、hooks 与 workflows，保持与 Cursor/Claude 规则一致
+- 文档补充：README/architecture/requirements/api/deployment/development-progress 中的配置、状态与端点描述与当前实现对齐
 
 ### 修复
 - 修复任务与工作流 Handler 的返回值处理与重复赋值导致的 Go 编译错误
@@ -16,6 +17,7 @@
 - 修复服务启动时 JWT 初始化调用与 UnitOfWork 类型不匹配导致的 Go 编译错误
 - 修复 AutoMigrate 直接使用 Domain 结构体导致的 GORM 映射错误（改用 infra/persistence/model）
 - 修复 adapter/persistence 直接操作 Domain 结构体导致的 GORM 关系与 JSON 字段解析错误（改用 infra/persistence/repo）
+- 修正文档中的任务状态、媒体源类型/协议、配置字段与示例端点不一致的问题
 
 ### Clean Architecture 重构 (Phase 5 完成 - DAG 引擎) - 2026-02-05
 
