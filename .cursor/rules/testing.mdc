@@ -1,0 +1,36 @@
+---
+description: 测试规则：单元测试和集成测试的编写规范
+globs:
+  - "**/*_test.go"
+  - "**/*.test.ts"
+  - "**/*.spec.ts"
+  - "**/__tests__/**"
+alwaysApply: false
+---
+
+# 测试规则
+
+## 通用规范
+
+- 测试命名清晰，描述"应当 + 条件"（如 `TestMediaAssetService_ShouldReturnError_WhenAssetNotFound`）
+- 单元测试覆盖核心业务逻辑与边界条件
+- 避免测试实现细节，关注行为而非内部结构
+
+## 后端测试
+
+- **Domain/App 层**：优先单元测试，使用 mock 隔离依赖
+- **Adapter 与 API 层**：使用集成测试，必要时使用测试数据库
+- 避免依赖外部资源的测试不加隔离（使用 mock 或测试容器）
+- 测试文件命名：`<package>_test.go`
+
+## 前端测试
+
+- 对组合式函数与关键组件做单元测试
+- 组件测试避免直接操作真实网络请求（使用 mock）
+- 测试文件命名：`<component>.test.ts` 或 `<component>.spec.ts`
+
+## 测试组织
+
+- 使用 `t.Run()` 组织子测试
+- 测试数据使用 fixtures 或 factory 函数
+- 清理测试资源（数据库、文件等）
