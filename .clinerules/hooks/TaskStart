@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+input=$(cat)
+
+context="PROJECT_TYPE: GoyaVision detected (Go + Vue 3). Follow Clean Architecture 分层规则与 /api/v1 REST 规范。"
+
+jq -n --arg ctx "$context" '{"cancel": false, "contextModification": $ctx}'

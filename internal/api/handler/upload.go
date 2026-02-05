@@ -9,25 +9,26 @@ import (
 	"goyavision/internal/api/dto"
 	"goyavision/internal/api/middleware"
 	"goyavision/internal/app"
-	"goyavision/internal/domain"
+	appdto "goyavision/internal/app/dto"
+	"goyavision/internal/domain/media"
 	"goyavision/pkg/storage"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
-func RegisterUpload(g *echo.Group, d Deps) {
-	h := uploadHandler{
-		assetSvc:    app.NewMediaAssetService(d.Repo),
-		fileSvc:     app.NewFileService(d.Repo, d.MinIOClient),
-		minioClient: d.MinIOClient,
-		cfg:         d.Cfg,
+func RegisterUpload(g *echo.Group, h *Handlers) {
+	uh := uploadHandler{
+		h:           h,
+		fileSvc:     app.NewFileService(h.Repo, h.MinIOClient),
+		minioClient: h.MinIOClient,
+		cfg:         h.Cfg,
 	}
-	g.POST("/upload", h.Upload)
+	g.POST("/upload", uh.Upload)
 }
 
 type uploadHandler struct {
-	assetSvc    *app.MediaAssetService
+	h           *Handlers
 	fileSvc     *app.FileService
 	minioClient *storage.MinIOClient
 	cfg         *config.Config
@@ -95,18 +96,18 @@ func (h *uploadHandler) Upload(c echo.Context) error {
 		format = format[1:]
 	}
 
-	createReq := &app.CreateMediaAssetRequest{
-		Type:       domain.AssetType(assetType),
-		SourceType: domain.AssetSourceUpload,
+	cmd := appdto.CreateAssetCommand{
+		Type:       media.AssetType(assetType),
+		SourceType: media.AssetSourceUpload,
 		Name:       name,
 		Path:       uploadedFile.Path,
 		Size:       file.Size,
 		Format:     format,
-		Status:     domain.AssetStatusReady,
+		Status:     media.AssetStatusReady,
 		Tags:       tags,
 	}
 
-	asset, err := h.assetSvc.Create(c.Request().Context(), createReq)
+	asset, err := h.h.CreateAsset.Handle(c.Request().Context(), cmd)
 	if err != nil {
 		_ = h.fileSvc.DeleteFile(c.Request().Context(), uploadedFile.ID)
 		return err

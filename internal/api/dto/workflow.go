@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"goyavision/internal/domain"
+	"goyavision/internal/domain/workflow"
 
 	"github.com/google/uuid"
 )
@@ -118,19 +118,20 @@ type WorkflowListResponse struct {
 }
 
 // WorkflowToResponse 转换为响应
-func WorkflowToResponse(w *domain.Workflow) *WorkflowResponse {
+func WorkflowToResponse(w *workflow.Workflow) *WorkflowResponse {
 	if w == nil {
 		return nil
 	}
 
 	var triggerConf map[string]interface{}
-	if w.TriggerConf != nil && len(w.TriggerConf) > 0 {
-		json.Unmarshal(w.TriggerConf, &triggerConf)
+	if w.TriggerConf != nil {
+		triggerConfBytes, _ := json.Marshal(w.TriggerConf)
+		json.Unmarshal(triggerConfBytes, &triggerConf)
 	}
 
-	var tags []string
-	if w.Tags != nil && len(w.Tags) > 0 {
-		json.Unmarshal(w.Tags, &tags)
+	tags := w.Tags
+	if tags == nil {
+		tags = []string{}
 	}
 
 	return &WorkflowResponse{
@@ -149,31 +150,34 @@ func WorkflowToResponse(w *domain.Workflow) *WorkflowResponse {
 }
 
 // WorkflowToResponseWithNodes 转换为包含节点的响应
-func WorkflowToResponseWithNodes(w *domain.Workflow) *WorkflowWithNodesResponse {
+func WorkflowToResponseWithNodes(w *workflow.Workflow) *WorkflowWithNodesResponse {
 	if w == nil {
 		return nil
 	}
 
 	var triggerConf map[string]interface{}
-	if w.TriggerConf != nil && len(w.TriggerConf) > 0 {
-		json.Unmarshal(w.TriggerConf, &triggerConf)
+	if w.TriggerConf != nil {
+		triggerConfBytes, _ := json.Marshal(w.TriggerConf)
+		json.Unmarshal(triggerConfBytes, &triggerConf)
 	}
 
-	var tags []string
-	if w.Tags != nil && len(w.Tags) > 0 {
-		json.Unmarshal(w.Tags, &tags)
+	tags := w.Tags
+	if tags == nil {
+		tags = []string{}
 	}
 
 	nodes := make([]WorkflowNodeResponse, 0, len(w.Nodes))
 	for _, n := range w.Nodes {
 		var config map[string]interface{}
-		if n.Config != nil && len(n.Config) > 0 {
-			json.Unmarshal(n.Config, &config)
+		if n.Config != nil {
+			configBytes, _ := json.Marshal(n.Config)
+			json.Unmarshal(configBytes, &config)
 		}
 
 		var position map[string]interface{}
-		if n.Position != nil && len(n.Position) > 0 {
-			json.Unmarshal(n.Position, &position)
+		if n.Position != nil {
+			positionBytes, _ := json.Marshal(n.Position)
+			json.Unmarshal(positionBytes, &position)
 		}
 
 		nodeResp := WorkflowNodeResponse{
@@ -185,18 +189,15 @@ func WorkflowToResponseWithNodes(w *domain.Workflow) *WorkflowWithNodesResponse 
 			Position:   position,
 		}
 
-		if n.Operator != nil {
-			nodeResp.Operator = OperatorToResponse(n.Operator)
-		}
-
 		nodes = append(nodes, nodeResp)
 	}
 
 	edges := make([]WorkflowEdgeResponse, 0, len(w.Edges))
 	for _, e := range w.Edges {
 		var condition map[string]interface{}
-		if e.Condition != nil && len(e.Condition) > 0 {
-			json.Unmarshal(e.Condition, &condition)
+		if e.Condition != nil {
+			conditionBytes, _ := json.Marshal(e.Condition)
+			json.Unmarshal(conditionBytes, &condition)
 		}
 
 		edges = append(edges, WorkflowEdgeResponse{
@@ -225,7 +226,7 @@ func WorkflowToResponseWithNodes(w *domain.Workflow) *WorkflowWithNodesResponse 
 }
 
 // WorkflowsToResponse 转换为响应列表
-func WorkflowsToResponse(workflows []*domain.Workflow) []*WorkflowResponse {
+func WorkflowsToResponse(workflows []*workflow.Workflow) []*WorkflowResponse {
 	result := make([]*WorkflowResponse, len(workflows))
 	for i, w := range workflows {
 		result[i] = WorkflowToResponse(w)

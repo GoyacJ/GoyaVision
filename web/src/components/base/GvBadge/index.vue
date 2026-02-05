@@ -105,7 +105,7 @@ const variantColorClasses = computed(() => {
   const classes = {
     // Filled 变体
     'filled-primary': 'bg-primary-600 text-white',
-    'filled-secondary': 'bg-secondary-600 text-white',
+    'filled-secondary': 'bg-neutral-600 text-white',
     'filled-success': 'bg-success-600 text-white',
     'filled-error': 'bg-error-600 text-white',
     'filled-warning': 'bg-warning-600 text-white',
@@ -114,7 +114,7 @@ const variantColorClasses = computed(() => {
     
     // Tonal 变体
     'tonal-primary': 'bg-primary-100 text-primary-700',
-    'tonal-secondary': 'bg-secondary-100 text-secondary-700',
+    'tonal-secondary': 'bg-neutral-100 text-neutral-700',
     'tonal-success': 'bg-success-100 text-success-700',
     'tonal-error': 'bg-error-100 text-error-700',
     'tonal-warning': 'bg-warning-100 text-warning-700',
@@ -123,7 +123,7 @@ const variantColorClasses = computed(() => {
     
     // Outlined 变体
     'outlined-primary': 'border-2 border-primary-600 text-primary-600 bg-white',
-    'outlined-secondary': 'border-2 border-secondary-600 text-secondary-600 bg-white',
+    'outlined-secondary': 'border-2 border-neutral-600 text-neutral-600 bg-white',
     'outlined-success': 'border-2 border-success-600 text-success-600 bg-white',
     'outlined-error': 'border-2 border-error-600 text-error-600 bg-white',
     'outlined-warning': 'border-2 border-warning-600 text-warning-600 bg-white',

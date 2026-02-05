@@ -1,266 +1,252 @@
 package handler
 
 import (
+	"net/http"
 	"time"
 
-	"goyavision/config"
+	appdto "goyavision/internal/app/dto"
 	"goyavision/internal/api/dto"
-	"goyavision/internal/app"
-	"goyavision/internal/domain"
+	"goyavision/internal/domain/media"
+	"goyavision/internal/domain/workflow"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
-func RegisterTask(g *echo.Group, d Deps) {
-	svc := app.NewTaskService(d.Repo)
-	h := taskHandler{
-		svc: svc,
-		cfg: d.Cfg,
-	}
-	g.GET("/tasks", h.List)
-	g.POST("/tasks", h.Create)
-	g.GET("/tasks/:id", h.Get)
-	g.PUT("/tasks/:id", h.Update)
-	g.DELETE("/tasks/:id", h.Delete)
-	g.POST("/tasks/:id/start", h.Start)
-	g.POST("/tasks/:id/complete", h.Complete)
-	g.POST("/tasks/:id/fail", h.Fail)
-	g.POST("/tasks/:id/cancel", h.Cancel)
-	g.GET("/tasks/stats", h.Stats)
+func RegisterTask(g *echo.Group, h *Handlers) {
+	handler := &taskHandler{h: h}
+	g.GET("/tasks", handler.List)
+	g.POST("/tasks", handler.Create)
+	g.GET("/tasks/:id", handler.Get)
+	g.PUT("/tasks/:id", handler.Update)
+	g.DELETE("/tasks/:id", handler.Delete)
+	g.POST("/tasks/:id/start", handler.Start)
+	g.POST("/tasks/:id/complete", handler.Complete)
+	g.POST("/tasks/:id/fail", handler.Fail)
+	g.POST("/tasks/:id/cancel", handler.Cancel)
+	g.GET("/tasks/stats", handler.Stats)
 }
 
 type taskHandler struct {
-	svc *app.TaskService
-	cfg *config.Config
+	h *Handlers
 }
 
 func (h *taskHandler) List(c echo.Context) error {
 	var query dto.TaskListQuery
 	if err := c.Bind(&query); err != nil {
-		return c.JSON(400, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid query parameters",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid query parameters")
 	}
 
-	req := &app.ListTasksRequest{
+	q := appdto.ListTasksQuery{
 		WorkflowID: query.WorkflowID,
 		AssetID:    query.AssetID,
-		Limit:      query.Limit,
-		Offset:     query.Offset,
+		Pagination: appdto.Pagination{
+			Limit:  query.Limit,
+			Offset: query.Offset,
+		},
 	}
 
 	if query.Status != nil {
-		s := domain.TaskStatus(*query.Status)
-		req.Status = &s
+		s := workflow.TaskStatus(*query.Status)
+		q.Status = &s
 	}
 
 	if query.From != nil {
 		t := time.Unix(*query.From, 0)
-		req.From = &t
+		q.From = &t
 	}
 
 	if query.To != nil {
 		t := time.Unix(*query.To, 0)
-		req.To = &t
+		q.To = &t
 	}
 
-	tasks, total, err := h.svc.List(c.Request().Context(), req)
+	result, err := h.h.ListTasks.Handle(c.Request().Context(), q)
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(200, dto.TaskListResponse{
-		Items: dto.TasksToResponse(tasks),
-		Total: total,
+	return c.JSON(http.StatusOK, dto.TaskListResponse{
+		Items: dto.TasksToResponse(result.Items),
+		Total: result.Total,
 	})
 }
 
 func (h *taskHandler) Create(c echo.Context) error {
 	var req dto.TaskCreateReq
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(400, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid request body",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
 	}
 
-	createReq := &app.CreateTaskRequest{
+	cmd := appdto.CreateTaskCommand{
 		WorkflowID:  req.WorkflowID,
 		AssetID:     req.AssetID,
 		InputParams: req.InputParams,
 	}
 
-	task, err := h.svc.Create(c.Request().Context(), createReq)
+	task, err := h.h.CreateTask.Handle(c.Request().Context(), cmd)
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(201, dto.TaskToResponseWithRelations(task, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL))
+	var wf *workflow.Workflow
+	var asset *media.Asset
+	if task.WorkflowID != uuid.Nil {
+		wf, _ = h.h.GetWorkflow.Handle(c.Request().Context(), appdto.GetWorkflowQuery{ID: task.WorkflowID})
+	}
+	if task.AssetID != nil {
+		asset, _ = h.h.GetAsset.Handle(c.Request().Context(), appdto.GetAssetQuery{ID: *task.AssetID})
+	}
+
+	return c.JSON(http.StatusCreated, dto.TaskToResponseWithRelations(task, wf, asset, h.h.Cfg.MinIO.Endpoint, h.h.Cfg.MinIO.BucketName, h.h.Cfg.MinIO.UseSSL))
 }
 
 func (h *taskHandler) Get(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		return c.JSON(400, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid task id",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid task id")
 	}
 
 	withRelations := c.QueryParam("with_relations") == "true"
 	if withRelations {
-		task, err := h.svc.GetWithRelations(c.Request().Context(), id)
+		task, err := h.h.GetTaskWithRelations.Handle(c.Request().Context(), appdto.GetTaskWithRelationsQuery{ID: id})
 		if err != nil {
 			return err
 		}
-		return c.JSON(200, dto.TaskToResponseWithRelations(task, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL))
+
+		var wf *workflow.Workflow
+		var asset *media.Asset
+		if task.WorkflowID != uuid.Nil {
+			wf, _ = h.h.GetWorkflow.Handle(c.Request().Context(), appdto.GetWorkflowQuery{ID: task.WorkflowID})
+		}
+		if task.AssetID != nil {
+			asset, _ = h.h.GetAsset.Handle(c.Request().Context(), appdto.GetAssetQuery{ID: *task.AssetID})
+		}
+
+		return c.JSON(http.StatusOK, dto.TaskToResponseWithRelations(task, wf, asset, h.h.Cfg.MinIO.Endpoint, h.h.Cfg.MinIO.BucketName, h.h.Cfg.MinIO.UseSSL))
 	}
 
-	task, err := h.svc.Get(c.Request().Context(), id)
+	task, err := h.h.GetTask.Handle(c.Request().Context(), appdto.GetTaskQuery{ID: id})
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(200, dto.TaskToResponse(task))
+	return c.JSON(http.StatusOK, dto.TaskToResponse(task))
 }
 
 func (h *taskHandler) Update(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		return c.JSON(400, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid task id",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid task id")
 	}
 
 	var req dto.TaskUpdateReq
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(400, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid request body",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
 	}
 
-	updateReq := &app.UpdateTaskRequest{
+	cmd := appdto.UpdateTaskCommand{
+		ID:          id,
 		Progress:    req.Progress,
 		CurrentNode: req.CurrentNode,
 		Error:       req.Error,
 	}
 
 	if req.Status != nil {
-		s := domain.TaskStatus(*req.Status)
-		updateReq.Status = &s
+		s := workflow.TaskStatus(*req.Status)
+		cmd.Status = &s
 	}
 
-	task, err := h.svc.Update(c.Request().Context(), id, updateReq)
+	task, err := h.h.UpdateTask.Handle(c.Request().Context(), cmd)
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(200, dto.TaskToResponse(task))
+	return c.JSON(http.StatusOK, dto.TaskToResponse(task))
 }
 
 func (h *taskHandler) Delete(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		return c.JSON(400, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid task id",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid task id")
 	}
 
-	if err := h.svc.Delete(c.Request().Context(), id); err != nil {
+	err = h.h.DeleteTask.Handle(c.Request().Context(), appdto.DeleteTaskCommand{ID: id})
+	if err != nil {
 		return err
 	}
 
-	return c.NoContent(204)
+	return c.NoContent(http.StatusNoContent)
 }
 
 func (h *taskHandler) Start(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		return c.JSON(400, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid task id",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid task id")
 	}
 
-	task, err := h.svc.Start(c.Request().Context(), id)
+	task, err := h.h.StartTask.Handle(c.Request().Context(), appdto.StartTaskCommand{ID: id})
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(200, dto.TaskToResponse(task))
+	return c.JSON(http.StatusOK, dto.TaskToResponse(task))
 }
 
 func (h *taskHandler) Complete(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		return c.JSON(400, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid task id",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid task id")
 	}
 
-	task, err := h.svc.Complete(c.Request().Context(), id)
+	task, err := h.h.CompleteTask.Handle(c.Request().Context(), appdto.CompleteTaskCommand{ID: id})
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(200, dto.TaskToResponse(task))
+	return c.JSON(http.StatusOK, dto.TaskToResponse(task))
 }
 
 func (h *taskHandler) Fail(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		return c.JSON(400, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid task id",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid task id")
 	}
 
 	var req struct {
 		Error string `json:"error"`
 	}
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(400, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid request body",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
 	}
 
-	task, err := h.svc.Fail(c.Request().Context(), id, req.Error)
+	task, err := h.h.FailTask.Handle(c.Request().Context(), appdto.FailTaskCommand{ID: id, ErrorMsg: req.Error})
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(200, dto.TaskToResponse(task))
+	return c.JSON(http.StatusOK, dto.TaskToResponse(task))
 }
 
 func (h *taskHandler) Cancel(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		return c.JSON(400, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid task id",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid task id")
 	}
 
-	task, err := h.svc.Cancel(c.Request().Context(), id)
+	task, err := h.h.CancelTask.Handle(c.Request().Context(), appdto.CancelTaskCommand{ID: id})
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(200, dto.TaskToResponse(task))
+	return c.JSON(http.StatusOK, dto.TaskToResponse(task))
 }
 
 func (h *taskHandler) Stats(c echo.Context) error {
@@ -268,18 +254,15 @@ func (h *taskHandler) Stats(c echo.Context) error {
 	if wfIDStr := c.QueryParam("workflow_id"); wfIDStr != "" {
 		id, err := uuid.Parse(wfIDStr)
 		if err != nil {
-			return c.JSON(400, dto.ErrorResponse{
-				Error:   "Bad Request",
-				Message: "invalid workflow_id",
-			})
+			return echo.NewHTTPError(http.StatusBadRequest, "invalid workflow_id")
 		}
 		workflowID = &id
 	}
 
-	stats, err := h.svc.GetStats(c.Request().Context(), workflowID)
+	stats, err := h.h.GetTaskStats.Handle(c.Request().Context(), appdto.GetTaskStatsQuery{WorkflowID: workflowID})
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(200, dto.TaskStatsToResponse(stats))
+	return c.JSON(http.StatusOK, dto.TaskStatsToResponse(stats))
 }

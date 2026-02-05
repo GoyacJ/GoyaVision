@@ -3,7 +3,7 @@ package dto
 import (
 	"time"
 
-	"goyavision/internal/domain"
+	"goyavision/internal/domain/identity"
 
 	"github.com/google/uuid"
 )
@@ -65,8 +65,8 @@ type UserListResponse struct {
 	Total int64           `json:"total"`
 }
 
-// UserToResponse 将 domain.User 转换为 UserResponse
-func UserToResponse(u *domain.User) *UserResponse {
+// UserToResponse 将 identity.User 转换为 UserResponse
+func UserToResponse(u *identity.User) *UserResponse {
 	if u == nil {
 		return nil
 	}
@@ -93,7 +93,7 @@ func UserToResponse(u *domain.User) *UserResponse {
 }
 
 // UsersToResponse 批量转换
-func UsersToResponse(users []*domain.User) []*UserResponse {
+func UsersToResponse(users []*identity.User) []*UserResponse {
 	result := make([]*UserResponse, len(users))
 	for i, u := range users {
 		result[i] = UserToResponse(u)

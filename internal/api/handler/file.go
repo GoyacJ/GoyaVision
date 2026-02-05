@@ -7,24 +7,24 @@ import (
 	"goyavision/internal/api/dto"
 	"goyavision/internal/api/middleware"
 	"goyavision/internal/app"
-	"goyavision/internal/domain"
+	"goyavision/internal/domain/storage"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
-func RegisterFile(g *echo.Group, d Deps) {
-	svc := app.NewFileService(d.Repo, d.MinIOClient)
-	h := fileHandler{
+func RegisterFile(g *echo.Group, h *Handlers) {
+	svc := app.NewFileService(h.Repo, h.MinIOClient)
+	fh := fileHandler{
 		svc: svc,
-		cfg: d.Cfg,
+		cfg: h.Cfg,
 	}
-	g.POST("/files", h.Upload)
-	g.GET("/files", h.List)
-	g.GET("/files/:id", h.Get)
-	g.PUT("/files/:id", h.Update)
-	g.DELETE("/files/:id", h.Delete)
-	g.GET("/files/:id/download", h.Download)
+	g.POST("/files", fh.Upload)
+	g.GET("/files", fh.List)
+	g.GET("/files/:id", fh.Get)
+	g.PUT("/files/:id", fh.Update)
+	g.DELETE("/files/:id", fh.Delete)
+	g.GET("/files/:id/download", fh.Download)
 }
 
 type fileHandler struct {
@@ -85,11 +85,11 @@ func (h *fileHandler) List(c echo.Context) error {
 	}
 
 	if query.Type != nil {
-		t := domain.FileType(*query.Type)
+		t := storage.FileType(*query.Type)
 		req.Type = &t
 	}
 	if query.Status != nil {
-		s := domain.FileStatus(*query.Status)
+		s := storage.FileStatus(*query.Status)
 		req.Status = &s
 	}
 	if query.UploaderID != nil {
@@ -159,7 +159,7 @@ func (h *fileHandler) Update(c echo.Context) error {
 	}
 
 	if req.Status != nil {
-		s := domain.FileStatus(*req.Status)
+		s := storage.FileStatus(*req.Status)
 		updateReq.Status = &s
 	}
 

@@ -1,10 +1,9 @@
 package dto
 
 import (
-	"encoding/json"
 	"time"
 
-	"goyavision/internal/domain"
+	"goyavision/internal/domain/operator"
 
 	"github.com/google/uuid"
 )
@@ -80,29 +79,29 @@ type OperatorListResponse struct {
 }
 
 // OperatorToResponse 转换为响应
-func OperatorToResponse(o *domain.Operator) *OperatorResponse {
+func OperatorToResponse(o *operator.Operator) *OperatorResponse {
 	if o == nil {
 		return nil
 	}
 
-	var inputSchema map[string]interface{}
-	if o.InputSchema != nil && len(o.InputSchema) > 0 {
-		json.Unmarshal(o.InputSchema, &inputSchema)
+	inputSchema := o.InputSchema
+	if inputSchema == nil {
+		inputSchema = make(map[string]interface{})
 	}
 
-	var outputSpec map[string]interface{}
-	if o.OutputSpec != nil && len(o.OutputSpec) > 0 {
-		json.Unmarshal(o.OutputSpec, &outputSpec)
+	outputSpec := o.OutputSpec
+	if outputSpec == nil {
+		outputSpec = make(map[string]interface{})
 	}
 
-	var config map[string]interface{}
-	if o.Config != nil && len(o.Config) > 0 {
-		json.Unmarshal(o.Config, &config)
+	config := o.Config
+	if config == nil {
+		config = make(map[string]interface{})
 	}
 
-	var tags []string
-	if o.Tags != nil && len(o.Tags) > 0 {
-		json.Unmarshal(o.Tags, &tags)
+	tags := o.Tags
+	if tags == nil {
+		tags = []string{}
 	}
 
 	return &OperatorResponse{
@@ -127,7 +126,7 @@ func OperatorToResponse(o *domain.Operator) *OperatorResponse {
 }
 
 // OperatorsToResponse 转换为响应列表
-func OperatorsToResponse(operators []*domain.Operator) []*OperatorResponse {
+func OperatorsToResponse(operators []*operator.Operator) []*OperatorResponse {
 	result := make([]*OperatorResponse, len(operators))
 	for i, o := range operators {
 		result[i] = OperatorToResponse(o)

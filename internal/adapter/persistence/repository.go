@@ -2,10 +2,15 @@ package persistence
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 
-	"goyavision/internal/domain"
+	"goyavision/internal/domain/identity"
+	"goyavision/internal/domain/media"
+	"goyavision/internal/domain/operator"
+	"goyavision/internal/domain/storage"
+	"goyavision/internal/domain/workflow"
+	"goyavision/internal/infra/persistence/model"
+	"goyavision/internal/infra/persistence/repo"
 	"goyavision/internal/port"
 
 	"github.com/google/uuid"
@@ -18,10 +23,39 @@ var _ port.Repository = (*repository)(nil)
 
 type repository struct {
 	db *gorm.DB
+
+	users       *repo.UserRepo
+	roles       *repo.RoleRepo
+	permissions *repo.PermissionRepo
+	menus       *repo.MenuRepo
+
+	assets  *repo.MediaAssetRepo
+	sources *repo.MediaSourceRepo
+
+	operators *repo.OperatorRepo
+
+	workflows *repo.WorkflowRepo
+	tasks     *repo.TaskRepo
+	artifacts *repo.ArtifactRepo
+
+	files *repo.FileRepo
 }
 
 func NewRepository(db *gorm.DB) *repository {
-	return &repository{db: db}
+	return &repository{
+		db:          db,
+		users:       repo.NewUserRepo(db),
+		roles:       repo.NewRoleRepo(db),
+		permissions: repo.NewPermissionRepo(db),
+		menus:       repo.NewMenuRepo(db),
+		assets:      repo.NewMediaAssetRepo(db),
+		sources:     repo.NewMediaSourceRepo(db),
+		operators:   repo.NewOperatorRepo(db),
+		workflows:   repo.NewWorkflowRepo(db),
+		tasks:       repo.NewTaskRepo(db),
+		artifacts:   repo.NewArtifactRepo(db),
+		files:       repo.NewFileRepo(db),
+	}
 }
 
 func (r *repository) checkDB() error {
@@ -32,1245 +66,651 @@ func (r *repository) checkDB() error {
 }
 
 func AutoMigrate(db *gorm.DB) error {
-	if err := db.AutoMigrate(
-		&domain.User{},
-		&domain.Role{},
-		&domain.Permission{},
-		&domain.Menu{},
-		&domain.MediaAsset{},
-		&domain.MediaSource{},
-		&domain.Operator{},
-		&domain.Workflow{},
-		&domain.WorkflowNode{},
-		&domain.WorkflowEdge{},
-		&domain.Task{},
-		&domain.Artifact{},
-		&domain.File{},
-	); err != nil {
-		return err
+	if db == nil {
+		return ErrDBNotConfigured
 	}
-
-	return nil
-}
-
-func ensureID(id *uuid.UUID) {
-	if *id == uuid.Nil {
-		*id = uuid.New()
-	}
+	return db.AutoMigrate(
+		&model.UserModel{},
+		&model.RoleModel{},
+		&model.PermissionModel{},
+		&model.MenuModel{},
+		&model.MediaAssetModel{},
+		&model.MediaSourceModel{},
+		&model.OperatorModel{},
+		&model.WorkflowModel{},
+		&model.WorkflowNodeModel{},
+		&model.WorkflowEdgeModel{},
+		&model.TaskModel{},
+		&model.ArtifactModel{},
+		&model.FileModel{},
+	)
 }
 
 // User methods
-
-func (r *repository) CreateUser(ctx context.Context, u *domain.User) error {
+func (r *repository) CreateUser(ctx context.Context, u *identity.User) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	ensureID(&u.ID)
-	return r.db.WithContext(ctx).Create(u).Error
+	return r.users.Create(ctx, u)
 }
 
-func (r *repository) GetUser(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+func (r *repository) GetUser(ctx context.Context, id uuid.UUID) (*identity.User, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var u domain.User
-	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&u).Error; err != nil {
-		return nil, err
-	}
-	return &u, nil
+	return r.users.Get(ctx, id)
 }
 
-func (r *repository) GetUserByUsername(ctx context.Context, username string) (*domain.User, error) {
+func (r *repository) GetUserByUsername(ctx context.Context, username string) (*identity.User, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var u domain.User
-	if err := r.db.WithContext(ctx).Where("username = ?", username).First(&u).Error; err != nil {
-		return nil, err
-	}
-	return &u, nil
+	return r.users.GetByUsername(ctx, username)
 }
 
-func (r *repository) GetUserWithRoles(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+func (r *repository) GetUserWithRoles(ctx context.Context, id uuid.UUID) (*identity.User, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var u domain.User
-	if err := r.db.WithContext(ctx).Preload("Roles").Where("id = ?", id).First(&u).Error; err != nil {
-		return nil, err
-	}
-	return &u, nil
+	return r.users.GetWithRoles(ctx, id)
 }
 
-func (r *repository) ListUsers(ctx context.Context, status *int, limit, offset int) ([]*domain.User, int64, error) {
+func (r *repository) ListUsers(ctx context.Context, status *int, limit, offset int) ([]*identity.User, int64, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, 0, err
 	}
-	q := r.db.WithContext(ctx).Model(&domain.User{})
-	if status != nil {
-		q = q.Where("status = ?", *status)
-	}
-	var total int64
-	if err := q.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	var list []*domain.User
-	if err := q.Limit(limit).Offset(offset).Order("created_at DESC").Find(&list).Error; err != nil {
-		return nil, 0, err
-	}
-	return list, total, nil
+	return r.users.List(ctx, status, limit, offset)
 }
 
-func (r *repository) UpdateUser(ctx context.Context, u *domain.User) error {
+func (r *repository) UpdateUser(ctx context.Context, u *identity.User) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	return r.db.WithContext(ctx).Save(u).Error
+	return r.users.Update(ctx, u)
 }
 
 func (r *repository) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	
-	if err := r.db.WithContext(ctx).Exec("DELETE FROM user_roles WHERE user_id = ?", id).Error; err != nil {
-		return err
-	}
-	
-	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.User{}).Error
+	return r.users.Delete(ctx, id)
 }
 
 func (r *repository) SetUserRoles(ctx context.Context, userID uuid.UUID, roleIDs []uuid.UUID) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	var user domain.User
-	if err := r.db.WithContext(ctx).First(&user, userID).Error; err != nil {
-		return err
-	}
-	var roles []domain.Role
-	if len(roleIDs) > 0 {
-		if err := r.db.WithContext(ctx).Where("id IN ?", roleIDs).Find(&roles).Error; err != nil {
-			return err
-		}
-	}
-	return r.db.WithContext(ctx).Model(&user).Association("Roles").Replace(roles)
+	return r.users.SetUserRoles(ctx, userID, roleIDs)
 }
 
 // Role methods
-
-func (r *repository) CreateRole(ctx context.Context, role *domain.Role) error {
+func (r *repository) CreateRole(ctx context.Context, role *identity.Role) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	ensureID(&role.ID)
-	return r.db.WithContext(ctx).Create(role).Error
+	return r.roles.Create(ctx, role)
 }
 
-func (r *repository) GetRole(ctx context.Context, id uuid.UUID) (*domain.Role, error) {
+func (r *repository) GetRole(ctx context.Context, id uuid.UUID) (*identity.Role, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var role domain.Role
-	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&role).Error; err != nil {
-		return nil, err
-	}
-	return &role, nil
+	return r.roles.Get(ctx, id)
 }
 
-func (r *repository) GetRoleByCode(ctx context.Context, code string) (*domain.Role, error) {
+func (r *repository) GetRoleByCode(ctx context.Context, code string) (*identity.Role, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var role domain.Role
-	if err := r.db.WithContext(ctx).Where("code = ?", code).First(&role).Error; err != nil {
-		return nil, err
-	}
-	return &role, nil
+	return r.roles.GetByCode(ctx, code)
 }
 
-func (r *repository) GetRoleWithPermissions(ctx context.Context, id uuid.UUID) (*domain.Role, error) {
+func (r *repository) GetRoleWithPermissions(ctx context.Context, id uuid.UUID) (*identity.Role, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var role domain.Role
-	if err := r.db.WithContext(ctx).Preload("Permissions").Preload("Menus").Where("id = ?", id).First(&role).Error; err != nil {
-		return nil, err
-	}
-	return &role, nil
+	return r.roles.GetWithPermissions(ctx, id)
 }
 
-func (r *repository) ListRoles(ctx context.Context, status *int) ([]*domain.Role, error) {
+func (r *repository) ListRoles(ctx context.Context, status *int) ([]*identity.Role, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	q := r.db.WithContext(ctx)
-	if status != nil {
-		q = q.Where("status = ?", *status)
-	}
-	var list []*domain.Role
-	if err := q.Order("created_at DESC").Find(&list).Error; err != nil {
-		return nil, err
-	}
-	return list, nil
+	return r.roles.List(ctx, status)
 }
 
-func (r *repository) UpdateRole(ctx context.Context, role *domain.Role) error {
+func (r *repository) UpdateRole(ctx context.Context, role *identity.Role) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	return r.db.WithContext(ctx).Save(role).Error
+	return r.roles.Update(ctx, role)
 }
 
 func (r *repository) DeleteRole(ctx context.Context, id uuid.UUID) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	
-	if err := r.db.WithContext(ctx).Exec("DELETE FROM role_permissions WHERE role_id = ?", id).Error; err != nil {
-		return err
-	}
-	
-	if err := r.db.WithContext(ctx).Exec("DELETE FROM role_menus WHERE role_id = ?", id).Error; err != nil {
-		return err
-	}
-	
-	if err := r.db.WithContext(ctx).Exec("DELETE FROM user_roles WHERE role_id = ?", id).Error; err != nil {
-		return err
-	}
-	
-	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.Role{}).Error
+	return r.roles.Delete(ctx, id)
 }
 
 func (r *repository) SetRolePermissions(ctx context.Context, roleID uuid.UUID, permissionIDs []uuid.UUID) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	var role domain.Role
-	if err := r.db.WithContext(ctx).First(&role, roleID).Error; err != nil {
-		return err
-	}
-	var permissions []domain.Permission
-	if len(permissionIDs) > 0 {
-		if err := r.db.WithContext(ctx).Where("id IN ?", permissionIDs).Find(&permissions).Error; err != nil {
-			return err
-		}
-	}
-	return r.db.WithContext(ctx).Model(&role).Association("Permissions").Replace(permissions)
+	return r.roles.SetPermissions(ctx, roleID, permissionIDs)
 }
 
 func (r *repository) SetRoleMenus(ctx context.Context, roleID uuid.UUID, menuIDs []uuid.UUID) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	var role domain.Role
-	if err := r.db.WithContext(ctx).First(&role, roleID).Error; err != nil {
-		return err
-	}
-	var menus []domain.Menu
-	if len(menuIDs) > 0 {
-		if err := r.db.WithContext(ctx).Where("id IN ?", menuIDs).Find(&menus).Error; err != nil {
-			return err
-		}
-	}
-	return r.db.WithContext(ctx).Model(&role).Association("Menus").Replace(menus)
+	return r.roles.SetMenus(ctx, roleID, menuIDs)
 }
 
 // Permission methods
-
-func (r *repository) CreatePermission(ctx context.Context, p *domain.Permission) error {
+func (r *repository) CreatePermission(ctx context.Context, p *identity.Permission) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	ensureID(&p.ID)
-	return r.db.WithContext(ctx).Create(p).Error
+	return r.permissions.Create(ctx, p)
 }
 
-func (r *repository) GetPermission(ctx context.Context, id uuid.UUID) (*domain.Permission, error) {
+func (r *repository) GetPermission(ctx context.Context, id uuid.UUID) (*identity.Permission, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var p domain.Permission
-	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&p).Error; err != nil {
-		return nil, err
-	}
-	return &p, nil
+	return r.permissions.Get(ctx, id)
 }
 
-func (r *repository) GetPermissionByCode(ctx context.Context, code string) (*domain.Permission, error) {
+func (r *repository) GetPermissionByCode(ctx context.Context, code string) (*identity.Permission, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var p domain.Permission
-	if err := r.db.WithContext(ctx).Where("code = ?", code).First(&p).Error; err != nil {
-		return nil, err
-	}
-	return &p, nil
+	return r.permissions.GetByCode(ctx, code)
 }
 
-func (r *repository) ListPermissions(ctx context.Context) ([]*domain.Permission, error) {
+func (r *repository) ListPermissions(ctx context.Context) ([]*identity.Permission, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var list []*domain.Permission
-	if err := r.db.WithContext(ctx).Order("code").Find(&list).Error; err != nil {
-		return nil, err
-	}
-	return list, nil
+	return r.permissions.List(ctx)
 }
 
-func (r *repository) UpdatePermission(ctx context.Context, p *domain.Permission) error {
+func (r *repository) UpdatePermission(ctx context.Context, p *identity.Permission) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	return r.db.WithContext(ctx).Save(p).Error
+	return r.permissions.Update(ctx, p)
 }
 
 func (r *repository) DeletePermission(ctx context.Context, id uuid.UUID) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	
-	if err := r.db.WithContext(ctx).Exec("DELETE FROM role_permissions WHERE permission_id = ?", id).Error; err != nil {
-		return err
-	}
-	
-	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.Permission{}).Error
+	return r.permissions.Delete(ctx, id)
 }
 
-func (r *repository) GetPermissionsByRoleIDs(ctx context.Context, roleIDs []uuid.UUID) ([]*domain.Permission, error) {
+func (r *repository) GetPermissionsByRoleIDs(ctx context.Context, roleIDs []uuid.UUID) ([]*identity.Permission, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	if len(roleIDs) == 0 {
-		return []*domain.Permission{}, nil
-	}
-	var permissions []*domain.Permission
-	err := r.db.WithContext(ctx).
-		Distinct().
-		Joins("JOIN role_permissions ON role_permissions.permission_id = permissions.id").
-		Where("role_permissions.role_id IN ?", roleIDs).
-		Find(&permissions).Error
-	if err != nil {
-		return nil, err
-	}
-	return permissions, nil
+	return r.permissions.GetByRoleIDs(ctx, roleIDs)
 }
 
 // Menu methods
-
-func (r *repository) CreateMenu(ctx context.Context, m *domain.Menu) error {
+func (r *repository) CreateMenu(ctx context.Context, m *identity.Menu) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	ensureID(&m.ID)
-	return r.db.WithContext(ctx).Create(m).Error
+	return r.menus.Create(ctx, m)
 }
 
-func (r *repository) GetMenu(ctx context.Context, id uuid.UUID) (*domain.Menu, error) {
+func (r *repository) GetMenu(ctx context.Context, id uuid.UUID) (*identity.Menu, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var m domain.Menu
-	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&m).Error; err != nil {
-		return nil, err
-	}
-	return &m, nil
+	return r.menus.Get(ctx, id)
 }
 
-func (r *repository) GetMenuByCode(ctx context.Context, code string) (*domain.Menu, error) {
+func (r *repository) GetMenuByCode(ctx context.Context, code string) (*identity.Menu, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var m domain.Menu
-	if err := r.db.WithContext(ctx).Where("code = ?", code).First(&m).Error; err != nil {
-		return nil, err
-	}
-	return &m, nil
+	return r.menus.GetByCode(ctx, code)
 }
 
-func (r *repository) ListMenus(ctx context.Context, status *int) ([]*domain.Menu, error) {
+func (r *repository) ListMenus(ctx context.Context, status *int) ([]*identity.Menu, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	q := r.db.WithContext(ctx)
-	if status != nil {
-		q = q.Where("status = ?", *status)
-	}
-	var list []*domain.Menu
-	if err := q.Order("sort, created_at").Find(&list).Error; err != nil {
-		return nil, err
-	}
-	return list, nil
+	return r.menus.List(ctx, status)
 }
 
-func (r *repository) UpdateMenu(ctx context.Context, m *domain.Menu) error {
+func (r *repository) UpdateMenu(ctx context.Context, m *identity.Menu) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	return r.db.WithContext(ctx).Save(m).Error
+	return r.menus.Update(ctx, m)
 }
 
 func (r *repository) DeleteMenu(ctx context.Context, id uuid.UUID) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	
-	if err := r.db.WithContext(ctx).Exec("DELETE FROM role_menus WHERE menu_id = ?", id).Error; err != nil {
-		return err
-	}
-	
-	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.Menu{}).Error
+	return r.menus.Delete(ctx, id)
 }
 
-func (r *repository) GetMenusByRoleIDs(ctx context.Context, roleIDs []uuid.UUID) ([]*domain.Menu, error) {
+func (r *repository) GetMenusByRoleIDs(ctx context.Context, roleIDs []uuid.UUID) ([]*identity.Menu, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	if len(roleIDs) == 0 {
-		return []*domain.Menu{}, nil
-	}
-	var menus []*domain.Menu
-	err := r.db.WithContext(ctx).
-		Distinct().
-		Joins("JOIN role_menus ON role_menus.menu_id = menus.id").
-		Where("role_menus.role_id IN ?", roleIDs).
-		Order("menus.sort, menus.created_at").
-		Find(&menus).Error
-	if err != nil {
-		return nil, err
-	}
-	return menus, nil
+	return r.menus.GetByRoleIDs(ctx, roleIDs)
 }
 
 // MediaAsset methods
-
-func (r *repository) CreateMediaAsset(ctx context.Context, a *domain.MediaAsset) error {
+func (r *repository) CreateMediaAsset(ctx context.Context, a *media.Asset) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	ensureID(&a.ID)
-	return r.db.WithContext(ctx).Create(a).Error
+	return r.assets.Create(ctx, a)
 }
 
-func (r *repository) GetMediaAsset(ctx context.Context, id uuid.UUID) (*domain.MediaAsset, error) {
+func (r *repository) GetMediaAsset(ctx context.Context, id uuid.UUID) (*media.Asset, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var a domain.MediaAsset
-	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&a).Error; err != nil {
-		return nil, err
-	}
-	return &a, nil
+	return r.assets.Get(ctx, id)
 }
 
-func (r *repository) ListMediaAssets(ctx context.Context, filter domain.MediaAssetFilter) ([]*domain.MediaAsset, int64, error) {
+func (r *repository) ListMediaAssets(ctx context.Context, filter media.AssetFilter) ([]*media.Asset, int64, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, 0, err
 	}
-
-	q := r.db.WithContext(ctx).Model(&domain.MediaAsset{})
-
-	if filter.Type != nil {
-		q = q.Where("type = ?", *filter.Type)
-	}
-	if filter.SourceType != nil {
-		q = q.Where("source_type = ?", *filter.SourceType)
-	}
-	if filter.SourceID != nil {
-		q = q.Where("source_id = ?", *filter.SourceID)
-	}
-	if filter.ParentID != nil {
-		q = q.Where("parent_id = ?", *filter.ParentID)
-	}
-	if filter.Status != nil {
-		q = q.Where("status = ?", *filter.Status)
-	}
-	if len(filter.Tags) > 0 {
-		tagsJSON, _ := json.Marshal(filter.Tags)
-		q = q.Where("tags @> ?::jsonb", string(tagsJSON))
-	}
-	if filter.From != nil {
-		q = q.Where("created_at >= ?", *filter.From)
-	}
-	if filter.To != nil {
-		q = q.Where("created_at <= ?", *filter.To)
-	}
-
-	var total int64
-	if err := q.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-
-	var list []*domain.MediaAsset
-	if err := q.Limit(filter.Limit).Offset(filter.Offset).Order("created_at DESC").Find(&list).Error; err != nil {
-		return nil, 0, err
-	}
-
-	return list, total, nil
+	return r.assets.List(ctx, filter)
 }
 
-func (r *repository) UpdateMediaAsset(ctx context.Context, a *domain.MediaAsset) error {
+func (r *repository) UpdateMediaAsset(ctx context.Context, a *media.Asset) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	return r.db.WithContext(ctx).Save(a).Error
+	return r.assets.Update(ctx, a)
 }
 
 func (r *repository) DeleteMediaAsset(ctx context.Context, id uuid.UUID) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.MediaAsset{}).Error
+	return r.assets.Delete(ctx, id)
 }
 
-func (r *repository) ListMediaAssetsBySource(ctx context.Context, sourceID uuid.UUID) ([]*domain.MediaAsset, error) {
+func (r *repository) ListMediaAssetsBySource(ctx context.Context, sourceID uuid.UUID) ([]*media.Asset, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var list []*domain.MediaAsset
-	if err := r.db.WithContext(ctx).Where("source_id = ?", sourceID).Order("created_at DESC").Find(&list).Error; err != nil {
-		return nil, err
-	}
-	return list, nil
+	return r.assets.ListBySource(ctx, sourceID)
 }
 
-func (r *repository) ListMediaAssetsByParent(ctx context.Context, parentID uuid.UUID) ([]*domain.MediaAsset, error) {
+func (r *repository) ListMediaAssetsByParent(ctx context.Context, parentID uuid.UUID) ([]*media.Asset, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var list []*domain.MediaAsset
-	if err := r.db.WithContext(ctx).Where("parent_id = ?", parentID).Order("created_at DESC").Find(&list).Error; err != nil {
-		return nil, err
-	}
-	return list, nil
+	return r.assets.ListByParent(ctx, parentID)
 }
 
 func (r *repository) GetAllAssetTags(ctx context.Context) ([]string, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-
-	var assets []*domain.MediaAsset
-	if err := r.db.WithContext(ctx).Select("tags").Where("tags IS NOT NULL AND tags != '[]'").Find(&assets).Error; err != nil {
-		return nil, err
-	}
-
-	// 提取所有唯一标签
-	tagSet := make(map[string]bool)
-	for _, asset := range assets {
-		if asset.Tags == nil {
-			continue
-		}
-		var tags []string
-		if err := json.Unmarshal(asset.Tags, &tags); err == nil {
-			for _, tag := range tags {
-				if tag != "" {
-					tagSet[tag] = true
-				}
-			}
-		}
-	}
-
-	// 转换为切片
-	result := make([]string, 0, len(tagSet))
-	for tag := range tagSet {
-		result = append(result, tag)
-	}
-
-	return result, nil
+	return r.assets.GetAllTags(ctx)
 }
 
 // MediaSource methods
-
-func (r *repository) CreateMediaSource(ctx context.Context, s *domain.MediaSource) error {
+func (r *repository) CreateMediaSource(ctx context.Context, s *media.Source) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	ensureID(&s.ID)
-	return r.db.WithContext(ctx).Create(s).Error
+	return r.sources.Create(ctx, s)
 }
 
-func (r *repository) GetMediaSource(ctx context.Context, id uuid.UUID) (*domain.MediaSource, error) {
+func (r *repository) GetMediaSource(ctx context.Context, id uuid.UUID) (*media.Source, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var s domain.MediaSource
-	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&s).Error; err != nil {
-		return nil, err
-	}
-	return &s, nil
+	return r.sources.Get(ctx, id)
 }
 
-func (r *repository) GetMediaSourceByPathName(ctx context.Context, pathName string) (*domain.MediaSource, error) {
+func (r *repository) GetMediaSourceByPathName(ctx context.Context, pathName string) (*media.Source, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var s domain.MediaSource
-	if err := r.db.WithContext(ctx).Where("path_name = ?", pathName).First(&s).Error; err != nil {
-		return nil, err
-	}
-	return &s, nil
+	return r.sources.GetByPathName(ctx, pathName)
 }
 
-func (r *repository) ListMediaSources(ctx context.Context, filter domain.MediaSourceFilter) ([]*domain.MediaSource, int64, error) {
+func (r *repository) ListMediaSources(ctx context.Context, filter media.SourceFilter) ([]*media.Source, int64, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, 0, err
 	}
-	q := r.db.WithContext(ctx).Model(&domain.MediaSource{})
-	if filter.Type != nil {
-		q = q.Where("type = ?", *filter.Type)
-	}
-	var total int64
-	if err := q.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	if filter.Limit <= 0 {
-		filter.Limit = 20
-	}
-	if filter.Limit > 1000 {
-		filter.Limit = 1000
-	}
-	var list []*domain.MediaSource
-	if err := q.Limit(filter.Limit).Offset(filter.Offset).Order("created_at DESC").Find(&list).Error; err != nil {
-		return nil, 0, err
-	}
-	return list, total, nil
+	return r.sources.List(ctx, filter)
 }
 
-func (r *repository) UpdateMediaSource(ctx context.Context, s *domain.MediaSource) error {
+func (r *repository) UpdateMediaSource(ctx context.Context, s *media.Source) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	return r.db.WithContext(ctx).Save(s).Error
+	return r.sources.Update(ctx, s)
 }
 
 func (r *repository) DeleteMediaSource(ctx context.Context, id uuid.UUID) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.MediaSource{}).Error
+	return r.sources.Delete(ctx, id)
 }
 
 // Operator methods
-
-func (r *repository) CreateOperator(ctx context.Context, o *domain.Operator) error {
+func (r *repository) CreateOperator(ctx context.Context, o *operator.Operator) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	ensureID(&o.ID)
-	return r.db.WithContext(ctx).Create(o).Error
+	return r.operators.Create(ctx, o)
 }
 
-func (r *repository) GetOperator(ctx context.Context, id uuid.UUID) (*domain.Operator, error) {
+func (r *repository) GetOperator(ctx context.Context, id uuid.UUID) (*operator.Operator, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var o domain.Operator
-	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&o).Error; err != nil {
-		return nil, err
-	}
-	return &o, nil
+	return r.operators.Get(ctx, id)
 }
 
-func (r *repository) GetOperatorByCode(ctx context.Context, code string) (*domain.Operator, error) {
+func (r *repository) GetOperatorByCode(ctx context.Context, code string) (*operator.Operator, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var o domain.Operator
-	if err := r.db.WithContext(ctx).Where("code = ?", code).First(&o).Error; err != nil {
-		return nil, err
-	}
-	return &o, nil
+	return r.operators.GetByCode(ctx, code)
 }
 
-func (r *repository) ListOperators(ctx context.Context, filter domain.OperatorFilter) ([]*domain.Operator, int64, error) {
+func (r *repository) ListOperators(ctx context.Context, filter operator.Filter) ([]*operator.Operator, int64, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, 0, err
 	}
-
-	q := r.db.WithContext(ctx).Model(&domain.Operator{})
-
-	if filter.Category != nil {
-		q = q.Where("category = ?", *filter.Category)
-	}
-	if filter.Type != nil {
-		q = q.Where("type = ?", *filter.Type)
-	}
-	if filter.Status != nil {
-		q = q.Where("status = ?", *filter.Status)
-	}
-	if filter.IsBuiltin != nil {
-		q = q.Where("is_builtin = ?", *filter.IsBuiltin)
-	}
-	if len(filter.Tags) > 0 {
-		tagsJSON, _ := json.Marshal(filter.Tags)
-		q = q.Where("tags @> ?::jsonb", string(tagsJSON))
-	}
-	if filter.Keyword != "" {
-		keyword := "%" + filter.Keyword + "%"
-		q = q.Where("name ILIKE ? OR description ILIKE ? OR code ILIKE ?", keyword, keyword, keyword)
-	}
-
-	var total int64
-	if err := q.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-
-	var list []*domain.Operator
-	if err := q.Limit(filter.Limit).Offset(filter.Offset).Order("created_at DESC").Find(&list).Error; err != nil {
-		return nil, 0, err
-	}
-
-	return list, total, nil
+	return r.operators.List(ctx, filter)
 }
 
-func (r *repository) UpdateOperator(ctx context.Context, o *domain.Operator) error {
+func (r *repository) UpdateOperator(ctx context.Context, o *operator.Operator) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	return r.db.WithContext(ctx).Save(o).Error
+	return r.operators.Update(ctx, o)
 }
 
 func (r *repository) DeleteOperator(ctx context.Context, id uuid.UUID) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.Operator{}).Error
+	return r.operators.Delete(ctx, id)
 }
 
-func (r *repository) ListEnabledOperators(ctx context.Context) ([]*domain.Operator, error) {
+func (r *repository) ListEnabledOperators(ctx context.Context) ([]*operator.Operator, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var list []*domain.Operator
-	if err := r.db.WithContext(ctx).Where("status = ?", domain.OperatorStatusEnabled).Order("created_at DESC").Find(&list).Error; err != nil {
-		return nil, err
-	}
-	return list, nil
+	return r.operators.ListEnabled(ctx)
 }
 
-func (r *repository) ListOperatorsByCategory(ctx context.Context, category domain.OperatorCategory) ([]*domain.Operator, error) {
+func (r *repository) ListOperatorsByCategory(ctx context.Context, category operator.Category) ([]*operator.Operator, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var list []*domain.Operator
-	if err := r.db.WithContext(ctx).Where("category = ?", category).Order("created_at DESC").Find(&list).Error; err != nil {
-		return nil, err
-	}
-	return list, nil
+	return r.operators.ListByCategory(ctx, category)
 }
 
 // Workflow methods
-
-func (r *repository) CreateWorkflow(ctx context.Context, w *domain.Workflow) error {
+func (r *repository) CreateWorkflow(ctx context.Context, w *workflow.Workflow) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	ensureID(&w.ID)
-	return r.db.WithContext(ctx).Create(w).Error
+	return r.workflows.Create(ctx, w)
 }
 
-func (r *repository) GetWorkflow(ctx context.Context, id uuid.UUID) (*domain.Workflow, error) {
+func (r *repository) GetWorkflow(ctx context.Context, id uuid.UUID) (*workflow.Workflow, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var w domain.Workflow
-	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&w).Error; err != nil {
-		return nil, err
-	}
-	return &w, nil
+	return r.workflows.Get(ctx, id)
 }
 
-func (r *repository) GetWorkflowByCode(ctx context.Context, code string) (*domain.Workflow, error) {
+func (r *repository) GetWorkflowByCode(ctx context.Context, code string) (*workflow.Workflow, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var w domain.Workflow
-	if err := r.db.WithContext(ctx).Where("code = ?", code).First(&w).Error; err != nil {
-		return nil, err
-	}
-	return &w, nil
+	return r.workflows.GetByCode(ctx, code)
 }
 
-func (r *repository) GetWorkflowWithNodes(ctx context.Context, id uuid.UUID) (*domain.Workflow, error) {
+func (r *repository) GetWorkflowWithNodes(ctx context.Context, id uuid.UUID) (*workflow.Workflow, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var w domain.Workflow
-	if err := r.db.WithContext(ctx).
-		Preload("Nodes.Operator").
-		Preload("Edges").
-		Where("id = ?", id).
-		First(&w).Error; err != nil {
-		return nil, err
-	}
-	return &w, nil
+	return r.workflows.GetWithNodes(ctx, id)
 }
 
-func (r *repository) ListWorkflows(ctx context.Context, filter domain.WorkflowFilter) ([]*domain.Workflow, int64, error) {
+func (r *repository) ListWorkflows(ctx context.Context, filter workflow.Filter) ([]*workflow.Workflow, int64, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, 0, err
 	}
-
-	q := r.db.WithContext(ctx).Model(&domain.Workflow{})
-
-	if filter.Status != nil {
-		q = q.Where("status = ?", *filter.Status)
-	}
-	if filter.TriggerType != nil {
-		q = q.Where("trigger_type = ?", *filter.TriggerType)
-	}
-	if len(filter.Tags) > 0 {
-		tagsJSON, _ := json.Marshal(filter.Tags)
-		q = q.Where("tags @> ?::jsonb", string(tagsJSON))
-	}
-	if filter.Keyword != "" {
-		keyword := "%" + filter.Keyword + "%"
-		q = q.Where("name ILIKE ? OR description ILIKE ? OR code ILIKE ?", keyword, keyword, keyword)
-	}
-
-	var total int64
-	if err := q.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-
-	var list []*domain.Workflow
-	if err := q.Limit(filter.Limit).Offset(filter.Offset).Order("created_at DESC").Find(&list).Error; err != nil {
-		return nil, 0, err
-	}
-
-	return list, total, nil
+	return r.workflows.List(ctx, filter)
 }
 
-func (r *repository) UpdateWorkflow(ctx context.Context, w *domain.Workflow) error {
+func (r *repository) UpdateWorkflow(ctx context.Context, w *workflow.Workflow) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	return r.db.WithContext(ctx).Save(w).Error
+	return r.workflows.Update(ctx, w)
 }
 
 func (r *repository) DeleteWorkflow(ctx context.Context, id uuid.UUID) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.Workflow{}).Error
+	return r.workflows.Delete(ctx, id)
 }
 
-func (r *repository) ListEnabledWorkflows(ctx context.Context) ([]*domain.Workflow, error) {
+func (r *repository) ListEnabledWorkflows(ctx context.Context) ([]*workflow.Workflow, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var list []*domain.Workflow
-	if err := r.db.WithContext(ctx).
-		Preload("Nodes.Operator").
-		Preload("Edges").
-		Where("status = ?", domain.WorkflowStatusEnabled).
-		Order("created_at DESC").
-		Find(&list).Error; err != nil {
-		return nil, err
-	}
-	return list, nil
+	return r.workflows.ListEnabled(ctx)
 }
 
 // WorkflowNode methods
-
-func (r *repository) CreateWorkflowNode(ctx context.Context, n *domain.WorkflowNode) error {
+func (r *repository) CreateWorkflowNode(ctx context.Context, n *workflow.Node) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	ensureID(&n.ID)
-	return r.db.WithContext(ctx).Create(n).Error
+	return r.workflows.CreateNode(ctx, n)
 }
 
-func (r *repository) ListWorkflowNodes(ctx context.Context, workflowID uuid.UUID) ([]*domain.WorkflowNode, error) {
+func (r *repository) ListWorkflowNodes(ctx context.Context, workflowID uuid.UUID) ([]*workflow.Node, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var list []*domain.WorkflowNode
-	if err := r.db.WithContext(ctx).
-		Preload("Operator").
-		Where("workflow_id = ?", workflowID).
-		Find(&list).Error; err != nil {
-		return nil, err
-	}
-	return list, nil
+	return r.workflows.ListNodes(ctx, workflowID)
 }
 
 func (r *repository) DeleteWorkflowNodes(ctx context.Context, workflowID uuid.UUID) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	return r.db.WithContext(ctx).Where("workflow_id = ?", workflowID).Delete(&domain.WorkflowNode{}).Error
+	return r.workflows.DeleteNodes(ctx, workflowID)
 }
 
 // WorkflowEdge methods
-
-func (r *repository) CreateWorkflowEdge(ctx context.Context, e *domain.WorkflowEdge) error {
+func (r *repository) CreateWorkflowEdge(ctx context.Context, e *workflow.Edge) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	ensureID(&e.ID)
-	return r.db.WithContext(ctx).Create(e).Error
+	return r.workflows.CreateEdge(ctx, e)
 }
 
-func (r *repository) ListWorkflowEdges(ctx context.Context, workflowID uuid.UUID) ([]*domain.WorkflowEdge, error) {
+func (r *repository) ListWorkflowEdges(ctx context.Context, workflowID uuid.UUID) ([]*workflow.Edge, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var list []*domain.WorkflowEdge
-	if err := r.db.WithContext(ctx).Where("workflow_id = ?", workflowID).Find(&list).Error; err != nil {
-		return nil, err
-	}
-	return list, nil
+	return r.workflows.ListEdges(ctx, workflowID)
 }
 
 func (r *repository) DeleteWorkflowEdges(ctx context.Context, workflowID uuid.UUID) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	return r.db.WithContext(ctx).Where("workflow_id = ?", workflowID).Delete(&domain.WorkflowEdge{}).Error
+	return r.workflows.DeleteEdges(ctx, workflowID)
 }
 
 // Task methods
-
-func (r *repository) CreateTask(ctx context.Context, t *domain.Task) error {
+func (r *repository) CreateTask(ctx context.Context, t *workflow.Task) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	ensureID(&t.ID)
-	return r.db.WithContext(ctx).Create(t).Error
+	return r.tasks.Create(ctx, t)
 }
 
-func (r *repository) GetTask(ctx context.Context, id uuid.UUID) (*domain.Task, error) {
+func (r *repository) GetTask(ctx context.Context, id uuid.UUID) (*workflow.Task, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var t domain.Task
-	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&t).Error; err != nil {
-		return nil, err
-	}
-	return &t, nil
+	return r.tasks.Get(ctx, id)
 }
 
-func (r *repository) GetTaskWithRelations(ctx context.Context, id uuid.UUID) (*domain.Task, error) {
+func (r *repository) GetTaskWithRelations(ctx context.Context, id uuid.UUID) (*workflow.Task, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var t domain.Task
-	if err := r.db.WithContext(ctx).
-		Preload("Workflow").
-		Preload("Asset").
-		Preload("Artifacts").
-		Where("id = ?", id).
-		First(&t).Error; err != nil {
-		return nil, err
-	}
-	return &t, nil
+	return r.tasks.GetWithRelations(ctx, id)
 }
 
-func (r *repository) ListTasks(ctx context.Context, filter domain.TaskFilter) ([]*domain.Task, int64, error) {
+func (r *repository) ListTasks(ctx context.Context, filter workflow.TaskFilter) ([]*workflow.Task, int64, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, 0, err
 	}
-
-	q := r.db.WithContext(ctx).Model(&domain.Task{})
-
-	if filter.WorkflowID != nil {
-		q = q.Where("workflow_id = ?", *filter.WorkflowID)
-	}
-	if filter.AssetID != nil {
-		q = q.Where("asset_id = ?", *filter.AssetID)
-	}
-	if filter.Status != nil {
-		q = q.Where("status = ?", *filter.Status)
-	}
-	if filter.From != nil {
-		q = q.Where("created_at >= ?", *filter.From)
-	}
-	if filter.To != nil {
-		q = q.Where("created_at <= ?", *filter.To)
-	}
-
-	var total int64
-	if err := q.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-
-	var list []*domain.Task
-	if err := q.Limit(filter.Limit).Offset(filter.Offset).Order("created_at DESC").Find(&list).Error; err != nil {
-		return nil, 0, err
-	}
-
-	return list, total, nil
+	return r.tasks.List(ctx, filter)
 }
 
-func (r *repository) UpdateTask(ctx context.Context, t *domain.Task) error {
+func (r *repository) UpdateTask(ctx context.Context, t *workflow.Task) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	return r.db.WithContext(ctx).Save(t).Error
+	return r.tasks.Update(ctx, t)
 }
 
 func (r *repository) DeleteTask(ctx context.Context, id uuid.UUID) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.Task{}).Error
+	return r.tasks.Delete(ctx, id)
 }
 
-func (r *repository) GetTaskStats(ctx context.Context, workflowID *uuid.UUID) (*domain.TaskStats, error) {
+func (r *repository) GetTaskStats(ctx context.Context, workflowID *uuid.UUID) (*workflow.TaskStats, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-
-	q := r.db.WithContext(ctx).Model(&domain.Task{})
-	if workflowID != nil {
-		q = q.Where("workflow_id = ?", *workflowID)
-	}
-
-	var total int64
-	if err := q.Count(&total).Error; err != nil {
-		return nil, err
-	}
-
-	stats := &domain.TaskStats{Total: total}
-
-	statusCounts := []struct {
-		Status domain.TaskStatus
-		Count  int64
-	}{}
-	if err := r.db.WithContext(ctx).Model(&domain.Task{}).
-		Select("status, COUNT(*) as count").
-		Group("status").
-		Find(&statusCounts).Error; err != nil {
-		return nil, err
-	}
-
-	for _, sc := range statusCounts {
-		switch sc.Status {
-		case domain.TaskStatusPending:
-			stats.Pending = sc.Count
-		case domain.TaskStatusRunning:
-			stats.Running = sc.Count
-		case domain.TaskStatusSuccess:
-			stats.Success = sc.Count
-		case domain.TaskStatusFailed:
-			stats.Failed = sc.Count
-		case domain.TaskStatusCancelled:
-			stats.Cancelled = sc.Count
-		}
-	}
-
-	return stats, nil
+	return r.tasks.GetStats(ctx, workflowID)
 }
 
-func (r *repository) ListRunningTasks(ctx context.Context) ([]*domain.Task, error) {
+func (r *repository) ListRunningTasks(ctx context.Context) ([]*workflow.Task, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var list []*domain.Task
-	if err := r.db.WithContext(ctx).
-		Preload("Workflow").
-		Preload("Asset").
-		Where("status = ?", domain.TaskStatusRunning).
-		Order("created_at ASC").
-		Find(&list).Error; err != nil {
-		return nil, err
-	}
-	return list, nil
+	return r.tasks.ListRunning(ctx)
 }
 
 // Artifact methods
-
-func (r *repository) CreateArtifact(ctx context.Context, a *domain.Artifact) error {
+func (r *repository) CreateArtifact(ctx context.Context, a *workflow.Artifact) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	ensureID(&a.ID)
-	return r.db.WithContext(ctx).Create(a).Error
+	return r.artifacts.Create(ctx, a)
 }
 
-func (r *repository) GetArtifact(ctx context.Context, id uuid.UUID) (*domain.Artifact, error) {
+func (r *repository) GetArtifact(ctx context.Context, id uuid.UUID) (*workflow.Artifact, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var a domain.Artifact
-	if err := r.db.WithContext(ctx).
-		Preload("Task").
-		Preload("Asset").
-		Where("id = ?", id).
-		First(&a).Error; err != nil {
-		return nil, err
-	}
-	return &a, nil
+	return r.artifacts.Get(ctx, id)
 }
 
-func (r *repository) ListArtifacts(ctx context.Context, filter domain.ArtifactFilter) ([]*domain.Artifact, int64, error) {
+func (r *repository) ListArtifacts(ctx context.Context, filter workflow.ArtifactFilter) ([]*workflow.Artifact, int64, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, 0, err
 	}
-
-	q := r.db.WithContext(ctx).Model(&domain.Artifact{})
-
-	if filter.TaskID != nil {
-		q = q.Where("task_id = ?", *filter.TaskID)
-	}
-	if filter.Type != nil {
-		q = q.Where("type = ?", *filter.Type)
-	}
-	if filter.AssetID != nil {
-		q = q.Where("asset_id = ?", *filter.AssetID)
-	}
-	if filter.From != nil {
-		q = q.Where("created_at >= ?", *filter.From)
-	}
-	if filter.To != nil {
-		q = q.Where("created_at <= ?", *filter.To)
-	}
-
-	var total int64
-	if err := q.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-
-	var list []*domain.Artifact
-	if err := q.Limit(filter.Limit).Offset(filter.Offset).Order("created_at DESC").Find(&list).Error; err != nil {
-		return nil, 0, err
-	}
-
-	return list, total, nil
+	return r.artifacts.List(ctx, filter)
 }
 
 func (r *repository) DeleteArtifact(ctx context.Context, id uuid.UUID) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.Artifact{}).Error
+	return r.artifacts.Delete(ctx, id)
 }
 
-func (r *repository) ListArtifactsByTask(ctx context.Context, taskID uuid.UUID) ([]*domain.Artifact, error) {
+func (r *repository) ListArtifactsByTask(ctx context.Context, taskID uuid.UUID) ([]*workflow.Artifact, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var list []*domain.Artifact
-	if err := r.db.WithContext(ctx).
-		Preload("Asset").
-		Where("task_id = ?", taskID).
-		Order("created_at DESC").
-		Find(&list).Error; err != nil {
-		return nil, err
-	}
-	return list, nil
+	return r.artifacts.ListByTask(ctx, taskID)
 }
 
-func (r *repository) ListArtifactsByType(ctx context.Context, taskID uuid.UUID, artifactType domain.ArtifactType) ([]*domain.Artifact, error) {
+func (r *repository) ListArtifactsByType(ctx context.Context, taskID uuid.UUID, artifactType workflow.ArtifactType) ([]*workflow.Artifact, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var list []*domain.Artifact
-	if err := r.db.WithContext(ctx).
-		Preload("Asset").
-		Where("task_id = ? AND type = ?", taskID, artifactType).
-		Order("created_at DESC").
-		Find(&list).Error; err != nil {
-		return nil, err
-	}
-	return list, nil
+	return r.artifacts.ListByType(ctx, taskID, artifactType)
 }
 
 // File methods
-
-func (r *repository) CreateFile(ctx context.Context, f *domain.File) error {
+func (r *repository) CreateFile(ctx context.Context, f *storage.File) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	ensureID(&f.ID)
-	return r.db.WithContext(ctx).Create(f).Error
+	return r.files.Create(ctx, f)
 }
 
-func (r *repository) GetFile(ctx context.Context, id uuid.UUID) (*domain.File, error) {
+func (r *repository) GetFile(ctx context.Context, id uuid.UUID) (*storage.File, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var f domain.File
-	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&f).Error; err != nil {
-		return nil, err
-	}
-	return &f, nil
+	return r.files.Get(ctx, id)
 }
 
-func (r *repository) GetFileByPath(ctx context.Context, path string) (*domain.File, error) {
+func (r *repository) GetFileByPath(ctx context.Context, path string) (*storage.File, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var f domain.File
-	if err := r.db.WithContext(ctx).Where("path = ?", path).First(&f).Error; err != nil {
-		return nil, err
-	}
-	return &f, nil
+	return r.files.GetByPath(ctx, path)
 }
 
-func (r *repository) ListFiles(ctx context.Context, filter domain.FileFilter) ([]*domain.File, int64, error) {
+func (r *repository) ListFiles(ctx context.Context, filter storage.FileFilter) ([]*storage.File, int64, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, 0, err
 	}
-
-	q := r.db.WithContext(ctx).Model(&domain.File{})
-
-	if filter.Type != nil {
-		q = q.Where("type = ?", *filter.Type)
-	}
-	if filter.Status != nil {
-		q = q.Where("status = ?", *filter.Status)
-	}
-	if filter.UploaderID != nil {
-		q = q.Where("uploader_id = ?", *filter.UploaderID)
-	}
-	if filter.Search != "" {
-		q = q.Where("name ILIKE ? OR original_name ILIKE ?", "%"+filter.Search+"%", "%"+filter.Search+"%")
-	}
-	if filter.From != nil {
-		q = q.Where("created_at >= ?", *filter.From)
-	}
-	if filter.To != nil {
-		q = q.Where("created_at <= ?", *filter.To)
-	}
-
-	var total int64
-	if err := q.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-
-	var list []*domain.File
-	if err := q.Limit(filter.Limit).Offset(filter.Offset).Order("created_at DESC").Find(&list).Error; err != nil {
-		return nil, 0, err
-	}
-
-	return list, total, nil
+	return r.files.List(ctx, filter)
 }
 
-func (r *repository) UpdateFile(ctx context.Context, f *domain.File) error {
+func (r *repository) UpdateFile(ctx context.Context, f *storage.File) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	return r.db.WithContext(ctx).Save(f).Error
+	return r.files.Update(ctx, f)
 }
 
 func (r *repository) DeleteFile(ctx context.Context, id uuid.UUID) error {
 	if err := r.checkDB(); err != nil {
 		return err
 	}
-	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.File{}).Error
+	return r.files.Delete(ctx, id)
 }
 
-func (r *repository) GetFileByHash(ctx context.Context, hash string) (*domain.File, error) {
+func (r *repository) GetFileByHash(ctx context.Context, hash string) (*storage.File, error) {
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	var f domain.File
-	if err := r.db.WithContext(ctx).Where("hash = ?", hash).First(&f).Error; err != nil {
-		return nil, err
-	}
-	return &f, nil
+	return r.files.GetByHash(ctx, hash)
 }

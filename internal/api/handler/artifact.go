@@ -6,23 +6,23 @@ import (
 	"goyavision/config"
 	"goyavision/internal/api/dto"
 	"goyavision/internal/app"
-	"goyavision/internal/domain"
+	"goyavision/internal/domain/workflow"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
-func RegisterArtifact(g *echo.Group, d Deps) {
-	svc := app.NewArtifactService(d.Repo)
-	h := artifactHandler{
+func RegisterArtifact(g *echo.Group, h *Handlers) {
+	svc := app.NewArtifactService(h.Repo)
+	ah := artifactHandler{
 		svc: svc,
-		cfg: d.Cfg,
+		cfg: h.Cfg,
 	}
-	g.GET("/artifacts", h.List)
-	g.POST("/artifacts", h.Create)
-	g.GET("/artifacts/:id", h.Get)
-	g.DELETE("/artifacts/:id", h.Delete)
-	g.GET("/tasks/:task_id/artifacts", h.ListByTask)
+	g.GET("/artifacts", ah.List)
+	g.POST("/artifacts", ah.Create)
+	g.GET("/artifacts/:id", ah.Get)
+	g.DELETE("/artifacts/:id", ah.Delete)
+	g.GET("/tasks/:task_id/artifacts", ah.ListByTask)
 }
 
 type artifactHandler struct {
@@ -47,7 +47,7 @@ func (h *artifactHandler) List(c echo.Context) error {
 	}
 
 	if query.Type != nil {
-		t := domain.ArtifactType(*query.Type)
+		t := workflow.ArtifactType(*query.Type)
 		req.Type = &t
 	}
 
@@ -83,7 +83,7 @@ func (h *artifactHandler) Create(c echo.Context) error {
 
 	createReq := &app.CreateArtifactRequest{
 		TaskID:  req.TaskID,
-		Type:    domain.ArtifactType(req.Type),
+		Type:    workflow.ArtifactType(req.Type),
 		AssetID: req.AssetID,
 		Data:    req.Data,
 	}
@@ -143,7 +143,7 @@ func (h *artifactHandler) ListByTask(c echo.Context) error {
 
 	artifactType := c.QueryParam("type")
 	if artifactType != "" {
-		artifacts, err := h.svc.ListByType(c.Request().Context(), taskID, domain.ArtifactType(artifactType))
+		artifacts, err := h.svc.ListByType(c.Request().Context(), taskID, workflow.ArtifactType(artifactType))
 		if err != nil {
 			return err
 		}

@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -14,12 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"goyavision/internal/domain"
+	"goyavision/internal/domain/storage"
 	"goyavision/internal/port"
-	"goyavision/pkg/storage"
+	storageUtil "goyavision/pkg/storage"
 
 	"github.com/google/uuid"
-	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -30,7 +28,7 @@ type CreateFileRequest struct {
 	Path        string
 	Size        int64
 	MimeType    string
-	Type        domain.FileType
+	Type        storage.FileType
 	Extension   string
 	Hash        string
 	UploaderID  *uuid.UUID
@@ -40,14 +38,14 @@ type CreateFileRequest struct {
 // UpdateFileRequest 更新文件请求
 type UpdateFileRequest struct {
 	Name     *string
-	Status   *domain.FileStatus
+	Status   *storage.FileStatus
 	Metadata map[string]interface{}
 }
 
 // ListFilesRequest 列出文件请求
 type ListFilesRequest struct {
-	Type       *domain.FileType
-	Status     *domain.FileStatus
+	Type       *storage.FileType
+	Status     *storage.FileStatus
 	UploaderID *uuid.UUID
 	Search     string
 	From       *time.Time
@@ -58,10 +56,10 @@ type ListFilesRequest struct {
 
 type FileService struct {
 	repo       port.Repository
-	minioClient *storage.MinIOClient
+	minioClient *storageUtil.MinIOClient
 }
 
-func NewFileService(repo port.Repository, minioClient *storage.MinIOClient) *FileService {
+func NewFileService(repo port.Repository, minioClient *storageUtil.MinIOClient) *FileService {
 	return &FileService{
 		repo:       repo,
 		minioClient: minioClient,
@@ -69,7 +67,7 @@ func NewFileService(repo port.Repository, minioClient *storage.MinIOClient) *Fil
 }
 
 // UploadFile 上传文件
-func (s *FileService) UploadFile(ctx context.Context, reader io.Reader, filename string, size int64, uploaderID *uuid.UUID) (*domain.File, error) {
+func (s *FileService) UploadFile(ctx context.Context, reader io.Reader, filename string, size int64, uploaderID *uuid.UUID) (*storage.File, error) {
 	// 确定文件类型
 	ext := strings.ToLower(filepath.Ext(filename))
 	mimeType := mime.TypeByExtension(ext)
@@ -109,7 +107,7 @@ func (s *FileService) UploadFile(ctx context.Context, reader io.Reader, filename
 	}
 
 	// 创建文件记录
-	file := &domain.File{
+	file := &storage.File{
 		Name:        strings.TrimSuffix(filename, ext),
 		OriginalName: filename,
 		Path:        objectName,
@@ -117,7 +115,7 @@ func (s *FileService) UploadFile(ctx context.Context, reader io.Reader, filename
 		MimeType:    mimeType,
 		Type:        fileType,
 		Extension:   strings.TrimPrefix(ext, "."),
-		Status:      domain.FileStatusCompleted,
+		Status:      storage.FileStatusCompleted,
 		Hash:        fileHash,
 		UploaderID:  uploaderID,
 	}
@@ -131,7 +129,7 @@ func (s *FileService) UploadFile(ctx context.Context, reader io.Reader, filename
 }
 
 // GetFile 获取文件
-func (s *FileService) GetFile(ctx context.Context, id uuid.UUID) (*domain.File, error) {
+func (s *FileService) GetFile(ctx context.Context, id uuid.UUID) (*storage.File, error) {
 	file, err := s.repo.GetFile(ctx, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -143,7 +141,7 @@ func (s *FileService) GetFile(ctx context.Context, id uuid.UUID) (*domain.File, 
 }
 
 // ListFiles 列出文件
-func (s *FileService) ListFiles(ctx context.Context, req *ListFilesRequest) ([]*domain.File, int64, error) {
+func (s *FileService) ListFiles(ctx context.Context, req *ListFilesRequest) ([]*storage.File, int64, error) {
 	if req.Limit <= 0 {
 		req.Limit = 20
 	}
@@ -151,7 +149,7 @@ func (s *FileService) ListFiles(ctx context.Context, req *ListFilesRequest) ([]*
 		req.Limit = 1000
 	}
 
-	filter := domain.FileFilter{
+	filter := storage.FileFilter{
 		Type:       req.Type,
 		Status:     req.Status,
 		UploaderID: req.UploaderID,
@@ -166,7 +164,7 @@ func (s *FileService) ListFiles(ctx context.Context, req *ListFilesRequest) ([]*
 }
 
 // UpdateFile 更新文件
-func (s *FileService) UpdateFile(ctx context.Context, id uuid.UUID, req *UpdateFileRequest) (*domain.File, error) {
+func (s *FileService) UpdateFile(ctx context.Context, id uuid.UUID, req *UpdateFileRequest) (*storage.File, error) {
 	file, err := s.GetFile(ctx, id)
 	if err != nil {
 		return nil, err
@@ -179,11 +177,7 @@ func (s *FileService) UpdateFile(ctx context.Context, id uuid.UUID, req *UpdateF
 		file.Status = *req.Status
 	}
 	if req.Metadata != nil {
-		metadataBytes, err := json.Marshal(req.Metadata)
-		if err != nil {
-			return nil, errors.New("failed to marshal metadata: " + err.Error())
-		}
-		file.Metadata = datatypes.JSON(metadataBytes)
+		file.Metadata = req.Metadata
 	}
 
 	if err := s.repo.UpdateFile(ctx, file); err != nil {
@@ -210,28 +204,28 @@ func (s *FileService) DeleteFile(ctx context.Context, id uuid.UUID) error {
 }
 
 // detectFileType 根据 MIME 类型和扩展名检测文件类型
-func (s *FileService) detectFileType(mimeType, ext string) domain.FileType {
+func (s *FileService) detectFileType(mimeType, ext string) storage.FileType {
 	mimeLower := strings.ToLower(mimeType)
 	extLower := strings.ToLower(ext)
 
 	if strings.HasPrefix(mimeLower, "image/") {
-		return domain.FileTypeImage
+		return storage.FileTypeImage
 	}
 	if strings.HasPrefix(mimeLower, "video/") {
-		return domain.FileTypeVideo
+		return storage.FileTypeVideo
 	}
 	if strings.HasPrefix(mimeLower, "audio/") {
-		return domain.FileTypeAudio
+		return storage.FileTypeAudio
 	}
 	if strings.Contains(mimeLower, "pdf") || strings.Contains(mimeLower, "document") ||
 		strings.Contains(mimeLower, "text") || strings.Contains(mimeLower, "word") ||
 		strings.Contains(mimeLower, "excel") || strings.Contains(mimeLower, "powerpoint") {
-		return domain.FileTypeDocument
+		return storage.FileTypeDocument
 	}
 	if extLower == ".zip" || extLower == ".rar" || extLower == ".7z" ||
 		extLower == ".tar" || extLower == ".gz" {
-		return domain.FileTypeArchive
+		return storage.FileTypeArchive
 	}
 
-	return domain.FileTypeOther
+	return storage.FileTypeOther
 }

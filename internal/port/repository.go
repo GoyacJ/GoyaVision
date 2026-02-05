@@ -3,123 +3,127 @@ package port
 import (
 	"context"
 
-	"goyavision/internal/domain"
+	"goyavision/internal/domain/identity"
+	"goyavision/internal/domain/media"
+	"goyavision/internal/domain/operator"
+	"goyavision/internal/domain/storage"
+	"goyavision/internal/domain/workflow"
 
 	"github.com/google/uuid"
 )
 
 type Repository interface {
 	// User
-	CreateUser(ctx context.Context, u *domain.User) error
-	GetUser(ctx context.Context, id uuid.UUID) (*domain.User, error)
-	GetUserByUsername(ctx context.Context, username string) (*domain.User, error)
-	GetUserWithRoles(ctx context.Context, id uuid.UUID) (*domain.User, error)
-	ListUsers(ctx context.Context, status *int, limit, offset int) ([]*domain.User, int64, error)
-	UpdateUser(ctx context.Context, u *domain.User) error
+	CreateUser(ctx context.Context, u *identity.User) error
+	GetUser(ctx context.Context, id uuid.UUID) (*identity.User, error)
+	GetUserByUsername(ctx context.Context, username string) (*identity.User, error)
+	GetUserWithRoles(ctx context.Context, id uuid.UUID) (*identity.User, error)
+	ListUsers(ctx context.Context, status *int, limit, offset int) ([]*identity.User, int64, error)
+	UpdateUser(ctx context.Context, u *identity.User) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
 	SetUserRoles(ctx context.Context, userID uuid.UUID, roleIDs []uuid.UUID) error
 
 	// Role
-	CreateRole(ctx context.Context, r *domain.Role) error
-	GetRole(ctx context.Context, id uuid.UUID) (*domain.Role, error)
-	GetRoleByCode(ctx context.Context, code string) (*domain.Role, error)
-	GetRoleWithPermissions(ctx context.Context, id uuid.UUID) (*domain.Role, error)
-	ListRoles(ctx context.Context, status *int) ([]*domain.Role, error)
-	UpdateRole(ctx context.Context, r *domain.Role) error
+	CreateRole(ctx context.Context, r *identity.Role) error
+	GetRole(ctx context.Context, id uuid.UUID) (*identity.Role, error)
+	GetRoleByCode(ctx context.Context, code string) (*identity.Role, error)
+	GetRoleWithPermissions(ctx context.Context, id uuid.UUID) (*identity.Role, error)
+	ListRoles(ctx context.Context, status *int) ([]*identity.Role, error)
+	UpdateRole(ctx context.Context, r *identity.Role) error
 	DeleteRole(ctx context.Context, id uuid.UUID) error
 	SetRolePermissions(ctx context.Context, roleID uuid.UUID, permissionIDs []uuid.UUID) error
 	SetRoleMenus(ctx context.Context, roleID uuid.UUID, menuIDs []uuid.UUID) error
 
 	// Permission
-	CreatePermission(ctx context.Context, p *domain.Permission) error
-	GetPermission(ctx context.Context, id uuid.UUID) (*domain.Permission, error)
-	GetPermissionByCode(ctx context.Context, code string) (*domain.Permission, error)
-	ListPermissions(ctx context.Context) ([]*domain.Permission, error)
-	UpdatePermission(ctx context.Context, p *domain.Permission) error
+	CreatePermission(ctx context.Context, p *identity.Permission) error
+	GetPermission(ctx context.Context, id uuid.UUID) (*identity.Permission, error)
+	GetPermissionByCode(ctx context.Context, code string) (*identity.Permission, error)
+	ListPermissions(ctx context.Context) ([]*identity.Permission, error)
+	UpdatePermission(ctx context.Context, p *identity.Permission) error
 	DeletePermission(ctx context.Context, id uuid.UUID) error
-	GetPermissionsByRoleIDs(ctx context.Context, roleIDs []uuid.UUID) ([]*domain.Permission, error)
+	GetPermissionsByRoleIDs(ctx context.Context, roleIDs []uuid.UUID) ([]*identity.Permission, error)
 
 	// Menu
-	CreateMenu(ctx context.Context, m *domain.Menu) error
-	GetMenu(ctx context.Context, id uuid.UUID) (*domain.Menu, error)
-	GetMenuByCode(ctx context.Context, code string) (*domain.Menu, error)
-	ListMenus(ctx context.Context, status *int) ([]*domain.Menu, error)
-	UpdateMenu(ctx context.Context, m *domain.Menu) error
+	CreateMenu(ctx context.Context, m *identity.Menu) error
+	GetMenu(ctx context.Context, id uuid.UUID) (*identity.Menu, error)
+	GetMenuByCode(ctx context.Context, code string) (*identity.Menu, error)
+	ListMenus(ctx context.Context, status *int) ([]*identity.Menu, error)
+	UpdateMenu(ctx context.Context, m *identity.Menu) error
 	DeleteMenu(ctx context.Context, id uuid.UUID) error
-	GetMenusByRoleIDs(ctx context.Context, roleIDs []uuid.UUID) ([]*domain.Menu, error)
+	GetMenusByRoleIDs(ctx context.Context, roleIDs []uuid.UUID) ([]*identity.Menu, error)
 
 	// MediaAsset
-	CreateMediaAsset(ctx context.Context, a *domain.MediaAsset) error
-	GetMediaAsset(ctx context.Context, id uuid.UUID) (*domain.MediaAsset, error)
-	ListMediaAssets(ctx context.Context, filter domain.MediaAssetFilter) ([]*domain.MediaAsset, int64, error)
-	UpdateMediaAsset(ctx context.Context, a *domain.MediaAsset) error
+	CreateMediaAsset(ctx context.Context, a *media.Asset) error
+	GetMediaAsset(ctx context.Context, id uuid.UUID) (*media.Asset, error)
+	ListMediaAssets(ctx context.Context, filter media.AssetFilter) ([]*media.Asset, int64, error)
+	UpdateMediaAsset(ctx context.Context, a *media.Asset) error
 	DeleteMediaAsset(ctx context.Context, id uuid.UUID) error
-	ListMediaAssetsBySource(ctx context.Context, sourceID uuid.UUID) ([]*domain.MediaAsset, error)
-	ListMediaAssetsByParent(ctx context.Context, parentID uuid.UUID) ([]*domain.MediaAsset, error)
+	ListMediaAssetsBySource(ctx context.Context, sourceID uuid.UUID) ([]*media.Asset, error)
+	ListMediaAssetsByParent(ctx context.Context, parentID uuid.UUID) ([]*media.Asset, error)
 	GetAllAssetTags(ctx context.Context) ([]string, error) // 获取所有标签
 
 	// MediaSource
-	CreateMediaSource(ctx context.Context, s *domain.MediaSource) error
-	GetMediaSource(ctx context.Context, id uuid.UUID) (*domain.MediaSource, error)
-	GetMediaSourceByPathName(ctx context.Context, pathName string) (*domain.MediaSource, error)
-	ListMediaSources(ctx context.Context, filter domain.MediaSourceFilter) ([]*domain.MediaSource, int64, error)
-	UpdateMediaSource(ctx context.Context, s *domain.MediaSource) error
+	CreateMediaSource(ctx context.Context, s *media.Source) error
+	GetMediaSource(ctx context.Context, id uuid.UUID) (*media.Source, error)
+	GetMediaSourceByPathName(ctx context.Context, pathName string) (*media.Source, error)
+	ListMediaSources(ctx context.Context, filter media.SourceFilter) ([]*media.Source, int64, error)
+	UpdateMediaSource(ctx context.Context, s *media.Source) error
 	DeleteMediaSource(ctx context.Context, id uuid.UUID) error
 
 	// Operator
-	CreateOperator(ctx context.Context, o *domain.Operator) error
-	GetOperator(ctx context.Context, id uuid.UUID) (*domain.Operator, error)
-	GetOperatorByCode(ctx context.Context, code string) (*domain.Operator, error)
-	ListOperators(ctx context.Context, filter domain.OperatorFilter) ([]*domain.Operator, int64, error)
-	UpdateOperator(ctx context.Context, o *domain.Operator) error
+	CreateOperator(ctx context.Context, o *operator.Operator) error
+	GetOperator(ctx context.Context, id uuid.UUID) (*operator.Operator, error)
+	GetOperatorByCode(ctx context.Context, code string) (*operator.Operator, error)
+	ListOperators(ctx context.Context, filter operator.Filter) ([]*operator.Operator, int64, error)
+	UpdateOperator(ctx context.Context, o *operator.Operator) error
 	DeleteOperator(ctx context.Context, id uuid.UUID) error
-	ListEnabledOperators(ctx context.Context) ([]*domain.Operator, error)
-	ListOperatorsByCategory(ctx context.Context, category domain.OperatorCategory) ([]*domain.Operator, error)
+	ListEnabledOperators(ctx context.Context) ([]*operator.Operator, error)
+	ListOperatorsByCategory(ctx context.Context, category operator.Category) ([]*operator.Operator, error)
 
 	// Workflow
-	CreateWorkflow(ctx context.Context, w *domain.Workflow) error
-	GetWorkflow(ctx context.Context, id uuid.UUID) (*domain.Workflow, error)
-	GetWorkflowByCode(ctx context.Context, code string) (*domain.Workflow, error)
-	GetWorkflowWithNodes(ctx context.Context, id uuid.UUID) (*domain.Workflow, error)
-	ListWorkflows(ctx context.Context, filter domain.WorkflowFilter) ([]*domain.Workflow, int64, error)
-	UpdateWorkflow(ctx context.Context, w *domain.Workflow) error
+	CreateWorkflow(ctx context.Context, w *workflow.Workflow) error
+	GetWorkflow(ctx context.Context, id uuid.UUID) (*workflow.Workflow, error)
+	GetWorkflowByCode(ctx context.Context, code string) (*workflow.Workflow, error)
+	GetWorkflowWithNodes(ctx context.Context, id uuid.UUID) (*workflow.Workflow, error)
+	ListWorkflows(ctx context.Context, filter workflow.Filter) ([]*workflow.Workflow, int64, error)
+	UpdateWorkflow(ctx context.Context, w *workflow.Workflow) error
 	DeleteWorkflow(ctx context.Context, id uuid.UUID) error
-	ListEnabledWorkflows(ctx context.Context) ([]*domain.Workflow, error)
+	ListEnabledWorkflows(ctx context.Context) ([]*workflow.Workflow, error)
 
 	// WorkflowNode
-	CreateWorkflowNode(ctx context.Context, n *domain.WorkflowNode) error
-	ListWorkflowNodes(ctx context.Context, workflowID uuid.UUID) ([]*domain.WorkflowNode, error)
+	CreateWorkflowNode(ctx context.Context, n *workflow.Node) error
+	ListWorkflowNodes(ctx context.Context, workflowID uuid.UUID) ([]*workflow.Node, error)
 	DeleteWorkflowNodes(ctx context.Context, workflowID uuid.UUID) error
 
 	// WorkflowEdge
-	CreateWorkflowEdge(ctx context.Context, e *domain.WorkflowEdge) error
-	ListWorkflowEdges(ctx context.Context, workflowID uuid.UUID) ([]*domain.WorkflowEdge, error)
+	CreateWorkflowEdge(ctx context.Context, e *workflow.Edge) error
+	ListWorkflowEdges(ctx context.Context, workflowID uuid.UUID) ([]*workflow.Edge, error)
 	DeleteWorkflowEdges(ctx context.Context, workflowID uuid.UUID) error
 
 	// Task
-	CreateTask(ctx context.Context, t *domain.Task) error
-	GetTask(ctx context.Context, id uuid.UUID) (*domain.Task, error)
-	GetTaskWithRelations(ctx context.Context, id uuid.UUID) (*domain.Task, error)
-	ListTasks(ctx context.Context, filter domain.TaskFilter) ([]*domain.Task, int64, error)
-	UpdateTask(ctx context.Context, t *domain.Task) error
+	CreateTask(ctx context.Context, t *workflow.Task) error
+	GetTask(ctx context.Context, id uuid.UUID) (*workflow.Task, error)
+	GetTaskWithRelations(ctx context.Context, id uuid.UUID) (*workflow.Task, error)
+	ListTasks(ctx context.Context, filter workflow.TaskFilter) ([]*workflow.Task, int64, error)
+	UpdateTask(ctx context.Context, t *workflow.Task) error
 	DeleteTask(ctx context.Context, id uuid.UUID) error
-	GetTaskStats(ctx context.Context, workflowID *uuid.UUID) (*domain.TaskStats, error)
-	ListRunningTasks(ctx context.Context) ([]*domain.Task, error)
+	GetTaskStats(ctx context.Context, workflowID *uuid.UUID) (*workflow.TaskStats, error)
+	ListRunningTasks(ctx context.Context) ([]*workflow.Task, error)
 
 	// Artifact
-	CreateArtifact(ctx context.Context, a *domain.Artifact) error
-	GetArtifact(ctx context.Context, id uuid.UUID) (*domain.Artifact, error)
-	ListArtifacts(ctx context.Context, filter domain.ArtifactFilter) ([]*domain.Artifact, int64, error)
+	CreateArtifact(ctx context.Context, a *workflow.Artifact) error
+	GetArtifact(ctx context.Context, id uuid.UUID) (*workflow.Artifact, error)
+	ListArtifacts(ctx context.Context, filter workflow.ArtifactFilter) ([]*workflow.Artifact, int64, error)
 	DeleteArtifact(ctx context.Context, id uuid.UUID) error
-	ListArtifactsByTask(ctx context.Context, taskID uuid.UUID) ([]*domain.Artifact, error)
-	ListArtifactsByType(ctx context.Context, taskID uuid.UUID, artifactType domain.ArtifactType) ([]*domain.Artifact, error)
+	ListArtifactsByTask(ctx context.Context, taskID uuid.UUID) ([]*workflow.Artifact, error)
+	ListArtifactsByType(ctx context.Context, taskID uuid.UUID, artifactType workflow.ArtifactType) ([]*workflow.Artifact, error)
 
 	// File
-	CreateFile(ctx context.Context, f *domain.File) error
-	GetFile(ctx context.Context, id uuid.UUID) (*domain.File, error)
-	GetFileByPath(ctx context.Context, path string) (*domain.File, error)
-	ListFiles(ctx context.Context, filter domain.FileFilter) ([]*domain.File, int64, error)
-	UpdateFile(ctx context.Context, f *domain.File) error
+	CreateFile(ctx context.Context, f *storage.File) error
+	GetFile(ctx context.Context, id uuid.UUID) (*storage.File, error)
+	GetFileByPath(ctx context.Context, path string) (*storage.File, error)
+	ListFiles(ctx context.Context, filter storage.FileFilter) ([]*storage.File, int64, error)
+	UpdateFile(ctx context.Context, f *storage.File) error
 	DeleteFile(ctx context.Context, id uuid.UUID) error
-	GetFileByHash(ctx context.Context, hash string) (*domain.File, error)
+	GetFileByHash(ctx context.Context, hash string) (*storage.File, error)
 }

@@ -2,12 +2,11 @@ package app
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
 
-	"goyavision/internal/domain"
+	"goyavision/internal/domain/workflow"
 	"goyavision/internal/port"
 
 	"github.com/go-co-op/gocron/v2"
@@ -56,9 +55,9 @@ func (s *WorkflowScheduler) loadAndScheduleWorkflows(ctx context.Context) error 
 		return fmt.Errorf("list enabled workflows: %w", err)
 	}
 
-	for _, workflow := range workflows {
-		if workflow.TriggerType == domain.TriggerTypeSchedule {
-			if err := s.ScheduleWorkflow(ctx, workflow); err != nil {
+	for _, wf := range workflows {
+		if wf.TriggerType == workflow.TriggerTypeSchedule {
+			if err := s.ScheduleWorkflow(ctx, wf); err != nil {
 				continue
 			}
 		}
@@ -68,27 +67,25 @@ func (s *WorkflowScheduler) loadAndScheduleWorkflows(ctx context.Context) error 
 }
 
 // ScheduleWorkflow 调度工作流
-func (s *WorkflowScheduler) ScheduleWorkflow(ctx context.Context, workflow *domain.Workflow) error {
+func (s *WorkflowScheduler) ScheduleWorkflow(ctx context.Context, wf *workflow.Workflow) error {
 	s.jobsMu.Lock()
 	defer s.jobsMu.Unlock()
 
-	if _, exists := s.jobs[workflow.ID]; exists {
+	if _, exists := s.jobs[wf.ID]; exists {
 		return nil
 	}
 
-	var triggerConf domain.TriggerConfig
-	if workflow.TriggerConf != nil && len(workflow.TriggerConf) > 0 {
-		if err := json.Unmarshal(workflow.TriggerConf, &triggerConf); err != nil {
-			return fmt.Errorf("parse trigger config: %w", err)
-		}
+	var triggerConf *workflow.TriggerConfig
+	if wf.TriggerConf != nil {
+		triggerConf = wf.TriggerConf
 	}
 
-	job, err := s.createJob(workflow, &triggerConf)
+	job, err := s.createJob(wf, triggerConf)
 	if err != nil {
 		return fmt.Errorf("create job: %w", err)
 	}
 
-	s.jobs[workflow.ID] = job
+	s.jobs[wf.ID] = job
 	return nil
 }
 
@@ -111,7 +108,7 @@ func (s *WorkflowScheduler) UnscheduleWorkflow(workflowID uuid.UUID) error {
 }
 
 // createJob 创建调度任务
-func (s *WorkflowScheduler) createJob(workflow *domain.Workflow, triggerConf *domain.TriggerConfig) (gocron.Job, error) {
+func (s *WorkflowScheduler) createJob(workflow *workflow.Workflow, triggerConf *workflow.TriggerConfig) (gocron.Job, error) {
 	if triggerConf.Schedule != "" {
 		return s.createCronJob(workflow, triggerConf)
 	}
@@ -124,12 +121,12 @@ func (s *WorkflowScheduler) createJob(workflow *domain.Workflow, triggerConf *do
 }
 
 // createIntervalJob 创建间隔任务
-func (s *WorkflowScheduler) createIntervalJob(workflow *domain.Workflow, triggerConf *domain.TriggerConfig) (gocron.Job, error) {
+func (s *WorkflowScheduler) createIntervalJob(wf *workflow.Workflow, triggerConf *workflow.TriggerConfig) (gocron.Job, error) {
 	duration := time.Duration(triggerConf.IntervalSec) * time.Second
 
 	job, err := s.scheduler.NewJob(
 		gocron.DurationJob(duration),
-		gocron.NewTask(s.runWorkflow, workflow.ID),
+		gocron.NewTask(s.runWorkflow, wf.ID),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create interval job: %w", err)
@@ -139,10 +136,10 @@ func (s *WorkflowScheduler) createIntervalJob(workflow *domain.Workflow, trigger
 }
 
 // createCronJob 创建 Cron 任务
-func (s *WorkflowScheduler) createCronJob(workflow *domain.Workflow, triggerConf *domain.TriggerConfig) (gocron.Job, error) {
+func (s *WorkflowScheduler) createCronJob(wf *workflow.Workflow, triggerConf *workflow.TriggerConfig) (gocron.Job, error) {
 	job, err := s.scheduler.NewJob(
 		gocron.CronJob(triggerConf.Schedule, false),
-		gocron.NewTask(s.runWorkflow, workflow.ID),
+		gocron.NewTask(s.runWorkflow, wf.ID),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create cron job: %w", err)
@@ -155,19 +152,19 @@ func (s *WorkflowScheduler) createCronJob(workflow *domain.Workflow, triggerConf
 func (s *WorkflowScheduler) runWorkflow(workflowID uuid.UUID) {
 	ctx := context.Background()
 
-	workflow, err := s.repo.GetWorkflowWithNodes(ctx, workflowID)
+	wf, err := s.repo.GetWorkflowWithNodes(ctx, workflowID)
 	if err != nil {
 		return
 	}
 
-	if !workflow.IsEnabled() {
+	if !wf.IsEnabled() {
 		s.UnscheduleWorkflow(workflowID)
 		return
 	}
 
-	task := &domain.Task{
-		WorkflowID: workflow.ID,
-		Status:     domain.TaskStatusPending,
+	task := &workflow.Task{
+		WorkflowID: wf.ID,
+		Status:     workflow.TaskStatusPending,
 		Progress:   0,
 	}
 
@@ -176,9 +173,9 @@ func (s *WorkflowScheduler) runWorkflow(workflowID uuid.UUID) {
 	}
 
 	go func() {
-		if err := s.engine.Execute(context.Background(), workflow, task); err != nil {
+		if err := s.engine.Execute(context.Background(), wf, task); err != nil {
 			now := time.Now()
-			task.Status = domain.TaskStatusFailed
+			task.Status = workflow.TaskStatusFailed
 			task.Error = err.Error()
 			task.CompletedAt = &now
 			s.repo.UpdateTask(context.Background(), task)
@@ -187,13 +184,13 @@ func (s *WorkflowScheduler) runWorkflow(workflowID uuid.UUID) {
 }
 
 // TriggerWorkflow 手动触发工作流
-func (s *WorkflowScheduler) TriggerWorkflow(ctx context.Context, workflowID uuid.UUID, assetID *uuid.UUID) (*domain.Task, error) {
-	workflow, err := s.repo.GetWorkflowWithNodes(ctx, workflowID)
+func (s *WorkflowScheduler) TriggerWorkflow(ctx context.Context, workflowID uuid.UUID, assetID *uuid.UUID) (*workflow.Task, error) {
+	wf, err := s.repo.GetWorkflowWithNodes(ctx, workflowID)
 	if err != nil {
 		return nil, fmt.Errorf("get workflow: %w", err)
 	}
 
-	if !workflow.IsEnabled() {
+	if !wf.IsEnabled() {
 		return nil, fmt.Errorf("workflow is not enabled")
 	}
 
@@ -204,14 +201,12 @@ func (s *WorkflowScheduler) TriggerWorkflow(ctx context.Context, workflowID uuid
 		}
 	}
 
-	inputParamsJSON, _ := json.Marshal(inputParams)
-
-	task := &domain.Task{
-		WorkflowID:  workflow.ID,
+	task := &workflow.Task{
+		WorkflowID:  wf.ID,
 		AssetID:     assetID,
-		Status:      domain.TaskStatusPending,
+		Status:      workflow.TaskStatusPending,
 		Progress:    0,
-		InputParams: inputParamsJSON,
+		InputParams: inputParams,
 	}
 
 	if err := s.repo.CreateTask(ctx, task); err != nil {
@@ -219,9 +214,9 @@ func (s *WorkflowScheduler) TriggerWorkflow(ctx context.Context, workflowID uuid
 	}
 
 	go func() {
-		if err := s.engine.Execute(context.Background(), workflow, task); err != nil {
+		if err := s.engine.Execute(context.Background(), wf, task); err != nil {
 			now := time.Now()
-			task.Status = domain.TaskStatusFailed
+			task.Status = workflow.TaskStatusFailed
 			task.Error = err.Error()
 			task.CompletedAt = &now
 			s.repo.UpdateTask(context.Background(), task)

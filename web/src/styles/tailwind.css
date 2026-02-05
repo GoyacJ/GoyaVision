@@ -1,36 +1,210 @@
+/**
+ * GoyaVision 全局样式
+ * 设计原则：克制、内容优先、极简
+ */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  /* 基础重置 */
   * {
     @apply border-neutral-200;
   }
-  
+
+  /* 全局字体配置 */
   html {
     @apply antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
-  
+
+  /* Body 样式 */
   body {
-    @apply bg-surface text-text-primary;
+    @apply bg-surface-dim text-text-primary;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans SC', sans-serif;
+    font-size: 0.9375rem; /* 15px */
+    line-height: 1.6;
+  }
+
+  /* 标题样式 */
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-text-primary font-semibold;
+  }
+
+  h1 {
+    @apply text-4xl;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+  }
+
+  h2 {
+    @apply text-2xl;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+  }
+
+  h3 {
+    @apply text-lg;
+    line-height: 1.4;
+  }
+
+  /* 链接样式 */
+  a {
+    @apply text-primary-600 transition-colors duration-fast;
+  }
+
+  a:hover {
+    @apply text-primary-700;
+  }
+
+  /* 按钮基础样式重置 */
+  button {
+    @apply transition-all duration-fast;
+  }
+
+  /* 输入框基础样式 */
+  input, textarea, select {
+    @apply transition-colors duration-fast;
+  }
+}
+
+@layer components {
+  /* 排版工具类 */
+  .text-h1 {
+    @apply text-4xl font-bold tracking-tighter;
+    line-height: 1.25;
+  }
+
+  .text-h2 {
+    @apply text-2xl font-semibold tracking-tight;
+    line-height: 1.3;
+  }
+
+  .text-h3 {
+    @apply text-lg font-semibold;
+    line-height: 1.4;
+  }
+
+  .text-h4 {
+    @apply text-base font-semibold;
+    line-height: 1.5;
+  }
+
+  .text-body {
+    @apply text-base font-normal;
+    line-height: 1.6;
+  }
+
+  .text-body-small {
+    @apply text-sm font-normal;
+    line-height: 1.5;
+  }
+
+  .text-caption {
+    @apply text-sm text-text-tertiary;
+    line-height: 1.5;
+  }
+
+  .text-label {
+    @apply text-sm font-medium;
+    line-height: 1.4;
+  }
+
+  .text-overline {
+    @apply text-xs font-medium uppercase tracking-wider;
+    line-height: 1.4;
+  }
+
+  /* 容器工具类 */
+  .container-gv {
+    @apply max-w-7xl mx-auto px-8;
+  }
+
+  @media (max-width: 768px) {
+    .container-gv {
+      @apply px-4;
+    }
+  }
+
+  /* 卡片样式 */
+  .card {
+    @apply bg-surface rounded-md border border-neutral-200 shadow-sm;
+  }
+
+  .card-hover {
+    @apply card transition-shadow duration-fast hover:shadow-md;
+  }
+
+  /* 按钮基础样式 */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded text-sm font-medium transition-all duration-fast;
+    @apply focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800;
+  }
+
+  .btn-secondary {
+    @apply btn bg-neutral-100 text-text-primary hover:bg-neutral-200 active:bg-neutral-300;
+  }
+
+  .btn-ghost {
+    @apply btn bg-transparent text-text-primary hover:bg-neutral-100 active:bg-neutral-200;
   }
 }
 
 @layer utilities {
+  /* 自定义滚动条（克制版，无渐变） */
   .scrollbar-thin::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar-track {
     @apply bg-neutral-100 rounded;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    @apply bg-gradient-to-br from-primary-500 to-secondary-600 rounded;
+    @apply bg-neutral-300 rounded;
+    transition: background-color 150ms;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    @apply from-primary-600 to-secondary-700;
+    @apply bg-neutral-400;
+  }
+
+  /* 文本省略 */
+  .text-ellipsis-1 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .text-ellipsis-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .text-ellipsis-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Focus 可见性（无障碍） */
+  .focus-visible {
+    @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+  }
+
+  /* 禁用状态 */
+  .disabled {
+    @apply opacity-50 cursor-not-allowed pointer-events-none;
   }
 }

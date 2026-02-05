@@ -1,39 +1,24 @@
 /**
- * 颜色系统 - Material Design 3 动态配色方案
- * 基于 GoyaVision 品牌色生成完整色阶
+ * 颜色系统 - GoyaVision 克制设计系统
+ * 设计原则：内容优先、极简、专业
+ * 参考：Medium / Apple 官网风格
  */
 
 export const colors = {
-  // 主色（品牌色 #667eea）
+  // 主色：克制的蓝灰色（降低饱和度，更专业）
   primary: {
-    DEFAULT: '#667eea',
-    50: '#f5f7ff',
-    100: '#ebedff',
-    200: '#d6dcff',
-    300: '#b3bdff',
-    400: '#8d9eff',
-    500: '#667eea',
-    600: '#5568d3',
-    700: '#4553bd',
-    800: '#3640a6',
-    900: '#2a3290',
-    950: '#1f2673'
-  },
-  
-  // 辅助色
-  secondary: {
-    DEFAULT: '#764ba2',
-    50: '#f9f5fc',
-    100: '#f3ebf9',
-    200: '#e7d7f3',
-    300: '#d4b8e9',
-    400: '#b88ed9',
-    500: '#9d64c9',
-    600: '#764ba2',
-    700: '#65408b',
-    800: '#543574',
-    900: '#432a5d',
-    950: '#321f46'
+    DEFAULT: '#4F5B93',
+    50: '#F5F6FA',
+    100: '#EBEDF5',
+    200: '#D4D8E8',
+    300: '#B3BAD5',
+    400: '#8A94B8',
+    500: '#4F5B93',
+    600: '#3E4A7A',
+    700: '#2F3A61',
+    800: '#232D4B',
+    900: '#1A2238',
+    950: '#131A2B'
   },
   
   // 功能色 - 成功
@@ -100,42 +85,64 @@ export const colors = {
     950: '#172554'
   },
   
-  // 中性色（灰阶）
+  // 中性色：极简灰度系统（9 级，适合内容优先设计）
   neutral: {
-    DEFAULT: '#64748b',
-    50: '#f8fafc',
-    100: '#f1f5f9',
-    200: '#e2e8f0',
-    300: '#cbd5e1',
-    400: '#94a3b8',
-    500: '#64748b',
-    600: '#475569',
-    700: '#334155',
-    800: '#1e293b',
-    900: '#0f172a',
-    950: '#020617'
+    DEFAULT: '#737373',
+    50: '#FAFAFA',    // 页面背景
+    100: '#F5F5F5',   // 容器背景
+    200: '#E5E5E5',   // 边框
+    300: '#D4D4D4',   // 禁用状态
+    400: '#A3A3A3',   // 占位符
+    500: '#737373',   // 次要文本
+    600: '#525252',   // 主要文本
+    700: '#404040',   // 标题
+    800: '#262626',   // 深色文本
+    900: '#171717',   // 强调文本
+    950: '#0A0A0A'    // 最深（暗黑模式背景）
   },
-  
-  // 表面色（背景、卡片）
+
+  // 表面色（背景、卡片）- 简化版
   surface: {
-    DEFAULT: '#ffffff',
-    dark: '#1e293b',
-    dim: '#f8fafc',
-    bright: '#ffffff',
-    container: '#f1f5f9',
-    containerHigh: '#e2e8f0',
-    containerHighest: '#cbd5e1'
+    DEFAULT: '#FFFFFF',        // 白色卡片
+    dim: '#FAFAFA',           // 浅灰背景
+    container: '#F5F5F5',     // 容器背景
+    containerHigh: '#E5E5E5', // 高层级容器
+    dark: '#262626',          // 暗黑模式表面
+    darkContainer: '#171717'  // 暗黑模式容器
   },
-  
-  // 文字色
+
+  // 文字色（语义化命名）
   text: {
-    primary: '#0f172a',
-    secondary: '#475569',
-    tertiary: '#64748b',
-    disabled: '#cbd5e1',
-    inverse: '#ffffff'
+    primary: '#262626',    // 主要文本（neutral.800）
+    secondary: '#525252',  // 次要文本（neutral.600）
+    tertiary: '#737373',   // 三级文本（neutral.500）
+    placeholder: '#A3A3A3',// 占位符（neutral.400）
+    disabled: '#D4D4D4',   // 禁用文本（neutral.300）
+    inverse: '#FFFFFF'     // 反色文本（用于深色背景）
   }
 } as const
+
+/**
+ * 设计说明：
+ *
+ * 1. 主色（Primary）：从鲜艳的 #667eea 降低饱和度至 #4F5B93
+ *    - 更专业、更克制，适合长期内容消费
+ *    - 减少视觉疲劳
+ *
+ * 2. 中性色（Neutral）：采用纯灰度（无色相偏向）
+ *    - 不使用蓝灰色（#64748b），改用纯灰色（#737373）
+ *    - 9 级灰度满足所有层级需求
+ *
+ * 3. 移除 Secondary 色系：
+ *    - 不再使用渐变色（#667eea → #764ba2）
+ *    - 避免过度装饰
+ *
+ * 4. 功能色保持不变：
+ *    - Success: #10b981（绿色）
+ *    - Warning: #f59e0b（橙色）
+ *    - Error: #ef4444（红色）
+ *    - Info: #3b82f6（蓝色）
+ */
 
 export type ColorPalette = typeof colors
 export type ColorName = keyof typeof colors

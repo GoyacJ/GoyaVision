@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"goyavision/internal/domain"
+	"goyavision/internal/domain/operator"
 	"goyavision/internal/port"
 )
 
@@ -30,13 +30,13 @@ func NewHTTPOperatorExecutor() *HTTPOperatorExecutor {
 }
 
 // Execute 执行算子
-func (e *HTTPOperatorExecutor) Execute(ctx context.Context, operator *domain.Operator, input *domain.OperatorInput) (*domain.OperatorOutput, error) {
-	if operator == nil {
+func (e *HTTPOperatorExecutor) Execute(ctx context.Context, op *operator.Operator, input *operator.Input) (*operator.Output, error) {
+	if op == nil {
 		return nil, fmt.Errorf("operator is nil")
 	}
 
 	if input == nil {
-		input = &domain.OperatorInput{}
+		input = &operator.Input{}
 	}
 
 	requestBody, err := json.Marshal(input)
@@ -44,7 +44,7 @@ func (e *HTTPOperatorExecutor) Execute(ctx context.Context, operator *domain.Ope
 		return nil, fmt.Errorf("failed to marshal input: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, operator.Method, operator.Endpoint, bytes.NewReader(requestBody))
+	req, err := http.NewRequestWithContext(ctx, op.Method, op.Endpoint, bytes.NewReader(requestBody))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -67,7 +67,7 @@ func (e *HTTPOperatorExecutor) Execute(ctx context.Context, operator *domain.Ope
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	var output domain.OperatorOutput
+	var output operator.Output
 	if err := json.Unmarshal(body, &output); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal output: %w", err)
 	}

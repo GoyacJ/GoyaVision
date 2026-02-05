@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+input=$(cat)
+
+prompt=$(echo "$input" | jq -r '.userPromptSubmit.prompt // ""')
+context=""
+
+if echo "$prompt" | grep -qi "API\|接口\|endpoint"; then
+  context="WORKSPACE_RULES: 修改/新增 API 时需更新 docs/api.md，并保持 /api/v1 前缀与统一错误响应。"
+elif echo "$prompt" | grep -qi "前端\|Vue\|组件\|UI"; then
+  context="WORKSPACE_RULES: 前端使用 Vue 3 + TS + Tailwind，优先复用 Gv 组件库与 design tokens。"
+elif echo "$prompt" | grep -qi "测试\|test"; then
+  context="WORKSPACE_RULES: 测试需覆盖核心逻辑，命名清晰，并避免依赖外部资源。"
+fi
+
+if [[ -n "$context" ]]; then
+  jq -n --arg ctx "$context" '{"cancel": false, "contextModification": $ctx}'
+else
+  echo '{"cancel": false}'
+fi

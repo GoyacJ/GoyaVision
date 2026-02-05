@@ -1,15 +1,14 @@
 package handler
 
 import (
+	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
-	"goyavision/config"
+	appdto "goyavision/internal/app/dto"
 	"goyavision/internal/api/dto"
-	"goyavision/internal/app"
-	"goyavision/internal/domain"
-	"goyavision/pkg/storage"
+	"goyavision/internal/domain/media"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -35,104 +34,96 @@ func inferProtocol(rawURL string) string {
 	return ""
 }
 
-func RegisterAsset(g *echo.Group, d Deps) {
-	svc := app.NewMediaAssetService(d.Repo)
-	h := assetHandler{
-		svc:         svc,
-		sourceSvc:   d.MediaSourceService,
-		cfg:         d.Cfg,
-		minioClient: d.MinIOClient,
-	}
-	g.GET("/assets", h.List)
-	g.POST("/assets", h.Create)
-	g.GET("/assets/:id", h.Get)
-	g.PUT("/assets/:id", h.Update)
-	g.DELETE("/assets/:id", h.Delete)
-	g.GET("/assets/:id/children", h.ListChildren)
-	g.GET("/assets/tags", h.GetAllTags) // 获取所有标签
+func RegisterAsset(g *echo.Group, h *Handlers) {
+	handler := &assetHandler{h: h}
+	g.GET("/assets", handler.List)
+	g.POST("/assets", handler.Create)
+	g.GET("/assets/:id", handler.Get)
+	g.PUT("/assets/:id", handler.Update)
+	g.DELETE("/assets/:id", handler.Delete)
+	g.GET("/assets/:id/children", handler.ListChildren)
+	g.GET("/assets/tags", handler.GetAllTags)
 }
 
 type assetHandler struct {
-	svc         *app.MediaAssetService
-	sourceSvc   *app.MediaSourceService
-	cfg         *config.Config
-	minioClient *storage.MinIOClient
+	h *Handlers
 }
 
 func (h *assetHandler) List(c echo.Context) error {
 	var query dto.AssetListQuery
 	if err := c.Bind(&query); err != nil {
-		return c.JSON(400, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid query parameters",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid query parameters")
 	}
 
-	req := &app.ListMediaAssetsRequest{
-		Limit:  query.Limit,
-		Offset: query.Offset,
+	q := appdto.ListAssetsQuery{
+		Pagination: appdto.Pagination{
+			Limit:  query.Limit,
+			Offset: query.Offset,
+		},
 	}
 
 	if query.Type != nil {
-		t := domain.AssetType(*query.Type)
-		req.Type = &t
+		t := media.AssetType(*query.Type)
+		q.Type = &t
 	}
 
 	if query.SourceType != nil {
-		st := domain.AssetSourceType(*query.SourceType)
-		req.SourceType = &st
+		st := media.AssetSourceType(*query.SourceType)
+		q.SourceType = &st
 	}
 
 	if query.SourceID != nil {
-		req.SourceID = query.SourceID
+		q.SourceID = query.SourceID
 	}
 
 	if query.ParentID != nil {
-		req.ParentID = query.ParentID
+		q.ParentID = query.ParentID
 	}
 
 	if query.Status != nil {
-		s := domain.AssetStatus(*query.Status)
-		req.Status = &s
+		s := media.AssetStatus(*query.Status)
+		q.Status = &s
 	}
 
 	if query.Tags != nil && *query.Tags != "" {
-		req.Tags = strings.Split(*query.Tags, ",")
+		q.Tags = strings.Split(*query.Tags, ",")
 	}
 
 	if query.From != nil {
 		t := time.Unix(*query.From, 0)
-		req.From = &t
+		q.From = &t
 	}
 
 	if query.To != nil {
 		t := time.Unix(*query.To, 0)
-		req.To = &t
+		q.To = &t
 	}
 
-	assets, total, err := h.svc.List(c.Request().Context(), req)
+	result, err := h.h.ListAssets.Handle(c.Request().Context(), q)
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(200, dto.AssetListResponse{
-		Items: dto.AssetsToResponse(assets, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL),
-		Total: total,
+	return c.JSON(http.StatusOK, dto.AssetListResponse{
+		Items: dto.AssetsToResponse(result.Items, h.h.Cfg.MinIO.Endpoint, h.h.Cfg.MinIO.BucketName, h.h.Cfg.MinIO.UseSSL),
+		Total: result.Total,
 	})
 }
 
 func (h *assetHandler) Create(c echo.Context) error {
 	var req dto.AssetCreateReq
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(400, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid request body",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
 	}
 
-	createReq := &app.CreateMediaAssetRequest{
-		Type:       domain.AssetType(req.Type),
-		SourceType: domain.AssetSourceType(req.SourceType),
+	status := media.AssetStatusPending
+	if req.Status != "" {
+		status = media.AssetStatus(req.Status)
+	}
+
+	cmd := appdto.CreateAssetCommand{
+		Type:       media.AssetType(req.Type),
+		SourceType: media.AssetSourceType(req.SourceType),
 		SourceID:   req.SourceID,
 		ParentID:   req.ParentID,
 		Name:       req.Name,
@@ -141,145 +132,130 @@ func (h *assetHandler) Create(c echo.Context) error {
 		Size:       req.Size,
 		Format:     req.Format,
 		Metadata:   req.Metadata,
-		Status:     domain.AssetStatusPending,
+		Status:     status,
 		Tags:       req.Tags,
 	}
-	if req.Status != "" {
-		createReq.Status = domain.AssetStatus(req.Status)
-	}
 
-	if req.Type == string(domain.AssetTypeStream) && req.SourceType == string(domain.AssetSourceLive) && h.sourceSvc != nil {
+	if req.Type == string(media.AssetTypeStream) && req.SourceType == string(media.AssetSourceLive) {
 		if req.StreamURL != "" {
-			src, err := h.sourceSvc.Create(c.Request().Context(), &app.CreateMediaSourceRequest{
+			srcCmd := appdto.CreateSourceCommand{
 				Name:     req.Name,
-				Type:     domain.SourceTypePull,
+				Type:     media.SourceTypePull,
 				URL:      req.StreamURL,
 				Protocol: inferProtocol(req.StreamURL),
 				Enabled:  true,
-			})
+			}
+			source, err := h.h.CreateSource.Handle(c.Request().Context(), srcCmd)
 			if err != nil {
 				return err
 			}
-			createReq.SourceID = &src.ID
-			createReq.Path = src.PathName
+			cmd.SourceID = &source.ID
+			cmd.Path = source.PathName
 		} else if req.SourceID != nil && req.Path == "" {
-			src, err := h.sourceSvc.Get(c.Request().Context(), *req.SourceID)
+			source, err := h.h.GetSource.Handle(c.Request().Context(), appdto.GetSourceQuery{ID: *req.SourceID})
 			if err != nil {
 				return err
 			}
-			createReq.Path = src.PathName
+			cmd.Path = source.PathName
 		}
 	}
 
-	asset, err := h.svc.Create(c.Request().Context(), createReq)
+	asset, err := h.h.CreateAsset.Handle(c.Request().Context(), cmd)
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(201, dto.AssetToResponse(asset, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL))
+	return c.JSON(http.StatusCreated, dto.AssetToResponse(asset, h.h.Cfg.MinIO.Endpoint, h.h.Cfg.MinIO.BucketName, h.h.Cfg.MinIO.UseSSL))
 }
 
 func (h *assetHandler) Get(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		return c.JSON(400, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid asset id",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid asset id")
 	}
 
-	asset, err := h.svc.Get(c.Request().Context(), id)
+	asset, err := h.h.GetAsset.Handle(c.Request().Context(), appdto.GetAssetQuery{ID: id})
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(200, dto.AssetToResponse(asset, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL))
+	return c.JSON(http.StatusOK, dto.AssetToResponse(asset, h.h.Cfg.MinIO.Endpoint, h.h.Cfg.MinIO.BucketName, h.h.Cfg.MinIO.UseSSL))
 }
 
 func (h *assetHandler) Update(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		return c.JSON(400, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid asset id",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid asset id")
 	}
 
 	var req dto.AssetUpdateReq
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(400, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid request body",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
 	}
 
-	updateReq := &app.UpdateMediaAssetRequest{
+	cmd := appdto.UpdateAssetCommand{
+		ID:       id,
 		Name:     req.Name,
 		Metadata: req.Metadata,
 	}
 
 	if req.Tags != nil {
 		tags := req.Tags
-		updateReq.Tags = &tags
+		cmd.Tags = &tags
 	}
 
 	if req.Status != nil {
-		s := domain.AssetStatus(*req.Status)
-		updateReq.Status = &s
+		s := media.AssetStatus(*req.Status)
+		cmd.Status = &s
 	}
 
-	asset, err := h.svc.Update(c.Request().Context(), id, updateReq)
+	asset, err := h.h.UpdateAsset.Handle(c.Request().Context(), cmd)
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(200, dto.AssetToResponse(asset, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL))
+	return c.JSON(http.StatusOK, dto.AssetToResponse(asset, h.h.Cfg.MinIO.Endpoint, h.h.Cfg.MinIO.BucketName, h.h.Cfg.MinIO.UseSSL))
 }
 
 func (h *assetHandler) Delete(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		return c.JSON(400, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid asset id",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid asset id")
 	}
 
-	if err := h.svc.Delete(c.Request().Context(), id); err != nil {
+	err = h.h.DeleteAsset.Handle(c.Request().Context(), appdto.DeleteAssetCommand{ID: id})
+	if err != nil {
 		return err
 	}
 
-	return c.NoContent(204)
+	return c.NoContent(http.StatusNoContent)
 }
 
 func (h *assetHandler) ListChildren(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		return c.JSON(400, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid asset id",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid asset id")
 	}
 
-	children, err := h.svc.ListChildren(c.Request().Context(), id)
+	result, err := h.h.ListAssetChildren.Handle(c.Request().Context(), appdto.ListAssetChildrenQuery{ParentID: id})
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(200, dto.AssetsToResponse(children, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL))
+	return c.JSON(http.StatusOK, dto.AssetsToResponse(result.Assets, h.h.Cfg.MinIO.Endpoint, h.h.Cfg.MinIO.BucketName, h.h.Cfg.MinIO.UseSSL))
 }
 
 func (h *assetHandler) GetAllTags(c echo.Context) error {
-	tags, err := h.svc.GetAllTags(c.Request().Context())
+	result, err := h.h.GetAssetTags.Handle(c.Request().Context(), appdto.GetAssetTagsQuery{})
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(200, map[string]interface{}{
-		"tags": tags,
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"tags": result.Tags,
 	})
 }

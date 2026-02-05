@@ -4,138 +4,133 @@ import (
 	"net/http"
 	"strings"
 
-	"goyavision/config"
+	appdto "goyavision/internal/app/dto"
 	"goyavision/internal/api/dto"
-	"goyavision/internal/app"
-	"goyavision/internal/domain"
+	"goyavision/internal/domain/media"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
-func RegisterSource(g *echo.Group, d Deps) {
-	if d.MediaSourceService == nil {
-		return
-	}
-	h := &sourceHandler{svc: d.MediaSourceService, cfg: d.Cfg}
-	g.GET("/sources", h.List)
-	g.POST("/sources", h.Create)
-	g.GET("/sources/:id", h.Get)
-	g.PUT("/sources/:id", h.Update)
-	g.DELETE("/sources/:id", h.Delete)
-	g.GET("/sources/:id/preview", h.GetPreview)
+func RegisterSource(g *echo.Group, h *Handlers) {
+	handler := &sourceHandler{h: h}
+	g.GET("/sources", handler.List)
+	g.POST("/sources", handler.Create)
+	g.GET("/sources/:id", handler.Get)
+	g.PUT("/sources/:id", handler.Update)
+	g.DELETE("/sources/:id", handler.Delete)
+	g.GET("/sources/:id/preview", handler.GetPreview)
 }
 
 type sourceHandler struct {
-	svc *app.MediaSourceService
-	cfg *config.Config
+	h *Handlers
 }
 
 func (h *sourceHandler) List(c echo.Context) error {
 	var query dto.SourceListQuery
 	if err := c.Bind(&query); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid query parameters",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid query parameters")
 	}
-	filter := domain.MediaSourceFilter{
-		Limit:  query.Limit,
-		Offset: query.Offset,
+
+	q := appdto.ListSourcesQuery{
+		Pagination: appdto.Pagination{
+			Limit:  query.Limit,
+			Offset: query.Offset,
+		},
 	}
 	if query.Type != nil {
-		t := domain.SourceType(*query.Type)
-		filter.Type = &t
+		t := media.SourceType(*query.Type)
+		q.Type = &t
 	}
-	list, total, err := h.svc.List(c.Request().Context(), filter)
+
+	result, err := h.h.ListSources.Handle(c.Request().Context(), q)
 	if err != nil {
 		return err
 	}
+
 	return c.JSON(http.StatusOK, dto.SourceListResponse{
-		Items: dto.SourcesToResponse(list),
-		Total: total,
+		Items: dto.SourcesToResponse(result.Items),
+		Total: result.Total,
 	})
 }
 
 func (h *sourceHandler) Create(c echo.Context) error {
 	var req dto.SourceCreateReq
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid request body",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
 	}
-	createReq := &app.CreateMediaSourceRequest{
+
+	cmd := appdto.CreateSourceCommand{
 		Name:     req.Name,
-		Type:     domain.SourceType(req.Type),
+		Type:     media.SourceType(req.Type),
 		URL:      req.URL,
 		Protocol: req.Protocol,
 		Enabled:  req.Enabled,
 	}
-	src, err := h.svc.Create(c.Request().Context(), createReq)
+
+	source, err := h.h.CreateSource.Handle(c.Request().Context(), cmd)
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusCreated, dto.SourceToResponse(src))
+
+	return c.JSON(http.StatusCreated, dto.SourceToResponse(source))
 }
 
 func (h *sourceHandler) Get(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid source id",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid source id")
 	}
-	src, err := h.svc.Get(c.Request().Context(), id)
+
+	source, err := h.h.GetSource.Handle(c.Request().Context(), appdto.GetSourceQuery{ID: id})
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusOK, dto.SourceToResponse(src))
+
+	return c.JSON(http.StatusOK, dto.SourceToResponse(source))
 }
 
 func (h *sourceHandler) Update(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid source id",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid source id")
 	}
+
 	var req dto.SourceUpdateReq
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid request body",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
 	}
-	updateReq := &app.UpdateMediaSourceRequest{
+
+	cmd := appdto.UpdateSourceCommand{
+		ID:       id,
 		Name:     req.Name,
 		URL:      req.URL,
 		Protocol: req.Protocol,
 		Enabled:  req.Enabled,
 	}
-	src, err := h.svc.Update(c.Request().Context(), id, updateReq)
+
+	source, err := h.h.UpdateSource.Handle(c.Request().Context(), cmd)
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusOK, dto.SourceToResponse(src))
+
+	return c.JSON(http.StatusOK, dto.SourceToResponse(source))
 }
 
 func (h *sourceHandler) Delete(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid source id",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid source id")
 	}
-	if err := h.svc.Delete(c.Request().Context(), id); err != nil {
+
+	err = h.h.DeleteSource.Handle(c.Request().Context(), appdto.DeleteSourceCommand{ID: id})
+	if err != nil {
 		return err
 	}
+
 	return c.NoContent(http.StatusNoContent)
 }
 
@@ -143,21 +138,22 @@ func (h *sourceHandler) GetPreview(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid source id",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid source id")
 	}
-	src, err := h.svc.Get(c.Request().Context(), id)
+
+	source, err := h.h.GetSource.Handle(c.Request().Context(), appdto.GetSourceQuery{ID: id})
 	if err != nil {
 		return err
 	}
-	m := h.cfg.MediaMTX
+
+	src := source
+	m := h.h.Cfg.MediaMTX
 	baseHLS := strings.TrimSuffix(m.HLSAddress, "/")
 	baseRTSP := strings.TrimSuffix(m.RTSPAddress, "/")
 	baseRTMP := strings.TrimSuffix(m.RTMPAddress, "/")
 	baseWebRTC := strings.TrimSuffix(m.WebRTCAddress, "/")
 	pathName := src.PathName
+
 	resp := dto.SourcePreviewResponse{
 		PathName:  pathName,
 		HLSURL:    baseHLS + "/" + pathName + "/index.m3u8",
@@ -165,8 +161,9 @@ func (h *sourceHandler) GetPreview(c echo.Context) error {
 		RTMPURL:   baseRTMP + "/" + pathName,
 		WebRTCURL: baseWebRTC + "/" + pathName + "/whep",
 	}
-	if src.Type == domain.SourceTypePush {
+	if src.Type == media.SourceTypePush {
 		resp.PushURL = baseRTMP + "/" + pathName
 	}
+
 	return c.JSON(http.StatusOK, resp)
 }

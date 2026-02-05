@@ -36,10 +36,10 @@ const emit = defineEmits<CardEmits>()
 const cardClasses = computed(() => {
   const base = [
     'gv-card',
-    'rounded-xl overflow-hidden',
-    'transition-all duration-300'
+    'rounded-md overflow-hidden',  // 使用更克制的圆角
+    'transition-shadow duration-fast'  // 仅过渡阴影，更快速
   ]
-  
+
   // 阴影
   const shadowClasses = {
     none: '',
@@ -48,22 +48,22 @@ const cardClasses = computed(() => {
     lg: 'shadow-lg',
     xl: 'shadow-xl'
   }
-  
+
   // 背景色
   const backgroundClasses = {
     default: 'bg-white',
     container: 'bg-surface-container',
     transparent: 'bg-transparent'
   }
-  
+
   // 边框
   const borderClass = props.bordered ? 'border border-neutral-200' : ''
-  
-  // 悬停效果
+
+  // 悬停效果 - 仅增加阴影，移除平移动画
   const hoverClass = props.hoverable
-    ? 'hover:shadow-lg hover:-translate-y-1 cursor-pointer'
+    ? 'hover:shadow-lg cursor-pointer'
     : ''
-  
+
   return cn(
     base,
     shadowClasses[props.shadow],
@@ -81,11 +81,11 @@ const headerClasses = computed(() => {
     md: 'px-6 py-4',
     lg: 'px-8 py-5'
   }
-  
+
   return cn(
     'gv-card__header',
-    'border-b border-neutral-100',
-    'bg-gradient-to-r from-primary-50/30 to-secondary-50/30',
+    'border-b border-neutral-200',  // 使用更明显的边框
+    'bg-neutral-50',  // 纯色背景，移除渐变
     paddingClasses[props.padding]
   )
 })
@@ -128,19 +128,17 @@ const handleClick = (event: MouseEvent) => {
 </script>
 
 <style scoped>
-.gv-card {
-  backdrop-filter: blur(10px);
-}
+/* 移除毛玻璃效果，保持克制设计 */
 
 .dark .gv-card {
   @apply bg-surface-dark border-neutral-700;
 }
 
 .dark .gv-card__header {
-  @apply border-neutral-700 bg-gradient-to-r from-primary-950/30 to-secondary-950/30;
+  @apply border-neutral-700 bg-neutral-800;  /* 纯色背景 */
 }
 
 .dark .gv-card__footer {
-  @apply border-neutral-700 bg-neutral-800/50;
+  @apply border-neutral-700 bg-neutral-800;
 }
 </style>

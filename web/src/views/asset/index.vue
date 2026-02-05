@@ -88,7 +88,7 @@
               class="w-80"
               immediate
               :show-button="false"
-              @search="loadAssets"
+              @search="() => { pagination.page = 1 }"
             />
             <div class="view-switch-group">
               <button
@@ -116,15 +116,25 @@
         </div>
 
         <!-- 资产展示 -->
-        <div v-if="loading" class="flex justify-center items-center py-20">
-          <GvLoading />
-        </div>
-        <div v-else-if="assets.length === 0" class="text-center py-20">
-          <el-icon :size="64" class="text-neutral-300 mb-4">
-            <FolderOpened />
-          </el-icon>
-          <p class="text-text-tertiary">暂无资产</p>
-        </div>
+        <LoadingState v-if="loading" message="加载资产列表..." />
+
+        <ErrorState
+          v-else-if="error"
+          :error="error"
+          title="加载失败"
+          @retry="refreshTable"
+        />
+
+        <EmptyState
+          v-else-if="assets.length === 0"
+          icon="🎬"
+          title="还没有媒体资产"
+          description="开始上传您的第一个视频、图片或音频文件"
+          action-text="添加资产"
+          show-action
+          @action="showUploadDialog = true"
+        />
+
         <div v-else>
           <!-- 网格视图 -->
           <div v-if="viewMode === 'grid'" class="grid gap-4 mb-6" :class="gridClass">
@@ -197,7 +207,7 @@
           <div class="flex justify-end">
             <el-pagination
               v-model:current-page="pagination.page"
-              v-model:page-size="pagination.page_size"
+              v-model:page-size="pagination.pageSize"
               :page-sizes="[12, 24, 48, 96]"
               :total="pagination.total"
               layout="total, sizes, prev, pager, next, jumper"
@@ -486,11 +496,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type UploadFile, type UploadFiles } from 'element-plus'
 import { Upload, VideoCamera, Picture, Headset, Connection, Refresh, FolderOpened, Grid, List } from '@element-plus/icons-vue'
 import { assetApi, type MediaAsset, type AssetCreateReq, type AssetUpdateReq } from '@/api/asset'
 import { sourceApi } from '@/api/source'
+import { useTable, useAsyncData } from '@/composables'
 import GvContainer from '@/components/layout/GvContainer/index.vue'
 import GvCard from '@/components/base/GvCard/index.vue'
 import GvModal from '@/components/base/GvModal/index.vue'
@@ -507,12 +518,10 @@ import PageHeader from '@/components/business/PageHeader/index.vue'
 import SearchBar from '@/components/business/SearchBar/index.vue'
 import StatusBadge from '@/components/business/StatusBadge/index.vue'
 import AssetCard from '@/components/business/AssetCard/index.vue'
+import { LoadingState, ErrorState, EmptyState } from '@/components/common'
 
-const loading = ref(false)
+// UI 状态
 const uploading = ref(false)
-const tagsLoading = ref(false)
-const assets = ref<MediaAsset[]>([])
-const tags = ref<string[]>([])
 const showUploadDialog = ref(false)
 const showEditDialog = ref(false)
 const showViewDialog = ref(false)
@@ -528,15 +537,47 @@ const uploadFileList = ref<UploadFile[]>([])
 const selectedFile = ref<UploadFile | null>(null)
 const viewMode = ref<'grid' | 'list'>('grid')
 
+// 筛选参数
 const searchName = ref('')
 const selectedType = ref<string | null>(null)
 const selectedTag = ref<string | null>(null)
 
-const pagination = reactive({
-  page: 1,
-  page_size: 12,
-  total: 0
-})
+// 计算筛选参数
+const filterParams = computed(() => ({
+  name: searchName.value || undefined,
+  type: selectedType.value || undefined,
+  tags: selectedTag.value || undefined
+}))
+
+// 使用 useTable 管理资产列表
+const {
+  items: assets,
+  isLoading: loading,
+  error,
+  pagination,
+  goToPage,
+  changePageSize,
+  refreshTable
+} = useTable(
+  (params) => assetApi.list(params),
+  {
+    immediate: true,
+    initialPageSize: 12,
+    extraParams: filterParams
+  }
+)
+
+// 使用 useAsyncData 管理标签加载
+const {
+  data: tagsData,
+  isLoading: tagsLoading,
+  execute: loadTags
+} = useAsyncData(
+  () => assetApi.getTags(),
+  { immediate: true }
+)
+
+const tags = computed(() => tagsData.value?.data.tags || [])
 
 const uploadForm = reactive<AssetCreateReq>({
   type: 'video',
@@ -687,64 +728,22 @@ async function loadSources() {
   }
 }
 
-onMounted(() => {
-  loadAssets()
-  loadTags()
-})
-
-async function loadAssets() {
-  loading.value = true
-  try {
-    const response = await assetApi.list({
-      name: searchName.value || undefined,
-      type: selectedType.value as any,
-      tags: selectedTag.value || undefined,
-      page: pagination.page,
-      page_size: pagination.page_size
-    })
-    assets.value = response.data.items
-    pagination.total = response.data.total
-  } catch (error: any) {
-    ElMessage.error(error.response?.data?.message || '加载失败')
-  } finally {
-    loading.value = false
-  }
-}
-
-async function loadTags() {
-  tagsLoading.value = true
-  try {
-    const response = await assetApi.getTags()
-    tags.value = response.data.tags || []
-  } catch (error: any) {
-    ElMessage.error(error.response?.data?.message || '加载标签失败')
-  } finally {
-    tagsLoading.value = false
-  }
-}
 
 function handleTypeChange(type: string | null) {
   selectedType.value = type
   pagination.page = 1
-  loadAssets()
+  // useTable 监听 pagination.page 变化会自动重新加载
 }
 
 function handleTagChange(tag: string) {
   selectedTag.value = selectedTag.value === tag ? null : tag
   pagination.page = 1
-  loadAssets()
+  // useTable 监听 pagination.page 变化会自动重新加载
 }
 
-function handlePageChange(page: number) {
-  pagination.page = page
-  loadAssets()
-}
-
-function handleSizeChange(size: number) {
-  pagination.page_size = size
-  pagination.page = 1
-  loadAssets()
-}
+// 直接使用 useTable 提供的方法
+const handlePageChange = goToPage
+const handleSizeChange = changePageSize
 
 function handleFileChange(file: UploadFile, fileList: UploadFiles) {
   if (fileList.length > 0 && file.raw) {
@@ -824,7 +823,7 @@ async function handleUpload() {
       ElMessage.success('添加成功')
       showUploadDialog.value = false
       resetUploadForm()
-      loadAssets()
+      refreshTable()
       loadTags()
     } catch (error: any) {
       ElMessage.error(error.response?.data?.message || '添加失败')
@@ -873,7 +872,7 @@ async function handleUpdate() {
       await assetApi.update(currentAsset.value!.id, editForm)
       ElMessage.success('更新成功')
       showEditDialog.value = false
-      loadAssets()
+      refreshTable()
       loadTags()
     } catch (error: any) {
       ElMessage.error(error.response?.data?.message || '更新失败')
@@ -888,7 +887,7 @@ async function handleDelete(asset: MediaAsset) {
     })
     await assetApi.delete(asset.id)
     ElMessage.success('删除成功')
-    loadAssets()
+    refreshTable()
   } catch (error: any) {
     if (error !== 'cancel') {
       ElMessage.error(error.response?.data?.message || '删除失败')

@@ -4,3 +4,6 @@
 
 export * from './useTheme'
 export * from './useBreakpoint'
+export * from './useAsyncData'
+export * from './usePagination'
+export * from './useTable'

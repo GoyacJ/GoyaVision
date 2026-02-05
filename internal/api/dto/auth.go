@@ -3,7 +3,7 @@ package dto
 import (
 	"time"
 
-	"goyavision/internal/domain"
+	"goyavision/internal/domain/identity"
 
 	"github.com/google/uuid"
 )
@@ -72,7 +72,7 @@ type AppUserInfo struct {
 	Avatar      string
 	Roles       []string
 	Permissions []string
-	Menus       []*domain.Menu
+	Menus       []*identity.Menu
 }
 
 // UserInfoFromApp 从 AppUserInfo 转换
@@ -93,7 +93,7 @@ func UserInfoFromApp(u *AppUserInfo) *UserInfo {
 	}
 }
 
-func menusToSimple(menus []*domain.Menu) []*MenuSimple {
+func menusToSimple(menus []*identity.Menu) []*MenuSimple {
 	if menus == nil {
 		return nil
 	}
@@ -104,7 +104,7 @@ func menusToSimple(menus []*domain.Menu) []*MenuSimple {
 	return result
 }
 
-func menuToSimple(m *domain.Menu) *MenuSimple {
+func menuToSimple(m *identity.Menu) *MenuSimple {
 	if m == nil {
 		return nil
 	}
@@ -118,7 +118,7 @@ func menuToSimple(m *domain.Menu) *MenuSimple {
 		ParentID:   m.ParentID,
 		Code:       m.Code,
 		Name:       m.Name,
-		Type:       m.Type,
+		Type:       int(m.Type),
 		Path:       m.Path,
 		Icon:       m.Icon,
 		Component:  m.Component,

@@ -3,7 +3,7 @@ package dto
 import (
 	"time"
 
-	"goyavision/internal/domain"
+	"goyavision/internal/domain/identity"
 
 	"github.com/google/uuid"
 )
@@ -52,8 +52,8 @@ type PermissionSimple struct {
 	Name string    `json:"name"`
 }
 
-// RoleToResponse 将 domain.Role 转换为 RoleResponse
-func RoleToResponse(r *domain.Role) *RoleResponse {
+// RoleToResponse 将 identity.Role 转换为 RoleResponse
+func RoleToResponse(r *identity.Role) *RoleResponse {
 	if r == nil {
 		return nil
 	}
@@ -87,7 +87,7 @@ func RoleToResponse(r *domain.Role) *RoleResponse {
 }
 
 // RolesToResponse 批量转换
-func RolesToResponse(roles []*domain.Role) []*RoleResponse {
+func RolesToResponse(roles []*identity.Role) []*RoleResponse {
 	result := make([]*RoleResponse, len(roles))
 	for i, r := range roles {
 		result[i] = RoleToResponse(r)

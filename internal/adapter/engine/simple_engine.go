@@ -2,13 +2,13 @@ package engine
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
 	"time"
 
-	"goyavision/internal/domain"
+	"goyavision/internal/domain/operator"
+	"goyavision/internal/domain/workflow"
 	"goyavision/internal/port"
 
 	"github.com/google/uuid"
@@ -41,8 +41,8 @@ func NewSimpleWorkflowEngine(repo port.Repository, executor port.OperatorExecuto
 }
 
 // Execute 执行工作流
-func (e *SimpleWorkflowEngine) Execute(ctx context.Context, workflow *domain.Workflow, task *domain.Task) error {
-	if len(workflow.Nodes) == 0 {
+func (e *SimpleWorkflowEngine) Execute(ctx context.Context, wf *workflow.Workflow, task *workflow.Task) error {
+	if len(wf.Nodes) == 0 {
 		return errors.New("workflow has no nodes")
 	}
 
@@ -64,15 +64,15 @@ func (e *SimpleWorkflowEngine) Execute(ctx context.Context, workflow *domain.Wor
 	}()
 
 	now := time.Now()
-	task.Status = domain.TaskStatusRunning
+	task.Status = workflow.TaskStatusRunning
 	task.StartedAt = &now
 	task.Progress = 0
 	if err := e.repo.UpdateTask(ctx, task); err != nil {
 		return err
 	}
 
-	totalNodes := len(workflow.Nodes)
-	for i, node := range workflow.Nodes {
+	totalNodes := len(wf.Nodes)
+	for i, node := range wf.Nodes {
 		select {
 		case <-execCtx.Done():
 			return execCtx.Err()
@@ -96,29 +96,28 @@ func (e *SimpleWorkflowEngine) Execute(ctx context.Context, workflow *domain.Wor
 			continue
 		}
 
-		operator, err := e.repo.GetOperator(ctx, *node.OperatorID)
+		op, err := e.repo.GetOperator(ctx, *node.OperatorID)
 		if err != nil {
 			return fmt.Errorf("failed to get operator: %w", err)
 		}
 
-		var inputParams map[string]interface{}
-		if task.InputParams != nil && len(task.InputParams) > 0 {
-			if err := json.Unmarshal(task.InputParams, &inputParams); err != nil {
-				return fmt.Errorf("failed to unmarshal input params: %w", err)
-			}
+		inputParams := task.InputParams
+		if inputParams == nil {
+			inputParams = make(map[string]interface{})
 		}
 
-		input := &domain.OperatorInput{
-			Params: inputParams,
-		}
-
+		var assetID uuid.UUID
 		if task.AssetID != nil {
-			input.AssetID = *task.AssetID
+			assetID = *task.AssetID
+		}
+		input := &operator.Input{
+			AssetID: assetID,
+			Params:  inputParams,
 		}
 
-		output, err := e.executor.Execute(execCtx, operator, input)
+		output, err := e.executor.Execute(execCtx, op, input)
 		if err != nil {
-			return fmt.Errorf("failed to execute operator %s: %w", operator.Code, err)
+			return fmt.Errorf("failed to execute operator %s: %w", op.Code, err)
 		}
 
 		if err := e.saveArtifacts(ctx, task.ID, output); err != nil {
@@ -126,7 +125,7 @@ func (e *SimpleWorkflowEngine) Execute(ctx context.Context, workflow *domain.Wor
 		}
 	}
 
-	task.Status = domain.TaskStatusSuccess
+	task.Status = workflow.TaskStatusSuccess
 	task.Progress = 100
 	completedAt := time.Now()
 	task.CompletedAt = &completedAt
@@ -169,29 +168,24 @@ func (e *SimpleWorkflowEngine) GetProgress(ctx context.Context, taskID uuid.UUID
 }
 
 // saveArtifacts 保存产物
-func (e *SimpleWorkflowEngine) saveArtifacts(ctx context.Context, taskID uuid.UUID, output *domain.OperatorOutput) error {
+func (e *SimpleWorkflowEngine) saveArtifacts(ctx context.Context, taskID uuid.UUID, output *operator.Output) error {
 	if output == nil {
 		return nil
 	}
 
 	for _, asset := range output.OutputAssets {
-		data := map[string]interface{}{
-			"type":     asset.Type,
-			"path":     asset.Path,
-			"format":   asset.Format,
-			"metadata": asset.Metadata,
-		}
-
-		dataBytes, err := json.Marshal(data)
-		if err != nil {
-			return err
-		}
-
-		artifact := &domain.Artifact{
+		artifact := &workflow.Artifact{
 			TaskID: taskID,
-			Type:   domain.ArtifactTypeAsset,
+			Type:   workflow.ArtifactTypeAsset,
+			Data: &workflow.ArtifactData{
+				AssetInfo: &workflow.AssetInfo{
+					Type:     string(asset.Type),
+					Path:     asset.Path,
+					Format:   asset.Format,
+					Metadata: asset.Metadata,
+				},
+			},
 		}
-		artifact.Data = dataBytes
 
 		if err := e.repo.CreateArtifact(ctx, artifact); err != nil {
 			return err
@@ -199,20 +193,22 @@ func (e *SimpleWorkflowEngine) saveArtifacts(ctx context.Context, taskID uuid.UU
 	}
 
 	if len(output.Results) > 0 {
-		data := map[string]interface{}{
-			"results": output.Results,
+		results := make([]map[string]interface{}, len(output.Results))
+		for i, r := range output.Results {
+			results[i] = map[string]interface{}{
+				"type":       r.Type,
+				"data":       r.Data,
+				"confidence": r.Confidence,
+			}
 		}
 
-		dataBytes, err := json.Marshal(data)
-		if err != nil {
-			return err
-		}
-
-		artifact := &domain.Artifact{
+		artifact := &workflow.Artifact{
 			TaskID: taskID,
-			Type:   domain.ArtifactTypeResult,
+			Type:   workflow.ArtifactTypeResult,
+			Data: &workflow.ArtifactData{
+				Results: results,
+			},
 		}
-		artifact.Data = dataBytes
 
 		if err := e.repo.CreateArtifact(ctx, artifact); err != nil {
 			return err
@@ -220,20 +216,24 @@ func (e *SimpleWorkflowEngine) saveArtifacts(ctx context.Context, taskID uuid.UU
 	}
 
 	if len(output.Timeline) > 0 {
-		data := map[string]interface{}{
-			"timeline": output.Timeline,
+		timeline := make([]workflow.TimelineSegment, len(output.Timeline))
+		for i, t := range output.Timeline {
+			timeline[i] = workflow.TimelineSegment{
+				Start:      t.Start,
+				End:        t.End,
+				EventType:  t.EventType,
+				Confidence: t.Confidence,
+				Data:       t.Data,
+			}
 		}
 
-		dataBytes, err := json.Marshal(data)
-		if err != nil {
-			return err
-		}
-
-		artifact := &domain.Artifact{
+		artifact := &workflow.Artifact{
 			TaskID: taskID,
-			Type:   domain.ArtifactTypeTimeline,
+			Type:   workflow.ArtifactTypeTimeline,
+			Data: &workflow.ArtifactData{
+				Timeline: timeline,
+			},
 		}
-		artifact.Data = dataBytes
 
 		if err := e.repo.CreateArtifact(ctx, artifact); err != nil {
 			return err

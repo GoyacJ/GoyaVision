@@ -149,7 +149,6 @@ async function handleLogin() {
   position: absolute;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
   animation: float 20s infinite ease-in-out;
 }
 
@@ -191,7 +190,6 @@ async function handleLogin() {
   max-width: 100%;
   padding: 48px 40px;
   background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
   border-radius: 20px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   position: relative;

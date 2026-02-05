@@ -1,11 +1,10 @@
 package dto
 
 import (
-	"encoding/json"
 	"strings"
 	"time"
 
-	"goyavision/internal/domain"
+	"goyavision/internal/domain/storage"
 
 	"github.com/google/uuid"
 )
@@ -68,14 +67,14 @@ type FileListResponse struct {
 }
 
 // FileToResponse 转换为响应
-func FileToResponse(f *domain.File, minioEndpoint, minioBucket string, minioUseSSL bool) *FileResponse {
+func FileToResponse(f *storage.File, minioEndpoint, minioBucket string, minioUseSSL bool) *FileResponse {
 	if f == nil {
 		return nil
 	}
 
-	var metadata map[string]interface{}
-	if f.Metadata != nil && len(f.Metadata) > 0 {
-		json.Unmarshal(f.Metadata, &metadata)
+	metadata := f.Metadata
+	if metadata == nil {
+		metadata = make(map[string]interface{})
 	}
 
 	// 生成完整的文件 URL
@@ -108,7 +107,7 @@ func FileToResponse(f *domain.File, minioEndpoint, minioBucket string, minioUseS
 }
 
 // FilesToResponse 转换为响应列表
-func FilesToResponse(files []*domain.File, minioEndpoint, minioBucket string, minioUseSSL bool) []*FileResponse {
+func FilesToResponse(files []*storage.File, minioEndpoint, minioBucket string, minioUseSSL bool) []*FileResponse {
 	result := make([]*FileResponse, len(files))
 	for i, f := range files {
 		result[i] = FileToResponse(f, minioEndpoint, minioBucket, minioUseSSL)

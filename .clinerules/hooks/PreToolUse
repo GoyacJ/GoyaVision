@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+input=$(cat)
+
+tool_name=$(echo "$input" | jq -r '.preToolUse.toolName // ""')
+
+if [[ "$tool_name" != "write_to_file" && "$tool_name" != "replace_in_file" ]]; then
+  echo '{"cancel": false}'
+  exit 0
+fi
+
+file_path=$(echo "$input" | jq -r '.preToolUse.parameters.path // ""')
+
+if [[ -z "$file_path" ]]; then
+  echo '{"cancel": false}'
+  exit 0
+fi
+
+if [[ "$file_path" == internal/domain/* ]] && echo "$input" | jq -e '.preToolUse.parameters.content // empty' >/dev/null; then
+  context="DOMAIN_RULE: Domain 层不得依赖 adapter/api，确保纯业务模型。"
+  jq -n --arg ctx "$context" '{"cancel": false, "contextModification": $ctx}'
+  exit 0
+fi
+
+echo '{"cancel": false}'

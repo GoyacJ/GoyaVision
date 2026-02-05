@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+input=$(cat)
+
+task_id=$(echo "$input" | jq -r '.taskId // "unknown"')
+completion_log="$HOME/.cline_reports/goyavision-completions.log"
+mkdir -p "$(dirname "$completion_log")"
+
+echo "$(date -Iseconds): Task $task_id completed" >> "$completion_log"
+
+context="TASK_COMPLETED: 任务已完成，请确认是否需要更新 docs/development-progress.md 与 CHANGELOG.md。"
+jq -n --arg ctx "$context" '{"cancel": false, "contextModification": $ctx}'

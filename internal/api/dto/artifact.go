@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"goyavision/internal/domain"
+	"goyavision/internal/domain/workflow"
 
 	"github.com/google/uuid"
 )
@@ -47,14 +47,17 @@ type ArtifactListResponse struct {
 }
 
 // ArtifactToResponse 转换为响应
-func ArtifactToResponse(a *domain.Artifact, minioEndpoint, minioBucket string, minioUseSSL bool) *ArtifactResponse {
+func ArtifactToResponse(a *workflow.Artifact, minioEndpoint, minioBucket string, minioUseSSL bool) *ArtifactResponse {
 	if a == nil {
 		return nil
 	}
 
 	var data map[string]interface{}
-	if a.Data != nil && len(a.Data) > 0 {
-		json.Unmarshal(a.Data, &data)
+	if a.Data != nil {
+		dataBytes, err := json.Marshal(a.Data)
+		if err == nil {
+			json.Unmarshal(dataBytes, &data)
+		}
 	}
 
 	resp := &ArtifactResponse{
@@ -67,15 +70,11 @@ func ArtifactToResponse(a *domain.Artifact, minioEndpoint, minioBucket string, m
 		UpdatedAt: a.UpdatedAt,
 	}
 
-	if a.Asset != nil {
-		resp.Asset = AssetToResponse(a.Asset, minioEndpoint, minioBucket, minioUseSSL)
-	}
-
 	return resp
 }
 
 // ArtifactsToResponse 转换为响应列表
-func ArtifactsToResponse(artifacts []*domain.Artifact, minioEndpoint, minioBucket string, minioUseSSL bool) []*ArtifactResponse {
+func ArtifactsToResponse(artifacts []*workflow.Artifact, minioEndpoint, minioBucket string, minioUseSSL bool) []*ArtifactResponse {
 	result := make([]*ArtifactResponse, len(artifacts))
 	for i, a := range artifacts {
 		result[i] = ArtifactToResponse(a, minioEndpoint, minioBucket, minioUseSSL)

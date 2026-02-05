@@ -12,7 +12,7 @@
             placeholder="搜索算子"
             class="w-80"
             immediate
-            @search="loadOperators"
+            @search="() => { pagination.page = 1 }"
           />
           <GvButton @click="showCreateDialog = true">
             <template #icon>
@@ -29,12 +29,30 @@
       v-model="filters"
       :fields="filterFields"
       :loading="loading"
-      @filter="loadOperators"
+      @filter="() => { pagination.page = 1 }"
       @reset="handleResetFilter"
+    />
+
+    <ErrorState
+      v-if="error && !loading"
+      :error="error"
+      title="加载失败"
+      @retry="refreshTable"
+    />
+
+    <EmptyState
+      v-else-if="!loading && operators.length === 0"
+      icon="⚙️"
+      title="还没有算子"
+      description="添加 AI 算子以处理您的媒体资产"
+      action-text="添加算子"
+      show-action
+      @action="showCreateDialog = true"
     />
 
     <!-- 数据表格 -->
     <GvTable
+      v-else
       :data="operators"
       :columns="columns"
       :loading="loading"
@@ -184,10 +202,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { operatorApi, type Operator, type OperatorCreateReq } from '@/api/operator'
+import { useTable } from '@/composables'
 import GvContainer from '@/components/layout/GvContainer/index.vue'
 import GvTable from '@/components/base/GvTable/index.vue'
 import GvModal from '@/components/base/GvModal/index.vue'
@@ -200,12 +219,12 @@ import PageHeader from '@/components/business/PageHeader/index.vue'
 import FilterBar from '@/components/business/FilterBar/index.vue'
 import SearchBar from '@/components/business/SearchBar/index.vue'
 import StatusBadge from '@/components/business/StatusBadge/index.vue'
+import { ErrorState, EmptyState } from '@/components/common'
 import type { TableColumn } from '@/components/base/GvTable/types'
 import type { FilterField } from '@/components/business/FilterBar/types'
 
-const loading = ref(false)
+// UI 状态
 const creating = ref(false)
-const operators = ref<Operator[]>([])
 const showCreateDialog = ref(false)
 const showViewDialog = ref(false)
 const currentOperator = ref<Operator | null>(null)
@@ -219,11 +238,31 @@ const filters = ref({
   is_builtin: ''
 })
 
-const pagination = reactive({
-  page: 1,
-  page_size: 20,
-  total: 0
-})
+// 计算筛选参数
+const filterParams = computed(() => ({
+  keyword: searchKeyword.value || undefined,
+  category: filters.value.category || undefined,
+  status: filters.value.status || undefined,
+  is_builtin: filters.value.is_builtin ? filters.value.is_builtin === 'true' : undefined
+}))
+
+// 使用 useTable 管理算子列表
+const {
+  items: operators,
+  isLoading: loading,
+  error,
+  pagination,
+  goToPage,
+  changePageSize,
+  refreshTable
+} = useTable(
+  (params) => operatorApi.list(params),
+  {
+    immediate: true,
+    initialPageSize: 20,
+    extraParams: filterParams
+  }
+)
 
 const createForm = reactive<OperatorCreateReq>({
   code: '',
@@ -302,33 +341,10 @@ const columns: TableColumn[] = [
 
 const paginationConfig = computed(() => ({
   currentPage: pagination.page,
-  pageSize: pagination.page_size,
+  pageSize: pagination.pageSize,
   total: pagination.total
 }))
 
-onMounted(() => {
-  loadOperators()
-})
-
-async function loadOperators() {
-  loading.value = true
-  try {
-    const response = await operatorApi.list({
-      keyword: searchKeyword.value || undefined,
-      category: filters.value.category as any,
-      status: filters.value.status as any,
-      is_builtin: filters.value.is_builtin ? filters.value.is_builtin === 'true' : undefined,
-      page: pagination.page,
-      page_size: pagination.page_size
-    })
-    operators.value = response.data.items
-    pagination.total = response.data.total
-  } catch (error: any) {
-    ElMessage.error(error.response?.data?.message || '加载失败')
-  } finally {
-    loading.value = false
-  }
-}
 
 async function handleCreate() {
   if (!createFormRef.value) return
@@ -339,7 +355,7 @@ async function handleCreate() {
       await operatorApi.create(createForm)
       ElMessage.success('创建成功')
       showCreateDialog.value = false
-      loadOperators()
+      refreshTable()
     } catch (error: any) {
       ElMessage.error(error.response?.data?.message || '创建失败')
     } finally {
@@ -361,7 +377,7 @@ async function handleEnable(row: Operator) {
   try {
     await operatorApi.enable(row.id)
     ElMessage.success('启用成功')
-    loadOperators()
+    refreshTable()
   } catch (error: any) {
     ElMessage.error(error.response?.data?.message || '启用失败')
   }
@@ -371,7 +387,7 @@ async function handleDisable(row: Operator) {
   try {
     await operatorApi.disable(row.id)
     ElMessage.success('禁用成功')
-    loadOperators()
+    refreshTable()
   } catch (error: any) {
     ElMessage.error(error.response?.data?.message || '禁用失败')
   }
@@ -384,7 +400,7 @@ async function handleDelete(row: Operator) {
     })
     await operatorApi.delete(row.id)
     ElMessage.success('删除成功')
-    loadOperators()
+    refreshTable()
   } catch (error: any) {
     if (error !== 'cancel') {
       ElMessage.error(error.response?.data?.message || '删除失败')
@@ -392,20 +408,14 @@ async function handleDelete(row: Operator) {
   }
 }
 
-function handlePageChange(page: number) {
-  pagination.page = page
-  loadOperators()
-}
-
-function handleSizeChange(size: number) {
-  pagination.page_size = size
-  pagination.page = 1
-  loadOperators()
-}
+// 直接使用 useTable 提供的方法
+const handlePageChange = goToPage
+const handleSizeChange = changePageSize
 
 function handleResetFilter() {
   searchKeyword.value = ''
-  loadOperators()
+  pagination.page = 1
+  // useTable 监听 pagination.page 变化会自动重新加载
 }
 
 function getCategoryLabel(category: string) {
