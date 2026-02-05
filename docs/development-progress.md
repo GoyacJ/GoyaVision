@@ -48,6 +48,7 @@
 | 任务管理 | 任务列表、详情 | ✅ 已完成 | 重构完成 |
 | 产物页面 | 产物列表 | ✅ 已完成 | 已支持列表与详情 |
 | 系统管理页面 | 用户、角色、菜单、文件管理 | ✅ 已完成 | 文件管理已迁移至系统管理子菜单 |
+| 登录与鉴权体验 | Token 自动刷新、动态路由加载 | ✅ 已完成 | 统一 token_type 字段；自动刷新并重放请求；菜单驱动动态路由 |
 
 ### Phase 2：能力扩展
 
@@ -114,6 +115,12 @@
   - 新增 `.cursor/rules/development-workflow.mdc`：新需求前查阅文档、开发中遵循 rules/skills、完成后更新文档并提交
   - 新增 `.cursor/skills/development-workflow/SKILL.md`：开始开发 / 完成开发清单，可 @development-workflow 引用
   - 新增 `.cursor/hooks.json` 与 `hooks/finish-dev-reminder.sh`：任务结束（stop）时输出完成开发检查清单
+- [x] 更新 Cursor 配置符合官方规范（2026-02-06）
+  - ✅ 修正 Skills frontmatter（skill → name）
+  - ✅ 修正 Hooks 脚本路径（hooks/ → .cursor/hooks/）
+  - ✅ 创建 Cursor Commands（.cursor/commands/）
+  - ✅ 优化 Rules frontmatter（添加 globs 配置）
+  - ✅ 重新实现 stop hook 符合官方规范（JSON 输入/输出，followup_message）
   - 主规则 `goyavision.mdc` 增加「开发工作流」小节，引用上述规则与 Skill
 - [x] 建立 Cline 开发工作流规范（2026-02-05）
   - 新增 `.cline/rules/`：同步核心规则与前端规范（goyavision、development-workflow、frontend-components）

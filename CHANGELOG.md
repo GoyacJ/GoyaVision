@@ -11,6 +11,12 @@
 - 增加 Cline 规范目录（`.cline/`），同步 rules、skills、hooks 与 workflows，保持与 Cursor/Claude 规则一致
 - 文档补充：README/architecture/requirements/api/deployment/development-progress 中的配置、状态与端点描述与当前实现对齐
 - 配置体系升级：按环境加载 `config.<env>.yaml`，新增 `config.dev.yaml` / `config.prod.yaml` / `config.example.yaml` / `.env.example`，配置加载增加必填校验
+- 前端登录体验优化：自动刷新 access token 并重放请求，菜单驱动动态路由加载
+- **Cursor 配置符合官方规范**：更新 `.cursor/` 目录下的 rules、skills、commands、hooks 配置
+  - 修正 Skills frontmatter 字段（skill → name）
+  - 创建 Cursor Commands（.cursor/commands/）：dev-start, dev-done, commit, context, api-doc, progress
+  - 优化 Rules frontmatter（添加 globs 配置，frontend-components.mdc 仅在前端文件时应用）
+  - 重新实现 stop hook 完全符合官方规范（JSON 输入/输出，followup_message 自动触发）
 
 ### 修复
 - 修复任务与工作流 Handler 的返回值处理与重复赋值导致的 Go 编译错误
@@ -20,6 +26,12 @@
 - 修复 adapter/persistence 直接操作 Domain 结构体导致的 GORM 关系与 JSON 字段解析错误（改用 infra/persistence/repo）
 - 修正文档中的任务状态、媒体源类型/协议、配置字段与示例端点不一致的问题
 - 修复 .env 环境变量无法覆盖配置的问题（优先加载 `configs/.env`，支持下划线键映射）
+- 修复 JWT claims 字段不一致导致的 invalid token type 认证失败（统一 token_type）
+- **修复 Cursor Hooks 实现不符合官方规范**：重写 stop hook 脚本
+  - 修正脚本路径（hooks/ → .cursor/hooks/）
+  - 实现 JSON 输入/输出格式（从 stdin 读取，输出到 stdout）
+  - 添加 loop_count 限制检查（防止无限循环）
+  - 使用 followup_message 自动触发检查清单提醒
 
 ### Clean Architecture 重构 (Phase 5 完成 - DAG 引擎) - 2026-02-05
 
