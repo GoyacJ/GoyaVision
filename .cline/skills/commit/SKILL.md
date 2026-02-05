@@ -16,6 +16,8 @@ description: Git 提交规范指导（Conventional Commits）。用于提交前�
 <type>(<scope>): <subject>
 ```
 
+> 提交信息需使用中文描述。
+
 ### 类型
 - feat / fix / docs / refactor / test / chore / perf / style
 

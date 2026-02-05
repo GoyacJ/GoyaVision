@@ -1,6 +1,6 @@
 # 提交前检查与提交信息
 
-用于生成符合 Conventional Commits 的提交信息并进行简单检查。
+用于生成符合 Conventional Commits 的提交信息并进行简单检查（提交信息需使用中文描述）。
 
 ## 1. 查看当前变更
 
@@ -12,7 +12,7 @@ git status -sb
 
 ```xml
 <ask_followup_question>
-  <question>请提供本次变更类型（feat/fix/docs/refactor/test/chore/perf/style）与 scope（如 asset/workflow/ui），以及简要描述。</question>
+  <question>请提供本次变更类型（feat/fix/docs/refactor/test/chore/perf/style）与 scope（如 asset/workflow/ui），以及简要描述（中文）。</question>
 </ask_followup_question>
 ```
 

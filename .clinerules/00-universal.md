@@ -19,7 +19,7 @@
   - CHANGELOG.md（[未发布] 章节，按新增/变更/修复/弃用/移除/安全分类）
   - 如 API 变更：docs/api.md
   - 如设计/需求变更：docs/architecture.md 或 docs/requirements.md
-- 提交遵循 Conventional Commits：<type>(<scope>): <subject>
+- 提交遵循 Conventional Commits：<type>(<scope>): <subject>（提交信息需使用中文描述）
 
 ## 通用代码质量
 - 不吞错误，必须返回或记录。
