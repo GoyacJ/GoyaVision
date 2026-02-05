@@ -1,2 +1,20 @@
+.DS_Store
+.idea/
+.vscode/
 .env
 configs/.env
+*.log
+
+# Go build outputs
+bin/
+
+# Local data
+data/
+
+# Dependencies
+.pnpm-store/
+
+# Node/Vite
+web/node_modules/
+web/dist/
+web/.vite/
