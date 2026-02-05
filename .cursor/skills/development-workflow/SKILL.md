@@ -98,7 +98,7 @@ description: 开发工作流管理 - 开始开发前查阅文档，完成后更�
 **默认凭证**: admin / admin123
 **服务端口**: 8080 (API), 5432 (DB), 8554 (RTSP), 8888 (HLS)
 **构建命令**: `make build` (后端), `make build-web` (前端), `make build-all` (全部)
-**配置文件**: `configs/config.yaml`，环境变量前缀 `GOYAVISION_*`
+**配置文件**: `configs/config.<env>.yaml`，环境变量前缀 `GOYAVISION_*`
 
 ---
 

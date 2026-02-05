@@ -53,7 +53,7 @@
 **默认凭证**: admin / admin123
 **服务端口**: 8080 (API), 5432 (DB), 8554 (RTSP), 8888 (HLS)
 **构建命令**: `make build`, `make build-web`, `make build-all`
-**配置文件**: `configs/config.yaml`，环境变量前缀 `GOYAVISION_*`
+**配置文件**: `configs/config.<env>.yaml`，环境变量前缀 `GOYAVISION_*`
 
 ## 开始开发
 

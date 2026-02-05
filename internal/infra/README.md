@@ -67,7 +67,7 @@ defer reader.Close()
 url, err := storage.GetPresignedURL(ctx, "goya-vision", "media/video.mp4", 15*time.Minute)
 ```
 
-**配置** (configs/config.yaml):
+**配置** (configs/config.<env>.yaml):
 
 ```yaml
 minio:
@@ -126,7 +126,7 @@ if err != nil {
 newTokenPair, err := tokenService.RefreshTokenPair(refreshToken)
 ```
 
-**配置** (configs/config.yaml):
+**配置** (configs/config.<env>.yaml):
 
 ```yaml
 jwt:

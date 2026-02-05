@@ -57,7 +57,7 @@ go run cmd/migrate/main.go
    - 请确保已备份重要数据
 
 4. **配置要求**
-   - 需要正确配置 `configs/config.yaml` 中的数据库连接
+  - 需要正确配置 `configs/config.<env>.yaml` 中的数据库连接
    - 或通过环境变量设置 `GOYAVISION_DB_DSN`
 
 ## 输出示例

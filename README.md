@@ -314,7 +314,7 @@ go build -o bin/goyavision ./cmd/server
 
 ## ⚙️ 配置说明
 
-### 主配置文件 `configs/config.yaml`
+### 主配置文件 `configs/config.<env>.yaml`
 
 ```yaml
 server:
@@ -437,7 +437,10 @@ goyavision/
 ├── cmd/server/              # 应用入口
 ├── config/                  # 配置结构定义
 ├── configs/                 # 配置文件
-│   ├── config.yaml          # 主配置
+│   ├── config.dev.yaml      # 开发配置
+│   ├── config.prod.yaml     # 生产配置
+│   ├── config.example.yaml  # 配置模板
+│   ├── .env.example         # 环境变量示例
 │   └── mediamtx.yml         # MediaMTX 配置模板
 ├── internal/
 │   ├── domain/              # 领域实体

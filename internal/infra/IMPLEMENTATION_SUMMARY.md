@@ -340,5 +340,5 @@ func TestEventBus_PublishAndSubscribe(t *testing.T) {
 
 - 详细使用指南: `internal/infra/README.md`
 - Port 接口定义: `internal/app/port/`
-- 配置文件: `configs/config.yaml`
+- 配置文件: `configs/config.<env>.yaml`
 - 项目架构: `docs/architecture.md`

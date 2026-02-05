@@ -11,7 +11,7 @@ paths:
 # 配置与运维规则
 
 ## 配置
-- 默认配置位于 configs/config.yaml，避免硬编码敏感信息。
+- 默认配置位于 configs/config.<env>.yaml，避免硬编码敏感信息。
 - 支持 GOYAVISION_* 环境变量覆盖，变更需同步文档。
 
 ## 部署与脚本

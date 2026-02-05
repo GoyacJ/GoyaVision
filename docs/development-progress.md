@@ -582,6 +582,7 @@
 
 | 日期 | 版本 | 变更内容 |
 |------|------|----------|
+| 2026-02-05 | V1.0 | **配置体系升级（阶段 1）**：按环境加载配置（`GOYAVISION_ENV` → `config.<env>.yaml`），新增 `config.dev.yaml` / `config.prod.yaml` / `config.example.yaml` / `.env.example`，配置加载增加必填校验与默认值；文档同步更新部署与架构说明。 |
 | 2026-02-05 | V1.0 | 修复任务与工作流 Handler 的返回值处理与重复赋值导致的 Go 编译错误；修复 API router/errors 类型引用与错误响应构建导致的编译错误；修复服务启动时 JWT 初始化调用与 UnitOfWork 类型不匹配导致的编译错误；修复 AutoMigrate 直接使用 Domain 结构体导致的 GORM 映射错误（改用 infra/persistence/model）；修复 adapter/persistence 直接操作 Domain 结构体导致的 GORM 关系与 JSON 字段解析错误（改用 infra/persistence/repo）。 |
 | 2026-02-05 | V1.0 | **Clean Architecture 重构完成 - 可立即发布**：确认集成测试不在当前范围，依赖注入组装已完成（Phase 7: 100%），所有核心架构目标达成；系统已具备生产环境运行条件，剩余优化项（Context 传播、Middleware 分离、次要 Handler 迁移）为增强性质，不阻塞发布；整体进度 95%（+5%），架构符合度 100%。**✅ 可立即发布 V1.0 正式版**。 |
 | 2026-02-05 | V1.0 | **Clean Architecture 重构 (Phase 5 完成 - DAG 引擎)**：实现完整的 DAG 工作流引擎（620 行），支持拓扑排序（Kahn 算法）、环路检测、并行节点执行、数据流传递、重试机制、超时控制；新增 dag_engine_test.go（690 行，14 个测试函数）和完整文档；集成到 cmd/server/main.go；性能提升：菱形工作流 25%，宽并行 73%；整体进度 90%（+5%），Phase 5: 100%。 |

@@ -79,70 +79,33 @@ psql -c "GRANT ALL PRIVILEGES ON DATABASE goyavision TO goyavision;"
 
 ## 配置
 
-### 配置文件
+### 配置结构
 
-编辑 `configs/config.yaml`：
+配置按环境隔离，使用 `GOYAVISION_ENV` 选择加载文件：
 
-```yaml
-server:
-  port: 8080
-
-db:
-  dsn: "host=localhost user=goyavision password=goyavision dbname=goyavision port=5432 sslmode=disable"
-
-ffmpeg:
-  bin: "ffmpeg"
-  max_record: 16
-  max_frame: 16
-
-preview:
-  provider: "mediamtx"
-  mediamtx_bin: "mediamtx"
-  max_preview: 10
-  hls_base: "/live"
-
-record:
-  base_path: "./data/recordings"
-  segment_sec: 300
-
-ai:
-  timeout: 10s
-  retry: 2
-
-jwt:
-  secret: "goyavision-secret-change-in-production"
-  expire: 2h
-  refresh_exp: 168h
-  issuer: "goyavision"
-
-mediamtx:
-  api_address: "http://localhost:9997"
-  rtsp_address: "rtsp://localhost:8554"
-  rtmp_address: "rtmp://localhost:1935"
-  hls_address: "http://localhost:8888"
-  webrtc_address: "http://localhost:8889"
-  playback_address: "http://localhost:9996"
-  record_path: "./data/recordings/%path/%Y-%m-%d_%H-%M-%S"
-  record_format: "fmp4"
-  segment_duration: "1h"
-
-minio:
-  endpoint: "localhost:9000"
-  access_key: "minioadmin"
-  secret_key: "minioadmin"
-  bucket_name: "goyavision"
-  use_ssl: false
+```
+configs/
+  ├── config.dev.yaml      # 开发环境默认
+  ├── config.prod.yaml     # 生产环境（建议配合环境变量）
+  ├── config.example.yaml  # 配置模板（可用于初始化）
+  └── .env.example         # 环境变量示例
 ```
 
 ### 环境变量
 
-所有配置项可通过环境变量覆盖（`GOYAVISION_` 前缀）：
+通过环境变量覆盖（`GOYAVISION_` 前缀）：
 
 ```bash
+export GOYAVISION_ENV=dev
 export GOYAVISION_DB_DSN="host=localhost user=goyavision password=goyavision dbname=goyavision port=5432 sslmode=disable"
-export GOYAVISION_SERVER_PORT=8080
-export GOYAVISION_FFMPEG_BIN="/usr/local/bin/ffmpeg"
+export GOYAVISION_JWT_SECRET="replace-with-secure-secret"
+export GOYAVISION_MEDIAMTX_API_ADDRESS="http://localhost:9997"
+export GOYAVISION_MINIO_ENDPOINT="localhost:9000"
+export GOYAVISION_MEDIAMTX_RECORD_PATH="./data/recordings/%path/%Y-%m-%d_%H-%M-%S"
+export GOYAVISION_MINIO_USE_SSL=false
 ```
+
+生产环境建议使用 `.env`（参考 `configs/.env.example`），并在配置文件中引用环境变量占位符（如 `config.prod.yaml`）。
 
 ## 运行
 
@@ -226,7 +189,7 @@ ALTER SYSTEM SET effective_cache_size = '1GB';
 
 ### FFmpeg 限制
 
-根据服务器性能调整 `config.yaml` 中的限制：
+根据服务器性能调整 `config.<env>.yaml` 中的限制：
 
 ```yaml
 ffmpeg:

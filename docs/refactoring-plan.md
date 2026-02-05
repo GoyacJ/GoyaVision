@@ -223,7 +223,10 @@ goyavision/
 ├── config/
 │   └── config.go                      # 配置加载
 ├── configs/
-│   ├── config.yaml
+│   ├── config.dev.yaml
+│   ├── config.prod.yaml
+│   ├── config.example.yaml
+│   ├── .env.example
 │   └── mediamtx.yml
 ├── web/                               # Vue 3 前端
 ├── embed.go                           # 前端嵌入

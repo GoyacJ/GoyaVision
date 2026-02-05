@@ -520,6 +520,7 @@ Artifact (产物)
 **位置**: `config/`、`configs/`
 
 - 使用 Viper 加载 YAML 配置
+- 按环境加载配置文件（`GOYAVISION_ENV=dev/prod` → `configs/config.<env>.yaml`）
 - 支持环境变量覆盖（`GOYAVISION_*` 前缀）
 - 配置结构体定义在 `config/config.go`
 
@@ -530,21 +531,21 @@ server:
   port: 8080
 
 db:
-  dsn: "host=localhost user=goyavision password=goyavision dbname=goyavision port=5432 sslmode=disable"
+  dsn: "${GOYAVISION_DB_DSN}"
 
 ffmpeg:
-  bin: "ffmpeg"
+  bin: "${GOYAVISION_FFMPEG_BIN}"
   max_record: 16
   max_frame: 16
 
 preview:
   provider: "mediamtx"
-  mediamtx_bin: "mediamtx"
+  mediamtx_bin: "${GOYAVISION_PREVIEW_MEDIAMTX_BIN}"
   max_preview: 10
   hls_base: "/live"
 
 record:
-  base_path: "./data/recordings"
+  base_path: "${GOYAVISION_RECORD_BASE_PATH}"
   segment_sec: 300
 
 ai:
@@ -552,28 +553,28 @@ ai:
   retry: 2
 
 jwt:
-  secret: "your-secret-key"
+  secret: "${GOYAVISION_JWT_SECRET}"
   expire: 2h
   refresh_exp: 168h
   issuer: "goyavision"
 
 mediamtx:
-  api_address: "http://localhost:9997"
-  rtsp_address: "rtsp://localhost:8554"
-  rtmp_address: "rtmp://localhost:1935"
-  hls_address: "http://localhost:8888"
-  webrtc_address: "http://localhost:8889"
-  playback_address: "http://localhost:9996"
-  record_path: "./data/recordings/%path/%Y-%m-%d_%H-%M-%S"
+  api_address: "${GOYAVISION_MEDIAMTX_API_ADDRESS}"
+  rtsp_address: "${GOYAVISION_MEDIAMTX_RTSP_ADDRESS}"
+  rtmp_address: "${GOYAVISION_MEDIAMTX_RTMP_ADDRESS}"
+  hls_address: "${GOYAVISION_MEDIAMTX_HLS_ADDRESS}"
+  webrtc_address: "${GOYAVISION_MEDIAMTX_WEBRTC_ADDRESS}"
+  playback_address: "${GOYAVISION_MEDIAMTX_PLAYBACK_ADDRESS}"
+  record_path: "${GOYAVISION_MEDIAMTX_RECORD_PATH}"
   record_format: "fmp4"
   segment_duration: "1h"
 
 minio:
-  endpoint: "localhost:9000"
-  access_key: "minioadmin"
-  secret_key: "minioadmin"
-  bucket_name: "goyavision"
-  use_ssl: false
+  endpoint: "${GOYAVISION_MINIO_ENDPOINT}"
+  access_key: "${GOYAVISION_MINIO_ACCESS_KEY}"
+  secret_key: "${GOYAVISION_MINIO_SECRET_KEY}"
+  bucket_name: "${GOYAVISION_MINIO_BUCKET_NAME}"
+  use_ssl: ${GOYAVISION_MINIO_USE_SSL}
 ```
 
 ## 进程管理

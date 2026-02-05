@@ -23,7 +23,7 @@
 
 - **internal/adapter/mediamtx/client.go**：MediaMTX HTTP API 客户端
 - **主要接口**：AddPath、GetPathConfig、PatchPath、DeletePath、ListPathConfigs、GetPath、ListPaths、IsPathReady、EnableRecording、DisableRecording、GetRecordings、ListRecordings、DeleteRecordingSegment 等
-- **configs/config.yaml**：`mediamtx` 段配置 api_address、rtsp_address、rtmp_address、hls_address、webrtc_address、playback_address、record_path、record_format、segment_duration
+- **configs/config.<env>.yaml**：`mediamtx` 段配置 api_address、rtsp_address、rtmp_address、hls_address、webrtc_address、playback_address、record_path、record_format、segment_duration
 
 ### 1.2 MediaMTX Path 与 URL 对应关系
 
@@ -84,7 +84,7 @@
 
 ### 2.4 录制与点播参数约定（与 config 一致）
 
-- **录制**：创建 path 时若开启录制，PatchPath 传 `RecordPath`、`RecordFormat`、`RecordSegmentDuration` 等与 **configs/config.yaml** 中 `mediamtx.record_path`、`mediamtx.record_format`、`mediamtx.segment_duration` 一致，或使用 MediaMTX 全局默认，避免与设计中的录制路径不一致。录制启停即 PatchPath 的 `record` 字段。
+- **录制**：创建 path 时若开启录制，PatchPath 传 `RecordPath`、`RecordFormat`、`RecordSegmentDuration` 等与 **configs/config.<env>.yaml** 中 `mediamtx.record_path`、`mediamtx.record_format`、`mediamtx.segment_duration` 一致，或使用 MediaMTX 全局默认，避免与设计中的录制路径不一致。录制启停即 PatchPath 的 `record` 字段。
 - **点播 URL**：按 MediaMTX Playback 文档与 config 的 `playback_address` 拼出，格式固定为 `{playback_address}/{path_name}/...?start={unix_ts}`（具体路径与参数以 MediaMTX 文档为准），在 API 文档中写明，实现时统一使用该格式。
 
 ---
@@ -147,7 +147,7 @@
 
 ### 5.1 配置
 
-- **configs/config.yaml** 中 `mediamtx` 段：api_address 用于后端调 MediaMTX API（建议仅内网可达）；hls_address、rtsp_address、rtmp_address、playback_address 等用于拼预览/推流/点播 URL。
+- **configs/config.<env>.yaml** 中 `mediamtx` 段：api_address 用于后端调 MediaMTX API（建议仅内网可达）；hls_address、rtsp_address、rtmp_address、playback_address 等用于拼预览/推流/点播 URL。
 - **录制与点播**：record_path、record_format、segment_duration 与 2.4 节约定一致，实现时与 MediaMTX 全局或 path 级配置对齐。
 
 ### 5.2 安全与鉴权
