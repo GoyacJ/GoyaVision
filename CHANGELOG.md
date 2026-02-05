@@ -17,6 +17,13 @@
   - 创建 Cursor Commands（.cursor/commands/）：dev-start, dev-done, commit, context, api-doc, progress
   - 优化 Rules frontmatter（添加 globs 配置，frontend-components.mdc 仅在前端文件时应用）
   - 重新实现 stop hook 完全符合官方规范（JSON 输入/输出，followup_message 自动触发）
+- **完善 Cursor 配置**：参考 `.clinerules/` 和 `.cline/` 补充完整配置
+  - 新增 Rules：backend-domain, backend-app, backend-adapter-api, testing, docs, config-ops（按文件路径自动应用）
+  - 新增 Skills：frontend-components, api-doc, commit, progress（Agent 自动调用）
+  - 新增 Hooks：preToolUse（检查 Domain 层依赖）、postToolUse（性能监控）、beforeSubmitPrompt（上下文注入）
+  - 新增 Commands：frontend-component（前端组件开发流程）
+  - 更新 goyavision.mdc：添加信息完整性与提问规范、通用代码质量要求
+  - 更新 development-workflow.mdc：引用新增的规则文件
 
 ### 修复
 - 修复任务与工作流 Handler 的返回值处理与重复赋值导致的 Go 编译错误

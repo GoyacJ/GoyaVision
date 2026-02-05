@@ -26,8 +26,15 @@ alwaysApply: true
 ## 2. 开发开始：使用 Rules 与 Skills
 
 - **始终遵循**本仓库的 Cursor Rules（`.cursor/rules/*.mdc`），尤其是：
-  - `goyavision.mdc`：分层、领域概念、算子协议、工作流引擎、Go/前端规范、错误处理、Git 提交规范
+  - `goyavision.mdc`：核心规则（分层、领域概念、算子协议、工作流引擎、信息完整性、通用代码质量）
+  - `development-workflow.mdc`：开发工作流规范（本文件）
+  - `backend-domain.mdc`：后端领域与端口层规则（Domain/Port 层）
+  - `backend-app.mdc`：后端应用层规则（App 层）
+  - `backend-adapter-api.mdc`：后端适配器与 API 层规则（Adapter/API 层）
   - `frontend-components.mdc`：前端组件与样式约定（涉及前端时）
+  - `testing.mdc`：测试规则（测试文件）
+  - `docs.mdc`：文档规则（文档文件）
+  - `config-ops.mdc`：配置与运维规则（配置文件、脚本）
 - **开发过程中**依据：
   - 项目文档（`docs/`、`CHANGELOG.md`）
   - 上述 Rules 与 Skills

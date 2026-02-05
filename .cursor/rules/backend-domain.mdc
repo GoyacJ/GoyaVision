@@ -1,0 +1,33 @@
+---
+description: 后端领域与端口层规则：Domain 和 Port 层的开发规范
+globs:
+  - "internal/domain/**"
+  - "internal/port/**"
+alwaysApply: false
+---
+
+# 后端领域与端口层规则
+
+## 分层边界
+
+- **Domain 层**：仅包含纯业务实体与验证逻辑，不依赖任何外部包
+- **Port 层**：只定义接口与类型，不引入 Adapter 具体实现
+- **禁止**：在 Domain/Port 引入 `internal/adapter` 或 `internal/api`
+
+## 领域建模
+
+- 实体名称与字段遵循现有命名：MediaSource、MediaAsset、Operator、Workflow、Task、Artifact、User、Role、Menu
+- 领域状态与枚举保持与现有常量一致，避免新增未经讨论的状态值
+- 涉及资产派生必须维护 `parent_id` 关系
+
+## 质量要求
+
+- 所有错误必须返回或记录，不吞错误
+- 所有可取消操作使用 `context.Context`
+- 实体方法保持纯函数特性，避免副作用
+
+## 端口接口设计
+
+- 接口命名清晰，表达意图而非实现细节
+- Repository 接口按实体分组，避免过度聚合
+- 接口方法签名使用 Domain 实体，不暴露基础设施细节

@@ -1,6 +1,25 @@
 {
   "version": 1,
   "hooks": {
+    "preToolUse": [
+      {
+        "command": ".cursor/hooks/pre-tool-use.sh",
+        "timeout": 5,
+        "matcher": "Write"
+      }
+    ],
+    "postToolUse": [
+      {
+        "command": ".cursor/hooks/post-tool-use.sh",
+        "timeout": 5
+      }
+    ],
+    "beforeSubmitPrompt": [
+      {
+        "command": ".cursor/hooks/before-submit-prompt.sh",
+        "timeout": 5
+      }
+    ],
     "stop": [
       {
         "command": ".cursor/hooks/finish-dev-reminder.sh",

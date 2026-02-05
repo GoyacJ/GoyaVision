@@ -1,0 +1,39 @@
+---
+description: 配置与运维规则：配置文件、部署脚本和命令入口的规范
+globs:
+  - "configs/**"
+  - "config/**"
+  - "docker-compose.yml"
+  - "Makefile"
+  - "scripts/**"
+  - "cmd/**"
+alwaysApply: false
+---
+
+# 配置与运维规则
+
+## 配置管理
+
+- 默认配置位于 `configs/config.<env>.yaml`，避免硬编码敏感信息
+- 支持 `GOYAVISION_*` 环境变量覆盖，变更需同步文档
+- 配置文件按环境分离（dev/prod/test）
+- 敏感信息（密码、密钥）使用环境变量，不提交到仓库
+
+## 部署与脚本
+
+- Docker Compose 变更需同步 `docs/DEPLOYMENT.md`
+- Makefile 或脚本变更需保持跨平台兼容（bash + macOS/zsh）
+- 脚本使用 `#!/usr/bin/env bash`，设置 `set -euo pipefail`
+- 脚本注释清晰，说明用途和参数
+
+## 命令入口
+
+- `cmd/` 仅作为应用入口或工具入口，保持简洁
+- 入口中依赖注入必须符合分层规则
+- 启动逻辑放在 `internal/app` 或 `internal/api`，不在 `cmd/` 中
+
+## 环境变量
+
+- 使用 `GOYAVISION_` 前缀避免冲突
+- 环境变量命名使用下划线（`GOYAVISION_DB_DSN`）
+- 提供 `.env.example` 文件作为模板

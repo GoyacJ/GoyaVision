@@ -122,6 +122,13 @@
   - ✅ 优化 Rules frontmatter（添加 globs 配置）
   - ✅ 重新实现 stop hook 符合官方规范（JSON 输入/输出，followup_message）
   - 主规则 `goyavision.mdc` 增加「开发工作流」小节，引用上述规则与 Skill
+- [x] 完善 Cursor 配置，参考 .clinerules/ 和 .cline/ 补充内容（2026-02-06）
+  - ✅ 新增 Rules：backend-domain, backend-app, backend-adapter-api, testing, docs, config-ops（按文件路径自动应用）
+  - ✅ 新增 Skills：frontend-components, api-doc, commit, progress（Agent 自动调用）
+  - ✅ 新增 Hooks：preToolUse（检查 Domain 层依赖）、postToolUse（性能监控）、beforeSubmitPrompt（上下文注入）
+  - ✅ 新增 Commands：frontend-component（前端组件开发流程）
+  - ✅ 更新 goyavision.mdc：添加信息完整性与提问规范、通用代码质量要求
+  - ✅ 更新 development-workflow.mdc：引用新增的规则文件
 - [x] 建立 Cline 开发工作流规范（2026-02-05）
   - 新增 `.cline/rules/`：同步核心规则与前端规范（goyavision、development-workflow、frontend-components）
   - 新增 `.cline/skills/`：同步 development-workflow 与 goyavision-context skills

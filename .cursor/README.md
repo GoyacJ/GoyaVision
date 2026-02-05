@@ -9,19 +9,33 @@
 ├── rules/              # 项目规则（Project Rules）
 │   ├── goyavision.mdc              # 核心项目规则（始终应用）
 │   ├── development-workflow.mdc    # 开发工作流规则（始终应用）
-│   └── frontend-components.mdc     # 前端组件规范（仅前端文件应用）
+│   ├── backend-domain.mdc          # 后端领域与端口层规则（Domain/Port 文件）
+│   ├── backend-app.mdc             # 后端应用层规则（App 文件）
+│   ├── backend-adapter-api.mdc     # 后端适配器与 API 层规则（Adapter/API 文件）
+│   ├── frontend-components.mdc     # 前端组件规范（前端文件）
+│   ├── testing.mdc                 # 测试规则（测试文件）
+│   ├── docs.mdc                    # 文档规则（文档文件）
+│   └── config-ops.mdc              # 配置与运维规则（配置文件）
 ├── skills/             # Agent Skills
 │   ├── development-workflow/       # 开发工作流技能
-│   └── goyavision-context/         # 项目上下文技能
+│   ├── goyavision-context/         # 项目上下文技能
+│   ├── frontend-components/        # 前端组件开发技能
+│   ├── api-doc/                    # API 文档更新技能
+│   ├── commit/                     # Git 提交规范技能
+│   └── progress/                    # 开发进度更新技能
 ├── commands/           # 自定义命令（Slash Commands）
 │   ├── dev-start.md    # 开始开发检查清单
 │   ├── dev-done.md     # 完成开发检查清单
 │   ├── commit.md       # Git 提交规范
 │   ├── context.md      # 项目上下文
 │   ├── api-doc.md      # API 文档更新指南
-│   └── progress.md     # 开发进度更新指南
+│   ├── progress.md     # 开发进度更新指南
+│   └── frontend-component.md       # 前端组件开发流程
 ├── hooks/              # Hooks 脚本
-│   └── finish-dev-reminder.sh      # 完成开发提醒脚本
+│   ├── finish-dev-reminder.sh      # 完成开发提醒脚本
+│   ├── pre-tool-use.sh            # 工具使用前检查
+│   ├── post-tool-use.sh           # 工具使用后检查
+│   └── before-submit-prompt.sh    # 提交 prompt 前注入上下文
 ├── hooks.json          # Hooks 配置
 └── README.md           # 本文件
 ```
@@ -36,7 +50,13 @@ Rules 提供系统级指令，指导 AI Agent 如何理解和编写代码。
 |---------|---------|------|
 | `goyavision.mdc` | Always Apply | 核心项目规则，每个会话都应用 |
 | `development-workflow.mdc` | Always Apply | 开发工作流规范，每个会话都应用 |
-| `frontend-components.mdc` | Apply to Specific Files | 仅在前端文件（`web/**/*.vue`, `web/**/*.ts`）时应用 |
+| `backend-domain.mdc` | Apply to Specific Files | Domain/Port 层文件（`internal/domain/**`, `internal/port/**`） |
+| `backend-app.mdc` | Apply to Specific Files | App 层文件（`internal/app/**`） |
+| `backend-adapter-api.mdc` | Apply to Specific Files | Adapter/API 层文件（`internal/adapter/**`, `internal/api/**`） |
+| `frontend-components.mdc` | Apply to Specific Files | 前端文件（`web/**/*.vue`, `web/**/*.ts`） |
+| `testing.mdc` | Apply to Specific Files | 测试文件（`**/*_test.go`, `**/*.test.ts`） |
+| `docs.mdc` | Apply to Specific Files | 文档文件（`docs/**`, `**/*.md`） |
+| `config-ops.mdc` | Apply to Specific Files | 配置文件（`configs/**`, `Makefile`, `docker-compose.yml`） |
 
 ### 规则格式
 
@@ -61,6 +81,10 @@ Skills 是可移植的知识包，Agent 可以根据上下文自动调用。
 |------|------|----------|
 | `development-workflow` | 开发工作流管理 | 开始/完成开发时 |
 | `goyavision-context` | 项目架构和上下文 | 需要了解项目结构、API、实体时 |
+| `frontend-components` | 前端组件开发指南 | 新增/修改 Vue 组件、页面、样式时 |
+| `api-doc` | API 文档更新指南 | 新增或修改 API 端点时 |
+| `commit` | Git 提交规范指导 | 提交前检查与撰写提交信息时 |
+| `progress` | 开发进度更新指南 | 更新开发进度文档时 |
 
 ### 技能格式
 
@@ -87,6 +111,7 @@ Commands 是可通过 `/` 前缀触发的自定义工作流。
 | `/context` | 项目上下文信息 | `/context` |
 | `/api-doc` | API 文档更新指南 | `/api-doc` |
 | `/progress` | 开发进度更新指南 | `/progress` |
+| `/frontend-component` | 前端组件开发流程 | `/frontend-component` |
 
 ### 命令格式
 
@@ -104,6 +129,9 @@ Hooks 允许在 Agent 循环的特定阶段执行自定义脚本，观察、控�
 
 ### 当前配置
 
+- **preToolUse hook**: 在工具使用前检查 Domain 层依赖规则
+- **postToolUse hook**: 在工具使用后检查性能（执行时间超过 5 秒时提醒）
+- **beforeSubmitPrompt hook**: 在提交 prompt 前根据内容注入相关上下文提醒
 - **stop hook**: 在 Agent 任务结束时触发 `finish-dev-reminder.sh`，自动显示完成开发检查清单
 
 ### Hooks 配置
@@ -114,6 +142,25 @@ Hooks 允许在 Agent 循环的特定阶段执行自定义脚本，观察、控�
 {
   "version": 1,
   "hooks": {
+    "preToolUse": [
+      {
+        "command": ".cursor/hooks/pre-tool-use.sh",
+        "timeout": 5,
+        "matcher": "Write"
+      }
+    ],
+    "postToolUse": [
+      {
+        "command": ".cursor/hooks/post-tool-use.sh",
+        "timeout": 5
+      }
+    ],
+    "beforeSubmitPrompt": [
+      {
+        "command": ".cursor/hooks/before-submit-prompt.sh",
+        "timeout": 5
+      }
+    ],
     "stop": [
       {
         "command": ".cursor/hooks/finish-dev-reminder.sh",
@@ -220,3 +267,11 @@ exit 0
   - 添加 Skills（development-workflow, goyavision-context）
   - 添加 Commands（dev-start, dev-done, commit, context, api-doc, progress）
   - 配置 Hooks（stop hook 用于完成开发提醒）
+
+- **2024-02-06**: 完善配置，参考 .clinerules/ 和 .cline/ 补充内容
+  - 新增 Rules：backend-domain, backend-app, backend-adapter-api, testing, docs, config-ops
+  - 新增 Skills：frontend-components, api-doc, commit, progress
+  - 新增 Hooks：preToolUse, postToolUse, beforeSubmitPrompt
+  - 新增 Commands：frontend-component
+  - 更新 goyavision.mdc：添加信息完整性与提问规范、通用代码质量
+  - 更新 development-workflow.mdc：引用新增的规则文件
