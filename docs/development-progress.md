@@ -131,6 +131,18 @@
   - ✅ 新增 Commands：frontend-component（前端组件开发流程）
   - ✅ 更新 goyavision.mdc：添加信息完整性与提问规范、通用代码质量要求
   - ✅ 更新 development-workflow.mdc：引用新增的规则文件
+- [x] 完善 Claude Code 配置（2026-02-06）
+  - ✅ 增强 CLAUDE.md 项目指南（Claude Code 使用此文件作为项目指令）
+  - ✅ 添加信息完整性与提问规范（何时提问、提问标准、禁止行为）
+  - ✅ 添加 App 层 CQRS 结构详情（39 个 Command/Query Handler、Port 接口、服务列表）
+  - ✅ 添加前端 Composables 模式说明（useTable、useAsyncData、usePagination 及使用示例）
+  - ✅ 增强开发工作流章节（Pre-Development、During Development、Post-Development 详细步骤）
+  - ✅ 添加常见开发模式（创建实体流程、执行工作流流程）
+  - ✅ 添加废弃概念说明（V1.0 不再使用的 Stream、Algorithm、AlgorithmBinding、InferenceResult）
+  - ✅ 添加 Claude Code vs Cursor/Cline 对比说明
+  - ✅ 完善配置章节（环境变量优先级、JWT 配置参数）
+  - ✅ 完善 DAG 工作流引擎细节（Kahn 算法、并行执行、错误处理）
+  - 注：.claude/commands/ 目录已有完整命令（goya-dev-start、goya-dev-done、goya-commit 等）
 - [x] 建立 Cline 开发工作流规范（2026-02-05）
   - 新增 `.cline/rules/`：同步核心规则与前端规范（goyavision、development-workflow、frontend-components）
   - 新增 `.cline/skills/`：同步 development-workflow 与 goyavision-context skills

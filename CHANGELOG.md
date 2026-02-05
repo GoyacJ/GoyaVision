@@ -29,6 +29,16 @@
   - 新增 Commands：frontend-component（前端组件开发流程）
   - 更新 goyavision.mdc：添加信息完整性与提问规范、通用代码质量要求
   - 更新 development-workflow.mdc：引用新增的规则文件
+- **完善 Claude Code 配置**：增强 CLAUDE.md 项目指南
+  - 添加信息完整性与提问规范（何时提问、提问标准、禁止行为）
+  - 添加 App 层 CQRS 结构详情（39 个 Command/Query Handler、Port 接口、服务列表）
+  - 添加前端 Composables 模式说明（useTable、useAsyncData、usePagination 及使用示例）
+  - 增强开发工作流章节（Pre-Development、During Development、Post-Development 详细步骤）
+  - 添加常见开发模式（创建实体流程、执行工作流流程）
+  - 添加废弃概念说明（V1.0 不再使用的 Stream、Algorithm、AlgorithmBinding、InferenceResult）
+  - 添加 Claude Code vs Cursor/Cline 对比说明
+  - 完善配置章节（环境变量优先级、JWT 配置参数）
+  - 完善 DAG 工作流引擎细节（Kahn 算法、并行执行、错误处理）
 
 ### 修复
 - 修复任务与工作流 Handler 的返回值处理与重复赋值导致的 Go 编译错误

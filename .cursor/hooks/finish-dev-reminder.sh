@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # GoyaVision 完成开发提醒 Hook
-# 在 Cursor Agent 任务结束（stop）时自动触发检查清单提醒
+# 在 Cursor Agent 任务结束（stop）时输出检查清单提示
 # 路径：.cursor/hooks/finish-dev-reminder.sh
 #
 # 符合 Cursor Hooks 官方规范：
 # - 从 stdin 读取 JSON 输入
 # - 输出 JSON 格式到 stdout
-# - 只在有未提交变更时使用 followup_message 触发提醒
+# - 只在有未提交变更时输出提示信息（不自动发送请求）
 
 set -euo pipefail
 
@@ -51,9 +51,9 @@ else
     has_changes=false
 fi
 
-# 只有在有未提交变更时才触发提醒
+# 只有在有未提交变更时才输出提示
 if [ "$has_changes" = false ]; then
-    # 没有变更，不输出 followup_message
+    # 没有变更，不输出提示
     echo '{}'
     exit 0
 fi
@@ -82,18 +82,10 @@ checklist_message="请完成以下开发后检查清单：
 详细步骤见: .cursor/skills/development-workflow/SKILL.md
 规则说明: .cursor/rules/development-workflow.mdc"
 
-# 输出 JSON 格式的响应
-if command -v jq >/dev/null 2>&1; then
-    # 使用 jq 确保 JSON 格式正确，并转义特殊字符
-    response=$(jq -n \
-        --arg msg "$checklist_message" \
-        '{followup_message: $msg}')
-    echo "$response"
-else
-    # 如果没有 jq，手动构建 JSON（转义特殊字符）
-    # 转义双引号、反斜杠和换行符
-    escaped_msg=$(echo "$checklist_message" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
-    echo "{\"followup_message\":\"$escaped_msg\"}"
-fi
+# 输出提示信息到 stderr（这样可以在日志中看到，但不会自动发送请求）
+echo "$checklist_message" >&2
+
+# 输出空 JSON（不包含 followup_message，因此不会自动发送请求）
+echo '{}'
 
 exit 0
