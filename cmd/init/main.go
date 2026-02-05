@@ -1,0 +1,539 @@
+package main
+
+import (
+	"context"
+	"flag"
+	"fmt"
+	"log"
+
+	"goyavision/config"
+	"goyavision/internal/adapter/persistence"
+	"goyavision/internal/domain/identity"
+	"goyavision/internal/infra/persistence/model"
+
+	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+)
+
+var (
+	dryRun = flag.Bool("dry-run", false, "只显示将要执行的操作，不实际执行")
+	force  = flag.Bool("force", false, "强制重新初始化（删除现有数据后重新创建）")
+)
+
+func main() {
+	flag.Parse()
+
+	log.Println("GoyaVision 数据库初始化工具 v1.0")
+	log.Println("====================================")
+
+	if *dryRun {
+		log.Println("⚠️  模拟运行模式（不会修改数据库）")
+	}
+
+	if *force {
+		log.Println("⚠️  强制模式：将删除现有数据后重新创建")
+	}
+
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("加载配置失败: %v", err)
+	}
+
+	if cfg.DB.DSN == "" {
+		log.Fatal("数据库 DSN 未配置")
+	}
+
+	db, err := gorm.Open(postgres.Open(cfg.DB.DSN), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Info),
+	})
+	if err != nil {
+		log.Fatalf("连接数据库失败: %v", err)
+	}
+
+	ctx := context.Background()
+
+	log.Println("\n📊 初始化计划:")
+	log.Println("1. 创建数据库表结构")
+	log.Println("2. 初始化权限数据")
+	log.Println("3. 初始化菜单数据")
+	log.Println("4. 初始化角色数据（超级管理员）")
+	log.Println("5. 初始化管理员用户")
+
+	if !confirm("\n是否继续？") && !*dryRun {
+		log.Println("已取消")
+		return
+	}
+
+	log.Println("\n开始初始化...")
+
+	if err := createTables(db); err != nil {
+		log.Fatalf("创建数据库表失败: %v", err)
+	}
+
+	if err := initPermissions(ctx, db); err != nil {
+		log.Fatalf("初始化权限失败: %v", err)
+	}
+
+	if err := initMenus(ctx, db); err != nil {
+		log.Fatalf("初始化菜单失败: %v", err)
+	}
+
+	if err := initRoles(ctx, db); err != nil {
+		log.Fatalf("初始化角色失败: %v", err)
+	}
+
+	if err := initAdminUser(ctx, db); err != nil {
+		log.Fatalf("初始化管理员用户失败: %v", err)
+	}
+
+	log.Println("\n✅ 数据库初始化完成！")
+	log.Println("\n默认管理员账号:")
+	log.Println("  用户名: admin")
+	log.Println("  密码: admin123")
+	log.Println("  ⚠️  生产环境请立即修改密码！")
+}
+
+func createTables(db *gorm.DB) error {
+	log.Println("\n[1/5] 创建数据库表结构")
+
+	if *dryRun {
+		log.Println("  （模拟运行，跳过实际创建）")
+		return nil
+	}
+
+	log.Println("  创建 V1.0 表结构...")
+	if err := persistence.AutoMigrate(db); err != nil {
+		return fmt.Errorf("AutoMigrate 失败: %w", err)
+	}
+
+	log.Println("  ✓ 已创建/更新以下表:")
+	log.Println("    - users, roles, permissions, menus")
+	log.Println("    - media_sources, media_assets")
+	log.Println("    - operators")
+	log.Println("    - workflows, workflow_nodes, workflow_edges")
+	log.Println("    - tasks, artifacts")
+	log.Println("    - files")
+
+	log.Println("✅ 数据库表结构创建完成")
+	return nil
+}
+
+func initPermissions(ctx context.Context, db *gorm.DB) error {
+	log.Println("\n[2/5] 初始化权限数据")
+
+	if *dryRun {
+		log.Println("  （模拟运行，跳过实际初始化）")
+		return nil
+	}
+
+	if *force {
+		log.Println("  清理现有权限...")
+		if err := db.Exec("DELETE FROM role_permissions").Error; err != nil {
+			log.Printf("  ⚠️  清理权限关联失败: %v", err)
+		}
+		if err := db.Exec("DELETE FROM permissions").Error; err != nil {
+			log.Printf("  ⚠️  清理权限失败: %v", err)
+		}
+	}
+
+	permissions := []struct {
+		Code        string
+		Name        string
+		Method      string
+		Path        string
+		Description string
+	}{
+		{"asset:list", "查看媒体资产列表", "GET", "/api/v1/assets", ""},
+		{"asset:create", "创建媒体资产", "POST", "/api/v1/assets", ""},
+		{"asset:update", "更新媒体资产", "PUT", "/api/v1/assets/*", ""},
+		{"asset:delete", "删除媒体资产", "DELETE", "/api/v1/assets/*", ""},
+		{"source:list", "查看媒体源列表", "GET", "/api/v1/sources", ""},
+		{"source:create", "创建媒体源", "POST", "/api/v1/sources", ""},
+		{"source:update", "更新媒体源", "PUT", "/api/v1/sources/*", ""},
+		{"source:delete", "删除媒体源", "DELETE", "/api/v1/sources/*", ""},
+		{"operator:list", "查看算子列表", "GET", "/api/v1/operators", ""},
+		{"operator:create", "创建算子", "POST", "/api/v1/operators", ""},
+		{"operator:update", "更新算子", "PUT", "/api/v1/operators/*", ""},
+		{"operator:delete", "删除算子", "DELETE", "/api/v1/operators/*", ""},
+		{"operator:enable", "启用算子", "PUT", "/api/v1/operators/*/enable", ""},
+		{"operator:disable", "禁用算子", "PUT", "/api/v1/operators/*/disable", ""},
+		{"workflow:list", "查看工作流列表", "GET", "/api/v1/workflows", ""},
+		{"workflow:create", "创建工作流", "POST", "/api/v1/workflows", ""},
+		{"workflow:update", "更新工作流", "PUT", "/api/v1/workflows/*", ""},
+		{"workflow:delete", "删除工作流", "DELETE", "/api/v1/workflows/*", ""},
+		{"workflow:enable", "启用工作流", "PUT", "/api/v1/workflows/*/enable", ""},
+		{"workflow:disable", "禁用工作流", "PUT", "/api/v1/workflows/*/disable", ""},
+		{"workflow:trigger", "触发工作流", "POST", "/api/v1/workflows/*/trigger", ""},
+		{"task:list", "查看任务列表", "GET", "/api/v1/tasks", ""},
+		{"task:create", "创建任务", "POST", "/api/v1/tasks", ""},
+		{"task:update", "更新任务", "PUT", "/api/v1/tasks/*", ""},
+		{"task:delete", "删除任务", "DELETE", "/api/v1/tasks/*", ""},
+		{"task:cancel", "取消任务", "POST", "/api/v1/tasks/*/cancel", ""},
+		{"artifact:list", "查看产物列表", "GET", "/api/v1/artifacts", ""},
+		{"artifact:delete", "删除产物", "DELETE", "/api/v1/artifacts/*", ""},
+		{"user:list", "查看用户列表", "GET", "/api/v1/users", ""},
+		{"user:create", "创建用户", "POST", "/api/v1/users", ""},
+		{"user:update", "更新用户", "PUT", "/api/v1/users/*", ""},
+		{"user:delete", "删除用户", "DELETE", "/api/v1/users/*", ""},
+		{"role:list", "查看角色列表", "GET", "/api/v1/roles", ""},
+		{"role:create", "创建角色", "POST", "/api/v1/roles", ""},
+		{"role:update", "更新角色", "PUT", "/api/v1/roles/*", ""},
+		{"role:delete", "删除角色", "DELETE", "/api/v1/roles/*", ""},
+		{"menu:list", "查看菜单列表", "GET", "/api/v1/menus", ""},
+		{"menu:create", "创建菜单", "POST", "/api/v1/menus", ""},
+		{"menu:update", "更新菜单", "PUT", "/api/v1/menus/*", ""},
+		{"menu:delete", "删除菜单", "DELETE", "/api/v1/menus/*", ""},
+		{"file:list", "查看文件列表", "GET", "/api/v1/files", ""},
+		{"file:create", "上传文件", "POST", "/api/v1/files", ""},
+		{"file:update", "更新文件", "PUT", "/api/v1/files/*", ""},
+		{"file:delete", "删除文件", "DELETE", "/api/v1/files/*", ""},
+		{"file:download", "下载文件", "GET", "/api/v1/files/*/download", ""},
+	}
+
+	addedPerms := 0
+	skippedPerms := 0
+	for _, p := range permissions {
+		var existing model.PermissionModel
+		err := db.WithContext(ctx).Where("code = ?", p.Code).First(&existing).Error
+		if err == nil {
+			if *force {
+				existing.Name = p.Name
+				existing.Method = p.Method
+				existing.Path = p.Path
+				existing.Description = p.Description
+				if err := db.WithContext(ctx).Save(&existing).Error; err != nil {
+					log.Printf("  ⚠️  更新权限失败 %s: %v", p.Code, err)
+				} else {
+					log.Printf("  ✓ 更新权限: %s", p.Name)
+				}
+			} else {
+				skippedPerms++
+			}
+			continue
+		}
+
+		perm := &model.PermissionModel{
+			ID:          uuid.New(),
+			Code:        p.Code,
+			Name:        p.Name,
+			Method:      p.Method,
+			Path:        p.Path,
+			Description: p.Description,
+		}
+		if err := db.WithContext(ctx).Create(perm).Error; err != nil {
+			log.Printf("  ⚠️  创建权限失败 %s: %v", p.Code, err)
+		} else {
+			addedPerms++
+			log.Printf("  ✓ 创建权限: %s", p.Name)
+		}
+	}
+
+	if skippedPerms > 0 {
+		log.Printf("  ⊙ 跳过已存在权限: %d 个", skippedPerms)
+	}
+	log.Printf("  ✓ 新增权限: %d 个", addedPerms)
+	log.Println("✅ 权限数据初始化完成")
+	return nil
+}
+
+func initMenus(ctx context.Context, db *gorm.DB) error {
+	log.Println("\n[3/5] 初始化菜单数据")
+
+	if *dryRun {
+		log.Println("  （模拟运行，跳过实际初始化）")
+		return nil
+	}
+
+	if *force {
+		log.Println("  清理现有菜单...")
+		if err := db.Exec("DELETE FROM role_menus").Error; err != nil {
+			log.Printf("  ⚠️  清理菜单关联失败: %v", err)
+		}
+		if err := db.Exec("DELETE FROM menus").Error; err != nil {
+			log.Printf("  ⚠️  清理菜单失败: %v", err)
+		}
+	}
+
+	menus := []struct {
+		ID         uuid.UUID
+		ParentID   *uuid.UUID
+		Code       string
+		Name       string
+		Type       int
+		Path       string
+		Icon       string
+		Component  string
+		Permission string
+		Sort       int
+		Visible    bool
+	}{
+		{uuid.MustParse("00000000-0000-0000-0000-000000000010"), nil, "asset", "媒体资产", 2, "/assets", "Files", "asset/index", "asset:list", 1, true},
+		{uuid.MustParse("00000000-0000-0000-0000-000000000011"), nil, "source", "媒体源", 2, "/sources", "VideoCamera", "source/index", "source:list", 2, true},
+		{uuid.MustParse("00000000-0000-0000-0000-000000000020"), nil, "operator", "算子管理", 2, "/operators", "Cpu", "operator/index", "operator:list", 3, true},
+		{uuid.MustParse("00000000-0000-0000-0000-000000000030"), nil, "workflow", "工作流", 2, "/workflows", "Connection", "workflow/index", "workflow:list", 4, true},
+		{uuid.MustParse("00000000-0000-0000-0000-000000000040"), nil, "task", "任务管理", 2, "/tasks", "List", "task/index", "task:list", 5, true},
+		{uuid.MustParse("00000000-0000-0000-0000-000000000001"), nil, "system", "系统管理", 1, "/system", "Setting", "", "", 100, true},
+		{uuid.MustParse("00000000-0000-0000-0000-000000000002"), ptrUUID("00000000-0000-0000-0000-000000000001"), "system:user", "用户管理", 2, "/system/user", "User", "system/user/index", "user:list", 1, true},
+		{uuid.MustParse("00000000-0000-0000-0000-000000000003"), ptrUUID("00000000-0000-0000-0000-000000000001"), "system:role", "角色管理", 2, "/system/role", "UserFilled", "system/role/index", "role:list", 2, true},
+		{uuid.MustParse("00000000-0000-0000-0000-000000000004"), ptrUUID("00000000-0000-0000-0000-000000000001"), "system:menu", "菜单管理", 2, "/system/menu", "Menu", "system/menu/index", "menu:list", 3, true},
+		{uuid.MustParse("00000000-0000-0000-0000-000000000005"), ptrUUID("00000000-0000-0000-0000-000000000001"), "system:file", "文件管理", 2, "/system/file", "Document", "system/file/index", "file:list", 4, true},
+	}
+
+	addedMenus := 0
+	skippedMenus := 0
+	for _, m := range menus {
+		var existing model.MenuModel
+		err := db.WithContext(ctx).Where("code = ?", m.Code).First(&existing).Error
+		if err == nil {
+			if *force {
+				existing.Name = m.Name
+				existing.Type = m.Type
+				existing.Path = m.Path
+				existing.Icon = m.Icon
+				existing.Component = m.Component
+				existing.Permission = m.Permission
+				existing.Sort = m.Sort
+				existing.Visible = m.Visible
+				existing.Status = int(identity.MenuStatusEnabled)
+				if err := db.WithContext(ctx).Save(&existing).Error; err != nil {
+					log.Printf("  ⚠️  更新菜单失败 %s: %v", m.Code, err)
+				} else {
+					log.Printf("  ✓ 更新菜单: %s", m.Name)
+				}
+			} else {
+				skippedMenus++
+			}
+			continue
+		}
+
+		menu := &model.MenuModel{
+			ID:         m.ID,
+			ParentID:   m.ParentID,
+			Code:       m.Code,
+			Name:       m.Name,
+			Type:       m.Type,
+			Path:       m.Path,
+			Icon:       m.Icon,
+			Component:  m.Component,
+			Permission: m.Permission,
+			Sort:       m.Sort,
+			Visible:    m.Visible,
+			Status:     int(identity.MenuStatusEnabled),
+		}
+		if err := db.WithContext(ctx).Create(menu).Error; err != nil {
+			log.Printf("  ⚠️  创建菜单失败 %s: %v", m.Code, err)
+		} else {
+			addedMenus++
+			log.Printf("  ✓ 创建菜单: %s", m.Name)
+		}
+	}
+
+	if skippedMenus > 0 {
+		log.Printf("  ⊙ 跳过已存在菜单: %d 个", skippedMenus)
+	}
+	log.Printf("  ✓ 新增菜单: %d 个", addedMenus)
+	log.Println("✅ 菜单数据初始化完成")
+	return nil
+}
+
+func initRoles(ctx context.Context, db *gorm.DB) error {
+	log.Println("\n[4/5] 初始化角色数据")
+
+	if *dryRun {
+		log.Println("  （模拟运行，跳过实际初始化）")
+		return nil
+	}
+
+	roleID := uuid.MustParse("00000000-0000-0000-0000-000000000100")
+	var existingRole model.RoleModel
+	err := db.WithContext(ctx).Where("code = ?", "super_admin").First(&existingRole).Error
+
+	if err == nil {
+		if *force {
+			log.Println("  更新超级管理员角色...")
+			existingRole.Name = "超级管理员"
+			existingRole.Description = "拥有所有权限"
+			existingRole.Status = int(identity.RoleStatusEnabled)
+			if err := db.WithContext(ctx).Save(&existingRole).Error; err != nil {
+				return fmt.Errorf("更新角色失败: %w", err)
+			}
+			log.Println("  ✓ 已更新超级管理员角色")
+		} else {
+			log.Println("  ⊙ 超级管理员角色已存在，跳过创建")
+		}
+	} else {
+		log.Println("  创建超级管理员角色...")
+		role := &model.RoleModel{
+			ID:          roleID,
+			Code:        "super_admin",
+			Name:        "超级管理员",
+			Description: "拥有所有权限",
+			Status:      int(identity.RoleStatusEnabled),
+		}
+		if err := db.WithContext(ctx).Create(role).Error; err != nil {
+			return fmt.Errorf("创建角色失败: %w", err)
+		}
+		log.Println("  ✓ 已创建超级管理员角色")
+	}
+
+	log.Println("  检查并分配权限和菜单...")
+	var superAdminRole model.RoleModel
+	if err := db.WithContext(ctx).Where("code = ?", "super_admin").First(&superAdminRole).Error; err != nil {
+		return fmt.Errorf("获取角色失败: %w", err)
+	}
+
+	if *force {
+		log.Println("  清理现有权限和菜单关联...")
+		db.Exec("DELETE FROM role_permissions WHERE role_model_id = ?", superAdminRole.ID)
+		db.Exec("DELETE FROM role_menus WHERE role_model_id = ?", superAdminRole.ID)
+	}
+
+	var allPermissions []model.PermissionModel
+	if err := db.WithContext(ctx).Find(&allPermissions).Error; err != nil {
+		return fmt.Errorf("查询权限失败: %w", err)
+	}
+
+	addedPerms := 0
+	for _, perm := range allPermissions {
+		var count int64
+		if err := db.WithContext(ctx).Table("role_permissions").
+			Where("role_model_id = ? AND permission_model_id = ?", superAdminRole.ID, perm.ID).
+			Count(&count).Error; err == nil && count == 0 {
+			if err := db.WithContext(ctx).Exec(
+				"INSERT INTO role_permissions (role_model_id, permission_model_id) VALUES (?, ?)",
+				superAdminRole.ID, perm.ID,
+			).Error; err != nil {
+				log.Printf("  ⚠️  分配权限失败 %s: %v", perm.Code, err)
+			} else {
+				addedPerms++
+			}
+		}
+	}
+	if addedPerms > 0 {
+		log.Printf("  ✓ 新增分配 %d 个权限", addedPerms)
+	}
+	log.Printf("  ✓ 权限总计: %d 个", len(allPermissions))
+
+	var allMenus []model.MenuModel
+	if err := db.WithContext(ctx).Find(&allMenus).Error; err != nil {
+		return fmt.Errorf("查询菜单失败: %w", err)
+	}
+
+	addedMenus := 0
+	for _, menu := range allMenus {
+		var count int64
+		if err := db.WithContext(ctx).Table("role_menus").
+			Where("role_model_id = ? AND menu_model_id = ?", superAdminRole.ID, menu.ID).
+			Count(&count).Error; err == nil && count == 0 {
+			if err := db.WithContext(ctx).Exec(
+				"INSERT INTO role_menus (role_model_id, menu_model_id) VALUES (?, ?)",
+				superAdminRole.ID, menu.ID,
+			).Error; err != nil {
+				log.Printf("  ⚠️  分配菜单失败 %s: %v", menu.Code, err)
+			} else {
+				addedMenus++
+			}
+		}
+	}
+	if addedMenus > 0 {
+		log.Printf("  ✓ 新增分配 %d 个菜单", addedMenus)
+	}
+	log.Printf("  ✓ 菜单总计: %d 个", len(allMenus))
+
+	log.Println("✅ 角色数据初始化完成")
+	return nil
+}
+
+func initAdminUser(ctx context.Context, db *gorm.DB) error {
+	log.Println("\n[5/5] 初始化管理员用户")
+
+	if *dryRun {
+		log.Println("  （模拟运行，跳过实际初始化）")
+		return nil
+	}
+
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000200")
+	var existingUser model.UserModel
+	err := db.WithContext(ctx).Where("username = ?", "admin").First(&existingUser).Error
+
+	if err == nil {
+		if *force {
+			log.Println("  更新管理员用户...")
+			hashedPassword, err := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+			if err != nil {
+				return fmt.Errorf("加密密码失败: %w", err)
+			}
+			existingUser.Password = string(hashedPassword)
+			existingUser.Nickname = "管理员"
+			existingUser.Status = int(identity.UserStatusEnabled)
+			if err := db.WithContext(ctx).Save(&existingUser).Error; err != nil {
+				return fmt.Errorf("更新用户失败: %w", err)
+			}
+
+		roleID := uuid.MustParse("00000000-0000-0000-0000-000000000100")
+		db.Exec("DELETE FROM user_roles WHERE user_model_id = ?", existingUser.ID)
+		if err := db.WithContext(ctx).Exec(
+			"INSERT INTO user_roles (user_model_id, role_model_id) VALUES (?, ?)",
+			existingUser.ID, roleID,
+		).Error; err != nil {
+			log.Printf("  ⚠️  分配角色失败: %v", err)
+		}
+			log.Println("  ✓ 已更新管理员用户")
+		} else {
+			log.Println("  ⊙ 管理员用户已存在，跳过创建")
+		}
+		return nil
+	}
+
+	log.Println("  创建管理员用户...")
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("加密密码失败: %w", err)
+	}
+
+	user := &model.UserModel{
+		ID:       userID,
+		Username: "admin",
+		Password: string(hashedPassword),
+		Nickname: "管理员",
+		Status:   int(identity.UserStatusEnabled),
+	}
+
+	if err := db.WithContext(ctx).Create(user).Error; err != nil {
+		return fmt.Errorf("创建用户失败: %w", err)
+	}
+
+	roleID := uuid.MustParse("00000000-0000-0000-0000-000000000100")
+	if err := db.WithContext(ctx).Exec(
+		"INSERT INTO user_roles (user_model_id, role_model_id) VALUES (?, ?)",
+		user.ID, roleID,
+	).Error; err != nil {
+		return fmt.Errorf("分配角色失败: %w", err)
+	}
+
+	log.Println("  ✓ 已创建管理员用户")
+	log.Println("✅ 管理员用户初始化完成")
+	return nil
+}
+
+func ptrUUID(s string) *uuid.UUID {
+	id := uuid.MustParse(s)
+	return &id
+}
+
+func confirm(msg string) bool {
+	if *dryRun {
+		return true
+	}
+
+	log.Print(msg + " [y/N]: ")
+	var response string
+	_, err := fmt.Scanln(&response)
+	if err != nil {
+		return false
+	}
+	return response == "y" || response == "Y"
+}

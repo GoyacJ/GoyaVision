@@ -8,6 +8,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Core Philosophy**: Business = Configuration, Capability = Plugin, Execution = Engine
 
+## Information Completeness and Questioning Rules
+
+Before executing any user request, perform an information completeness check:
+
+**When to ask clarifying questions:**
+- **Missing critical information**: If essential information needed to complete the task is missing, you MUST ask clarifying questions before proceeding
+- **Ambiguity exists**: If there are multiple reasonable interpretations or execution paths, you MUST point out the ambiguity and ask for user preference
+- **High-risk operations**: If continuing would lead to high-risk errors or irreversible consequences, you MUST confirm user intent first
+
+**Questioning standards:**
+- Ask only the minimum necessary questions at once (maximum 3)
+- Questions must be specific, actionable, and answerable - avoid vague questions
+- Do not repeat information already confirmed
+- When information is sufficient, execute the task directly without asking
+
+**Prohibited behaviors:**
+- Making assumptions when critical information is missing
+- Continuing to generate results blindly just to appear "helpful"
+
+This ensures quality and prevents mistakes caused by insufficient information.
+
 ## Build Commands
 
 ### Backend
@@ -100,6 +121,35 @@ internal/
 
 **When adding features**: Start with Domain entities → Port interfaces → App services → Adapter implementations → API handlers + DTOs.
 
+### App Layer Structure (CQRS)
+
+The application layer follows **CQRS (Command Query Responsibility Segregation)** pattern with 39 handlers:
+
+**Commands** (`internal/app/command/`) - Write operations:
+- Asset library: `create_source.go`, `update_source.go`, `delete_source.go`, `create_asset.go`, `update_asset.go`, `delete_asset.go`
+- Operator center: `create_operator.go`, `update_operator.go`, `delete_operator.go`, `enable_operator.go`
+- Task center: `create_workflow.go`, `update_workflow.go`, `delete_workflow.go`, `enable_workflow.go`, `create_task.go`, `start_task.go`, `update_task.go`, `complete_task.go`, `fail_task.go`, `cancel_task.go`
+- Auth: `login.go`
+
+**Queries** (`internal/app/query/`) - Read operations:
+- Asset library: `get_source.go`, `list_sources.go`, `get_asset.go`, `list_assets.go`, `get_asset_tags.go`, `list_asset_children.go`
+- Operator center: `get_operator.go`, `get_operator_by_code.go`, `list_operators.go`
+- Task center: `get_workflow.go`, `get_workflow_by_code.go`, `get_workflow_with_nodes.go`, `list_workflows.go`, `get_task.go`, `get_task_with_relations.go`, `get_task_stats.go`, `list_tasks.go`, `list_running_tasks.go`
+- Auth: `get_profile.go`
+
+**Ports** (`internal/app/port/`) - Application boundary interfaces:
+- `media_gateway.go` - MediaMTX gateway interface
+- `object_storage.go` - Object storage interface (MinIO/S3)
+- `token_service.go` - Token service interface
+- `event_bus.go` - Event bus interface
+- `unit_of_work.go` - Transaction management interface
+
+**Other services**:
+- `artifact.go` - Artifact management (query, association)
+- `file.go` - File management (upload, download, metadata)
+- `user_management.go` - User management service (CRUD, role assignment)
+- `workflow_scheduler.go` - Workflow scheduler (cron tasks, event triggers using gocron/v2)
+
 ## Core Concepts
 
 The system centers around a media processing pipeline:
@@ -139,16 +189,21 @@ All operators MUST follow this I/O contract:
 
 ## Configuration
 
-Primary config: `configs/config.<env>.yaml`
+Primary config: `configs/config.yaml` (default) or `configs/config.<env>.yaml` for environment-specific settings.
 
 Environment variable override pattern: `GOYAVISION_*` prefix
+- `GOYAVISION_ENV` - Environment (dev/prod/test)
 - `GOYAVISION_DB_DSN` - Database connection string
 - `GOYAVISION_JWT_SECRET` - JWT signing secret (CHANGE IN PRODUCTION!)
+- `GOYAVISION_JWT_ACCESS_EXPIRE` - Access token expiry (default: 2h)
+- `GOYAVISION_JWT_REFRESH_EXPIRE` - Refresh token expiry (default: 168h = 7 days)
 - `GOYAVISION_MEDIAMTX_API_ADDRESS` - MediaMTX API endpoint
 
 Default credentials:
 - Username: `admin`
 - Password: `admin123` (⚠️ Change immediately in production)
+
+**Configuration precedence**: Environment variables > config.<env>.yaml > config.yaml
 
 ## Key Technologies
 
@@ -192,6 +247,54 @@ The Vue 3 frontend is embedded into the Go binary via `//go:embed` in `embed.go`
 - `web/src/stores/` - Pinia stores (user, auth, permissions)
 - `web/src/api/` - API client modules per domain
 - `web/src/components/` - Reusable UI components
+- `web/src/composables/` - Reusable composition functions (Phase 2/3 refactoring)
+
+**Frontend Composables Pattern** (Phase 2/3):
+
+The frontend uses a unified composables pattern to eliminate repetitive state management code:
+
+- **`useAsyncData.ts`** - Generic async data fetching with loading/error/data states
+  - Handles API calls with automatic state management
+  - Supports immediate execution and manual refresh
+  - Provides `isLoading`, `error`, `data`, `execute()`
+
+- **`usePagination.ts`** - Pagination state management
+  - Manages `page`, `pageSize`, `total`
+  - Provides `goToPage()`, `prevPage()`, `nextPage()`, `changePageSize()`
+  - Computed properties: `totalPages`, `hasPrevPage`, `hasNextPage`, `startIndex`, `endIndex`
+
+- **`useTable.ts`** - Complete table data management (combines above two)
+  - Integrates `useAsyncData` + `usePagination`
+  - Automatically reloads on page/pageSize changes
+  - Supports reactive `extraParams` for filtering
+  - Reduces page code by 60-70%
+
+**Usage example**:
+```typescript
+const filterParams = computed(() => ({
+  keyword: searchKeyword.value || undefined,
+  status: selectedStatus.value || undefined
+}))
+
+const {
+  items,
+  isLoading,
+  error,
+  pagination,
+  goToPage,
+  changePageSize,
+  refreshTable
+} = useTable(
+  (params) => assetApi.list(params),
+  {
+    immediate: true,
+    initialPageSize: 20,
+    extraParams: filterParams
+  }
+)
+```
+
+This pattern has been applied to all 5 list pages (asset, source, operator, workflow, task) with significant code reduction and improved maintainability.
 
 ## Workflow Engine
 
@@ -209,26 +312,82 @@ Execution flow:
 
 Engine implementation: `internal/adapter/engine/simple_engine.go`
 
+**DAG execution details**:
+- Uses Kahn's algorithm for topological sorting
+- Supports parallel execution of independent nodes
+- Validates DAG for cycles before execution
+- Each node execution: `OperatorPort.Execute()` → Save `Artifact` → Pass to downstream
+- Retry mechanism with configurable attempts and timeout
+- Comprehensive error handling with task status updates
+
 ## Development Workflow
 
-**CRITICAL**: Before any coding, review:
-1. `docs/requirements.md` - Functional specifications
-2. `docs/architecture.md` - Detailed design decisions
-3. `docs/development-progress.md` - Current feature status
-4. `CHANGELOG.md` (especially `[未发布]` section) - Recent changes
-5. `.cursor/rules/goyavision.mdc` - Project rules and conventions
-6. `.cursor/rules/development-workflow.mdc` - Development process
+### Pre-Development (MUST DO)
 
-**After completing any feature or bug fix, MUST**:
-1. Update `docs/development-progress.md` - Mark status (✅/🚧/⏸️)
-2. Update `CHANGELOG.md` - Add entry under `[未发布]` by type (新增/变更/修复/弃用/移除/安全)
-3. Update API docs (`docs/api.md`) if endpoints changed
-4. Update architecture/requirements docs if design changed
-5. Commit with Conventional Commits format: `<type>(<scope>): <subject>`
+Before starting any new feature or bug fix:
 
-**Commit types**: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`, `style`
+1. **Read documentation in order** (use `/goya-dev-start` command):
+   - `docs/development-progress.md` - Check feature status (✅/🚧/⏸️), avoid duplicate work
+   - `CHANGELOG.md` - Focus on `[未发布]` section for recent changes
+   - `docs/requirements.md` - Confirm functional requirements and acceptance criteria
+   - `docs/architecture.md` - Understand layered architecture and dependency rules
+   - `docs/api.md` - Check existing endpoints to avoid duplication
 
-**Scopes**: `asset`, `operator`, `workflow`, `task`, `auth`, `api`, `ui`
+2. **Verify architectural constraints**:
+   - Domain → No external dependencies
+   - Port → May depend on Domain
+   - App → May depend on Domain + Port (NEVER Adapter)
+   - Adapter → Implements Port, may use Domain
+   - API → May depend on App + Port + Domain (NEVER Adapter directly)
+
+3. **Code style requirements**:
+   - Go: Use `gofmt`/`goimports`, no end-of-line comments
+   - Frontend: TypeScript strict mode, Vue 3 Composition API
+   - Error handling: Use `internal/api/errors.go` error types
+
+### During Development
+
+- Follow existing code patterns and naming conventions
+- Do not introduce new styles or patterns without discussion
+- Never swallow errors - all errors must be returned or logged
+- Use `context.Context` for cancellable operations
+- Always use DTOs in API layer - never expose domain entities directly
+- For frontend list pages, use the composables pattern (`useTable`, `useAsyncData`, `usePagination`)
+
+### Post-Development (MUST DO)
+
+After completing any feature or bug fix, execute in order (use `/goya-dev-done` command):
+
+1. **Update development progress**:
+   - Edit `docs/development-progress.md`
+   - Update feature status (✅ Completed / 🚧 In Progress / ⏸️ Pending / ⚠️ Blocked / 🔄 Refactoring)
+   - Add notes and completion dates for major features
+
+2. **Update changelog**:
+   - Edit `CHANGELOG.md` under `[未发布]` section
+   - Categorize by type: 新增 (feat) / 变更 (change) / 修复 (fix) / 弃用 (deprecated) / 移除 (removed) / 安全 (security)
+   - Write clear, user-facing descriptions
+
+3. **Update related documentation** (if applicable):
+   - If API changed: Update `docs/api.md` with request/response examples
+   - If architecture changed: Update `docs/architecture.md` or `docs/requirements.md`
+   - If user-facing: Update `README.md` or `docs/DEPLOYMENT.md`
+
+4. **Pre-commit checklist**:
+   - [ ] Code tested (unit tests or manual testing)
+   - [ ] All documentation updated
+   - [ ] Code formatted (`gofmt`/`goimports` or Prettier)
+   - [ ] No debug code (console.log, temporary comments)
+   - [ ] Linter errors fixed
+   - [ ] Commit message follows Conventional Commits format
+
+5. **Git commit** (use `/goya-commit` command):
+   - Format: `<type>(<scope>): <subject>` (subject in Chinese)
+   - Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`, `style`
+   - Scopes: `asset`, `operator`, `workflow`, `task`, `auth`, `api`, `ui`
+   - Example: `feat(asset): 实现媒体资产管理功能`
+
+**Enforcement**: Both AI agents and developers MUST follow steps 1-5 after any code changes. Skipping documentation updates or using non-standard commit messages is prohibited.
 
 ## Claude Code Commands
 
@@ -308,6 +467,108 @@ Claude Code provides custom commands in `.claude/commands/` to streamline your d
 
 These commands enforce the same development standards documented in `.cursor/skills/` but are optimized for Claude Code's command interface. See `.claude/commands/README.md` for more details.
 
+## Common Development Patterns
+
+### Creating a new entity
+
+Follow this sequence for maximum architecture compliance:
+
+1. **Domain entity** (`internal/domain/<module>/<entity>.go`):
+   ```go
+   type MediaAsset struct {
+       ID          uuid.UUID `gorm:"type:uuid;primary_key"`
+       Name        string
+       Type        string
+       // ... other fields
+       CreatedAt   time.Time
+       UpdatedAt   time.Time
+   }
+   ```
+
+2. **Port interface** (`internal/port/repository.go`):
+   ```go
+   type Repository interface {
+       // MediaAsset methods
+       CreateMediaAsset(ctx context.Context, asset *domain.MediaAsset) error
+       GetMediaAssetByID(ctx context.Context, id uuid.UUID) (*domain.MediaAsset, error)
+       // ... other methods
+   }
+   ```
+
+3. **App layer commands/queries** (`internal/app/command/` and `internal/app/query/`):
+   ```go
+   // command/create_asset.go
+   type CreateAssetCommand struct {
+       repo port.Repository
+   }
+   func (c *CreateAssetCommand) Execute(ctx context.Context, req CreateAssetRequest) (*domain.MediaAsset, error)
+
+   // query/get_asset.go
+   type GetAssetQuery struct {
+       repo port.Repository
+   }
+   func (q *GetAssetQuery) Execute(ctx context.Context, id uuid.UUID) (*domain.MediaAsset, error)
+   ```
+
+4. **Adapter implementation** (`internal/adapter/persistence/`):
+   ```go
+   func (r *repository) CreateMediaAsset(ctx context.Context, asset *domain.MediaAsset) error {
+       return r.db.WithContext(ctx).Create(asset).Error
+   }
+   ```
+
+5. **API layer** (`internal/api/`):
+   ```go
+   // dto/asset.go - Request/Response DTOs
+   type CreateAssetRequest struct {
+       Name string `json:"name" validate:"required"`
+       Type string `json:"type" validate:"required,oneof=video image audio"`
+   }
+
+   type AssetResponse struct {
+       ID   string `json:"id"`
+       Name string `json:"name"`
+       Type string `json:"type"`
+   }
+
+   // handler/asset.go - HTTP handlers
+   func (h *AssetHandler) Create(c echo.Context) error {
+       var req dto.CreateAssetRequest
+       // ... bind and validate
+       asset, err := h.createAssetCmd.Execute(c.Request().Context(), req)
+       // ... convert to DTO and return
+   }
+   ```
+
+6. **Router registration** (`internal/api/router.go`):
+   ```go
+   assets := authenticated.Group("/assets")
+   assets.POST("", handlers.Asset.Create)
+   assets.GET("/:id", handlers.Asset.GetByID)
+   ```
+
+### Executing a workflow
+
+1. Trigger activates → Call `command/create_task.go`
+2. Create Task → Save via `UnitOfWork` to database
+3. `WorkflowScheduler` dispatches → `WorkflowEngine.Execute()`
+4. Parse DAG → Topological sort (Kahn's algorithm)
+5. Execute nodes → `OperatorPort.Execute()` for each
+6. Save `Artifact` → `artifact.go` service handles storage
+7. Update Task status → `command/complete_task.go` or `command/fail_task.go`
+8. Return execution result
+
+## Deprecated Concepts (Do Not Use)
+
+V1.0 is a complete rewrite. These legacy concepts are NO LONGER VALID:
+
+- ❌ **`Stream`** - Replaced by `MediaSource`
+- ❌ **`Algorithm`** - Replaced by `Operator`
+- ❌ **`AlgorithmBinding`** - Replaced by `Workflow` (DAG-based)
+- ❌ **`InferenceResult`** - Replaced by `Artifact` (with multiple types)
+
+**Database migrations**: V1.0 uses entirely new table schemas. Legacy tables (`streams`, `algorithms`, `algorithm_bindings`, `inference_results`) are not compatible and must be migrated manually if needed.
+
 ## Code Style
 
 **Go**:
@@ -372,3 +633,17 @@ Project docs in `docs/`:
 - `DEPLOYMENT.md` - Deployment and operations guide
 
 Always keep documentation synchronized with code changes.
+
+## Claude Code vs Cursor/Cline
+
+This project supports multiple AI coding assistants with similar but adapted configurations:
+
+| Tool | Configuration Location | Notes |
+|------|----------------------|-------|
+| **Claude Code** | `.claude/commands/`, `CLAUDE.md` | This file (CLAUDE.md) serves as project instructions |
+| **Cursor** | `.cursor/rules/`, `.cursor/skills/`, `.cursor/hooks.json` | Full rules/skills/hooks system |
+| **Cline** | `.cline/skills/`, `.clinerules/` | Simplified rules and skills |
+
+**For Claude Code users**: All project rules, conventions, and workflows are documented in this file (CLAUDE.md). The custom commands in `.claude/commands/` provide quick access to common workflows. Use `/goya-dev-start` before beginning work and `/goya-dev-done` before committing.
+
+**Shared standards**: All tools follow the same development workflow, code style, commit format, and documentation requirements described in this file.
