@@ -27,6 +27,10 @@
 - 修正文档中的任务状态、媒体源类型/协议、配置字段与示例端点不一致的问题
 - 修复 .env 环境变量无法覆盖配置的问题（优先加载 `configs/.env`，支持下划线键映射）
 - 修复 JWT claims 字段不一致导致的 invalid token type 认证失败（统一 token_type）
+  - 后端：JWT Service 使用 `token_type` 字段替代 `type`，保持向后兼容（支持 LegacyType）
+  - 中间件：支持同时检查 `token_type` 和 `type` 字段，确保兼容性
+  - 前端：实现自动刷新 token 机制，401 时自动刷新并重放请求
+  - API 文档：添加 token_type 字段说明
 - **修复 Cursor Hooks 实现不符合官方规范**：重写 stop hook 脚本
   - 修正脚本路径（hooks/ → .cursor/hooks/）
   - 实现 JSON 输入/输出格式（从 stdin 读取，输出到 stdout）
