@@ -39,12 +39,24 @@ offset: 偏移量（默认 0）
 
 ### 错误响应
 
-所有错误响应遵循统一格式：
+API 统一返回错误信封，包含错误码、消息与请求追踪信息：
 
 ```json
 {
-  "error": "错误类型",
-  "message": "错误详情"
+  "code": 40000,
+  "message": "错误详情",
+  "details": {},
+  "request_id": "req-xxx",
+  "timestamp": 1700000000
+}
+```
+
+参数校验失败等基础错误可能返回简化格式：
+
+```json
+{
+  "error": "Bad Request",
+  "message": "invalid request body"
 }
 ```
 
@@ -634,26 +646,23 @@ DELETE /api/v1/workflows/:id
 #### 启用工作流
 
 ```http
-POST /api/v1/workflows/:id/activate
+POST /api/v1/workflows/:id/enable
 ```
 
-#### 暂停工作流
+#### 禁用工作流
 
 ```http
-POST /api/v1/workflows/:id/pause
+POST /api/v1/workflows/:id/disable
 ```
 
-#### 验证工作流
+#### 手动触发工作流
 
 ```http
-POST /api/v1/workflows/:id/validate
-```
+POST /api/v1/workflows/:id/trigger
+Content-Type: application/json
 
-**响应**：
-```json
 {
-  "valid": true,
-  "errors": []
+  "asset_id": "uuid"
 }
 ```
 
@@ -669,8 +678,7 @@ GET /api/v1/tasks?workflow_id=uuid&status=running&limit=20&offset=0
 
 **查询参数**：
 - `workflow_id`（可选）：工作流 ID
-- `status`（可选）：状态（pending、running、completed、failed、cancelled）
-- `trigger_type`（可选）：触发类型（manual、schedule、event）
+- `status`（可选）：状态（pending、running、success、failed、cancelled）
 - `from`（可选）：开始时间戳
 - `to`（可选）：结束时间戳
 - `limit`（可选）：每页数量
@@ -683,8 +691,7 @@ GET /api/v1/tasks?workflow_id=uuid&status=running&limit=20&offset=0
     {
       "id": "uuid",
       "workflow_id": "uuid",
-      "trigger_type": "schedule",
-      "input_assets": ["uuid1", "uuid2"],
+      "asset_id": "uuid",
       "status": "running",
       "progress": 50,
       "current_node": "node2",
@@ -706,8 +713,8 @@ Content-Type: application/json
 
 {
   "workflow_id": "uuid",
-  "trigger_type": "manual",
-  "input_assets": ["uuid1", "uuid2"]
+  "asset_id": "uuid",
+  "input_params": {}
 }
 ```
 
@@ -723,9 +730,9 @@ GET /api/v1/tasks/:id
   "id": "uuid",
   "workflow_id": "uuid",
   "workflow": {...},
-  "trigger_type": "manual",
-  "input_assets": [...],
-  "status": "completed",
+  "asset_id": "uuid",
+  "input_params": {},
+  "status": "success",
   "progress": 100,
   "current_node": null,
   "started_at": "2025-02-01T10:00:00Z",
@@ -742,30 +749,10 @@ GET /api/v1/tasks/:id
 POST /api/v1/tasks/:id/cancel
 ```
 
-#### 重试任务
+#### 获取任务统计
 
 ```http
-POST /api/v1/tasks/:id/retry
-```
-
-#### 获取任务日志
-
-```http
-GET /api/v1/tasks/:id/logs
-```
-
-**响应**：
-```json
-{
-  "logs": [
-    {
-      "timestamp": "2025-02-01T10:00:00Z",
-      "level": "info",
-      "node_id": "node1",
-      "message": "Starting node execution"
-    }
-  ]
-}
+GET /api/v1/tasks/stats
 ```
 
 ---

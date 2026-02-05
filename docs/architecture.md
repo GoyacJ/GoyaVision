@@ -51,7 +51,7 @@ MediaSource → MediaAsset → Operator → Artifact → MediaAsset
 **核心实体**:
 
 #### 媒体资产类
-- **MediaSource**：媒体源（流、上传）
+- **MediaSource**：媒体源（拉流、推流）
 - **MediaAsset**：媒体资产（视频、图片、音频）
 
 #### 算子与工作流类
@@ -172,7 +172,7 @@ type WorkflowEngine interface {
 - **TaskService**：任务管理
   - 任务创建与执行
   - 任务状态查询
-  - 任务控制（取消、重试）
+  - 任务控制（取消）
 - **Scheduler**：调度器
   - 定时任务调度（gocron）
   - 事件驱动调度
@@ -374,8 +374,8 @@ type WorkflowEngine interface {
 
 ```
 MediaSource (媒体源)
-  ├── type: pull, push, upload
-  ├── protocol: rtsp, rtmp, hls, webrtc, file
+  ├── type: pull, push
+  ├── protocol: rtsp, rtmp, hls, webrtc, srt
   └── status: ready, online, offline
 
 MediaAsset (媒体资产)
@@ -454,7 +454,7 @@ Workflow (工作流)
 
 Task (任务)
   ├── workflow_id: 关联工作流
-  ├── status: pending, running, completed, failed
+  ├── status: pending, running, success, failed, cancelled
   ├── progress: 0-100
   └── current_node: 当前执行节点
 
@@ -534,7 +534,18 @@ db:
 
 ffmpeg:
   bin: "ffmpeg"
+  max_record: 16
   max_frame: 16
+
+preview:
+  provider: "mediamtx"
+  mediamtx_bin: "mediamtx"
+  max_preview: 10
+  hls_base: "/live"
+
+record:
+  base_path: "./data/recordings"
+  segment_sec: 300
 
 ai:
   timeout: 10s
@@ -557,11 +568,12 @@ mediamtx:
   record_format: "fmp4"
   segment_duration: "1h"
 
-storage:
-  base_path: "./data"
-  recordings_path: "./data/recordings"
-  frames_path: "./data/frames"
-  uploads_path: "./data/uploads"
+minio:
+  endpoint: "localhost:9000"
+  access_key: "minioadmin"
+  secret_key: "minioadmin"
+  bucket_name: "goyavision"
+  use_ssl: false
 ```
 
 ## 进程管理
@@ -584,7 +596,7 @@ storage:
 
 ## 调度器
 
-**位置**: `internal/app/scheduler.go`
+**位置**: `internal/app/workflow_scheduler.go`
 
 - 使用 gocron/v2 管理定时任务
 - 支持触发器类型：

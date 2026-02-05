@@ -96,7 +96,7 @@ ffmpeg:
   max_frame: 16
 
 preview:
-  provider: "ffmpeg"
+  provider: "mediamtx"
   mediamtx_bin: "mediamtx"
   max_preview: 10
   hls_base: "/live"
@@ -108,6 +108,30 @@ record:
 ai:
   timeout: 10s
   retry: 2
+
+jwt:
+  secret: "goyavision-secret-change-in-production"
+  expire: 2h
+  refresh_exp: 168h
+  issuer: "goyavision"
+
+mediamtx:
+  api_address: "http://localhost:9997"
+  rtsp_address: "rtsp://localhost:8554"
+  rtmp_address: "rtmp://localhost:1935"
+  hls_address: "http://localhost:8888"
+  webrtc_address: "http://localhost:8889"
+  playback_address: "http://localhost:9996"
+  record_path: "./data/recordings/%path/%Y-%m-%d_%H-%M-%S"
+  record_format: "fmp4"
+  segment_duration: "1h"
+
+minio:
+  endpoint: "localhost:9000"
+  access_key: "minioadmin"
+  secret_key: "minioadmin"
+  bucket_name: "goyavision"
+  use_ssl: false
 ```
 
 ### 环境变量
@@ -173,14 +197,14 @@ sudo systemctl start goyavision
 ./data/
 ├── recordings/    # 录制文件
 ├── frames/        # 抽帧文件
-└── hls/           # HLS 预览文件
+└── uploads/       # 用户上传文件
 ```
 
 ## 验证部署
 
 1. **检查服务**：
    ```bash
-   curl http://localhost:8080/api/v1/streams
+   curl http://localhost:8080/api/v1/sources
    ```
 
 2. **访问 Web 界面**：

@@ -325,14 +325,25 @@ db:
 
 ffmpeg:
   bin: "ffmpeg"
+  max_record: 16
   max_frame: 16
+
+preview:
+  provider: "mediamtx"
+  mediamtx_bin: "mediamtx"
+  max_preview: 10
+  hls_base: "/live"
+
+record:
+  base_path: "./data/recordings"
+  segment_sec: 300
 
 ai:
   timeout: 10s
   retry: 2
 
 jwt:
-  secret: "your-secret-key-change-in-production"
+  secret: "goyavision-secret-change-in-production"
   expire: 2h
   refresh_exp: 168h
   issuer: "goyavision"
@@ -348,11 +359,12 @@ mediamtx:
   record_format: "fmp4"
   segment_duration: "1h"
 
-storage:
-  base_path: "./data"
-  recordings_path: "./data/recordings"
-  frames_path: "./data/frames"
-  uploads_path: "./data/uploads"
+minio:
+  endpoint: "localhost:9000"
+  access_key: "minioadmin"
+  secret_key: "minioadmin"
+  bucket_name: "goyavision"
+  use_ssl: false
 ```
 
 ### 环境变量覆盖
@@ -430,12 +442,22 @@ goyavision/
 ├── internal/
 │   ├── domain/              # 领域实体
 │   ├── port/                # 端口接口
-│   ├── app/                 # 应用服务
-│   ├── adapter/             # 适配器
-│   │   ├── persistence/     # 数据库
+│   ├── app/                 # 应用层（CQRS）
+│   │   ├── command/         # 命令处理器
+│   │   ├── query/           # 查询处理器
+│   │   ├── dto/             # 应用 DTO
+│   │   └── port/            # 出站端口
+│   ├── adapter/             # 适配器层
+│   │   ├── persistence/     # 旧版 Repository 兼容
 │   │   ├── mediamtx/        # MediaMTX 客户端
-│   │   ├── workflow/        # 工作流引擎
-│   │   └── ai/              # AI 推理
+│   │   └── engine/          # 工作流执行器
+│   ├── infra/               # 基础设施实现
+│   │   ├── auth/            # JWT 服务
+│   │   ├── engine/          # DAG 引擎
+│   │   ├── eventbus/        # 事件总线
+│   │   ├── mediamtx/        # MediaMTX 网关
+│   │   ├── minio/           # 对象存储
+│   │   └── persistence/     # 持久化模型/仓储
 │   └── api/                 # HTTP 层
 │       ├── handler/         # 请求处理
 │       ├── dto/             # 数据传输对象
@@ -463,6 +485,7 @@ goyavision/
 - [部署指南](docs/DEPLOYMENT.md) - 部署和运维
 - [变更日志](CHANGELOG.md) - 版本更新记录
 - [Cursor 开发工作流](.cursor/rules/development-workflow.mdc) - 新需求前查阅文档、开发中遵循 Rules/Skills、完成后更新文档并提交（配合 `.cursor/skills/development-workflow/SKILL.md` 与 `.cursor/hooks.json`）
+- [Cline 开发规则](.clinerules/00-universal.md) - Cline 专用规则、Hooks 与工作流（`.clinerules/` / `.cline/`）
 
 ## 🤝 贡献
 
