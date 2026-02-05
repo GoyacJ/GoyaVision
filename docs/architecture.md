@@ -521,7 +521,8 @@ Artifact (产物)
 
 - 使用 Viper 加载 YAML 配置
 - 按环境加载配置文件（`GOYAVISION_ENV=dev/prod` → `configs/config.<env>.yaml`）
-- 支持环境变量覆盖（`GOYAVISION_*` 前缀）
+- 启动时优先加载 `configs/.env`（最高优先级）
+- 支持环境变量覆盖（`GOYAVISION_*` 前缀，支持点号→下划线映射）
 - 配置结构体定义在 `config/config.go`
 
 **核心配置**：

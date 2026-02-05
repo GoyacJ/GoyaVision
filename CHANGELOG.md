@@ -19,6 +19,7 @@
 - 修复 AutoMigrate 直接使用 Domain 结构体导致的 GORM 映射错误（改用 infra/persistence/model）
 - 修复 adapter/persistence 直接操作 Domain 结构体导致的 GORM 关系与 JSON 字段解析错误（改用 infra/persistence/repo）
 - 修正文档中的任务状态、媒体源类型/协议、配置字段与示例端点不一致的问题
+- 修复 .env 环境变量无法覆盖配置的问题（优先加载 `configs/.env`，支持下划线键映射）
 
 ### Clean Architecture 重构 (Phase 5 完成 - DAG 引擎) - 2026-02-05
 

@@ -107,6 +107,9 @@ export GOYAVISION_MINIO_USE_SSL=false
 
 生产环境建议使用 `.env`（参考 `configs/.env.example`），并在配置文件中引用环境变量占位符（如 `config.prod.yaml`）。
 
+> 说明：启动时会优先加载 `configs/.env`（最高优先级），其变量会覆盖系统已有环境变量与 `config.<env>.yaml` 的值。
+> 环境变量键名支持 `GOYAVISION_SERVER_PORT` 这类下划线格式（对应 `server.port`）。
+
 ## 运行
 
 ### 开发模式
