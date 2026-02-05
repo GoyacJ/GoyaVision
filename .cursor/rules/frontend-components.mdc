@@ -1,3 +1,12 @@
+---
+description: GoyaVision 前端组件使用规范：Vue 3 组件、Element Plus、Tailwind CSS 使用指南
+globs:
+  - "web/**/*.vue"
+  - "web/**/*.ts"
+  - "web/**/*.tsx"
+alwaysApply: false
+---
+
 # GoyaVision 前端组件使用规范
 
 > 本文档为 AI 辅助开发提供组件调用指南

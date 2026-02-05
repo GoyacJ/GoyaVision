@@ -1,5 +1,5 @@
 ---
-skill: development-workflow
+name: development-workflow
 description: 开发工作流管理 - 开始开发前查阅文档，完成后更新文档并规范提交
 ---
 

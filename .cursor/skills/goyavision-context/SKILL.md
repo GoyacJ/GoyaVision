@@ -1,5 +1,5 @@
 ---
-skill: goyavision-context
+name: goyavision-context
 description: 获取 GoyaVision 项目架构、核心概念、API 端点和开发状态的完整上下文
 ---
 

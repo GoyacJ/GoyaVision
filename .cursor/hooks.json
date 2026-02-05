@@ -3,7 +3,9 @@
   "hooks": {
     "stop": [
       {
-        "command": "hooks/finish-dev-reminder.sh"
+        "command": ".cursor/hooks/finish-dev-reminder.sh",
+        "timeout": 10,
+        "loop_limit": 5
       }
     ]
   }
