@@ -48,7 +48,9 @@
 | 任务管理 | 任务列表、详情 | ✅ 已完成 | 重构完成 |
 | 产物页面 | 产物列表 | ✅ 已完成 | 已支持列表与详情 |
 | 系统管理页面 | 用户、角色、菜单、文件管理 | ✅ 已完成 | 文件管理已迁移至系统管理子菜单 |
-| 登录与鉴权体验 | Token 自动刷新、动态路由加载 | ✅ 已完成 | 统一 token_type 字段；自动刷新并重放请求；菜单驱动动态路由 |
+| 登录与鉴权体验 | Token 自动刷新、动态路由加载 | ✅ 已完成 | 统一 token_type 字段；自动刷新并重放请求；菜单驱动动态路由；修复登录后路由未注册导致的空白页面问题 |
+| **数据迁移** | | | |
+| 迁移工具 | 数据迁移脚本 | ✅ 已完成 | 完善迁移脚本，添加表创建步骤；支持空数据库初始化；迁移 streams → media_sources/media_assets、algorithms → operators |
 
 ### Phase 2：能力扩展
 
@@ -375,18 +377,22 @@
 
 ---
 
-### 迭代 4：数据迁移与清理（当前）
+### 迭代 4：数据迁移与清理（已完成）
 
 **目标**: 清理废弃代码，创建数据迁移工具
 
 **已完成**:
 
 - [x] **数据迁移工具**
-  - [x] 创建迁移命令（cmd/migrate/main.go）
+  - [x] 完善迁移命令（cmd/migrate/main.go）
+    - 添加表创建步骤（使用 GORM AutoMigrate）
+    - 支持空数据库初始化
     - 支持 dry-run 模式
-    - Streams → MediaAssets 迁移（作为媒体源）
+    - Streams → MediaSources 迁移（媒体源）
+    - Streams → MediaAssets 迁移（媒体资产）
     - Algorithms → Operators 迁移
-    - 清理旧表（algorithm_bindings、inference_results）
+    - 清理旧表（algorithm_bindings、inference_results、streams、record_sessions）
+    - 更新菜单和权限（V1.0 新功能）
     - 确认提示和详细日志
 
 - [x] **删除废弃代码**
@@ -596,6 +602,8 @@
 
 | 日期 | 版本 | 变更内容 |
 |------|------|----------|
+| 2026-02-06 | V1.0 | **前端路由修复**：修复登录后跳转到空白页面问题；登录时立即注册动态路由；优化路由守卫逻辑，确保路由注册完成后再导航；移除根路由默认重定向，改为在路由守卫中处理；添加路由注册调试日志。 |
+| 2026-02-06 | V1.0 | **数据迁移工具完善**：迁移脚本添加表创建步骤（使用 GORM AutoMigrate），支持空数据库初始化；完善迁移流程（streams → media_sources/media_assets，algorithms → operators）；更新菜单和权限数据；改进错误处理和日志输出；更新 README 文档。 |
 | 2026-02-05 | V1.0 | **配置体系升级（阶段 1）**：按环境加载配置（`GOYAVISION_ENV` → `config.<env>.yaml`），新增 `config.dev.yaml` / `config.prod.yaml` / `config.example.yaml` / `.env.example`；启动时优先加载 `configs/.env` 并支持 `GOYAVISION_*` 下划线键覆盖（点号映射）；配置加载增加必填校验与默认值；文档同步更新部署与架构说明。 |
 | 2026-02-05 | V1.0 | 修复任务与工作流 Handler 的返回值处理与重复赋值导致的 Go 编译错误；修复 API router/errors 类型引用与错误响应构建导致的编译错误；修复服务启动时 JWT 初始化调用与 UnitOfWork 类型不匹配导致的编译错误；修复 AutoMigrate 直接使用 Domain 结构体导致的 GORM 映射错误（改用 infra/persistence/model）；修复 adapter/persistence 直接操作 Domain 结构体导致的 GORM 关系与 JSON 字段解析错误（改用 infra/persistence/repo）。 |
 | 2026-02-05 | V1.0 | **Clean Architecture 重构完成 - 可立即发布**：确认集成测试不在当前范围，依赖注入组装已完成（Phase 7: 100%），所有核心架构目标达成；系统已具备生产环境运行条件，剩余优化项（Context 传播、Middleware 分离、次要 Handler 迁移）为增强性质，不阻塞发布；整体进度 95%（+5%），架构符合度 100%。**✅ 可立即发布 V1.0 正式版**。 |

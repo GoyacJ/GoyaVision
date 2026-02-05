@@ -8,6 +8,11 @@
 ## [未发布]
 
 ### 新增
+- **数据迁移工具完善**：迁移脚本添加表创建步骤，支持空数据库初始化
+  - 使用 GORM AutoMigrate 自动创建所有 V1.0 表结构
+  - 支持从旧架构迁移到 V1.0（streams → media_sources/media_assets，algorithms → operators）
+  - 更新菜单和权限数据（清理旧数据，添加新功能）
+  - 改进错误处理和日志输出
 - 增加 Cline 规范目录（`.cline/`），同步 rules、skills、hooks 与 workflows，保持与 Cursor/Claude 规则一致
 - 文档补充：README/architecture/requirements/api/deployment/development-progress 中的配置、状态与端点描述与当前实现对齐
 - 配置体系升级：按环境加载 `config.<env>.yaml`，新增 `config.dev.yaml` / `config.prod.yaml` / `config.example.yaml` / `.env.example`，配置加载增加必填校验
@@ -43,6 +48,12 @@
   - 实现 JSON 输入/输出格式（从 stdin 读取，输出到 stdout）
   - 添加 loop_count 限制检查（防止无限循环）
   - 使用 followup_message 自动触发检查清单提醒
+- **修复前端路由问题**：登录后跳转到空白页面
+  - 修复登录时未注册动态路由的问题（在 login() 方法中立即注册）
+  - 优化路由守卫逻辑，确保路由注册完成后再导航
+  - 移除根路由默认重定向，改为在路由守卫中处理
+  - 优化登录后跳转逻辑，默认跳转到 `/assets`
+  - 添加路由注册调试日志
 
 ### Clean Architecture 重构 (Phase 5 完成 - DAG 引擎) - 2026-02-05
 

@@ -7,17 +7,32 @@ alwaysApply: false
 
 # 后端应用层规则
 
+## CQRS 模式
+
+App 层采用 **命令查询职责分离（CQRS）** 模式：
+
+- **命令（Commands）**：`command/` 目录，处理写操作（创建、更新、删除、状态变更）
+  - 命名：`create_*.go`、`update_*.go`、`delete_*.go`、`start_*.go`、`complete_*.go`、`fail_*.go`、`cancel_*.go`
+  - 职责：业务验证、状态流转、数据持久化
+- **查询（Queries）**：`query/` 目录，处理读操作（查询单个、列表、统计）
+  - 命名：`get_*.go`、`list_*.go`、`get_*_stats.go`、`get_*_with_relations.go`
+  - 职责：数据查询、聚合、格式化
+- **DTO**：`dto/` 目录，定义命令和查询的输入输出结构
+- **端口（Port）**：`port/` 目录，定义应用边界接口（MediaGateway、ObjectStorage、TokenService、EventBus、UnitOfWork）
+
 ## 依赖与编排
 
 - **仅依赖 Domain + Port**，不直接依赖 Adapter
 - 通过接口注入 Repository/Engine/Client 等端口
-- 一个服务对应一个业务用例，避免过度聚合
+- 使用 UnitOfWork 管理事务边界
+- 命令和查询职责分离，避免混合
 
 ## 业务逻辑
 
-- 业务验证放在 App 层完成，API 层只做输入校验与 DTO 转换
-- 任务状态流转需遵循既有状态机定义
+- 业务验证放在 Command 层完成，API 层只做输入校验与 DTO 转换
+- 任务状态流转需遵循既有状态机定义（pending → running → success/failed/cancelled）
 - 触发工作流或任务时，必须维护 Artifact 与 Asset 关联
+- 使用 UnitOfWork.Do() 确保事务一致性
 
 ## 错误处理
 
@@ -27,6 +42,7 @@ alwaysApply: false
 
 ## 服务设计
 
-- Service 方法命名清晰，表达业务意图
+- Command/Query 命名清晰，表达业务意图
 - 使用 `context.Context` 传播取消与超时
-- 避免在 Service 中直接操作数据库或 HTTP 客户端
+- 避免在 Command/Query 中直接操作数据库或 HTTP 客户端
+- 通过 Port 接口访问外部依赖

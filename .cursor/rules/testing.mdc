@@ -12,13 +12,15 @@ alwaysApply: false
 
 ## 通用规范
 
-- 测试命名清晰，描述"应当 + 条件"（如 `TestMediaAssetService_ShouldReturnError_WhenAssetNotFound`）
+- 测试命名清晰，描述"应当 + 条件"（如 `TestCreateAssetCommand_ShouldReturnError_WhenAssetNotFound`）
 - 单元测试覆盖核心业务逻辑与边界条件
 - 避免测试实现细节，关注行为而非内部结构
 
 ## 后端测试
 
 - **Domain/App 层**：优先单元测试，使用 mock 隔离依赖
+  - Command/Query 测试：测试业务逻辑和状态流转
+  - Port 接口测试：使用 mock 实现测试
 - **Adapter 与 API 层**：使用集成测试，必要时使用测试数据库
 - 避免依赖外部资源的测试不加隔离（使用 mock 或测试容器）
 - 测试文件命名：`<package>_test.go`

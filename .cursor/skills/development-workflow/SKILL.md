@@ -194,7 +194,7 @@ description: 开发工作流管理 - 开始开发前查阅文档，完成后更�
 git commit -m "feat(asset): 实现媒体资产管理功能
 
 - 添加 MediaAsset 实体和 Repository
-- 实现 MediaAssetService（CRUD、搜索、派生追踪）
+- 实现 CQRS 命令和查询（create/update/delete/get/list）
 - 添加 Asset Handler 和 DTO
 - 更新 API 文档和开发进度"
 
@@ -309,14 +309,18 @@ git commit -m "test(operator): 添加算子标准协议测试用例"
 **2. 实现功能** 💻
 
 ```
-实现步骤：
-1. internal/domain/media_asset.go - 定义 MediaAsset 实体
+实现步骤（CQRS 模式）：
+1. internal/domain/media/asset.go - 定义 MediaAsset 实体
 2. internal/port/repository.go - 定义 MediaAssetRepository 接口
-3. internal/adapter/persistence/media_asset.go - 实现 Repository
-4. internal/app/media_asset.go - 实现 MediaAssetService
-5. internal/api/dto/asset.go - 定义 DTO
-6. internal/api/handler/asset.go - 实现 Handler
-7. internal/api/router.go - 注册路由
+3. internal/adapter/persistence/media/asset.go - 实现 Repository
+4. internal/app/command/create_asset.go - 创建命令
+5. internal/app/command/update_asset.go - 更新命令
+6. internal/app/command/delete_asset.go - 删除命令
+7. internal/app/query/get_asset.go - 查询单个资产
+8. internal/app/query/list_assets.go - 列表查询
+9. internal/api/dto/asset.go - 定义 DTO
+10. internal/api/handler/asset.go - 实现 Handler
+11. internal/api/router.go - 注册路由
 ```
 
 **3. 完成开发** ✅
