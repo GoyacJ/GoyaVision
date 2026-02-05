@@ -18,6 +18,7 @@ Authorization: Bearer <access_token>
 2. 使用 `access_token` 访问其他 API
 3. 当 `access_token` 过期时，使用 `refresh_token` 获取新的 Token
 4. 当 `refresh_token` 也过期时，需要重新登录
+5. Access Token 内部包含 `token_type=access`，Refresh Token 包含 `token_type=refresh`
 
 ## 通用约定
 
@@ -93,6 +94,7 @@ Content-Type: application/json
   "access_token": "eyJhbGciOiJIUzI1NiIs...",
   "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
   "expires_in": 7200,
+  "token_type": "access",
   "user": {
     "id": "uuid",
     "username": "admin",
