@@ -1,11 +1,10 @@
 package dto
 
 import (
-	"encoding/json"
 	"strings"
 	"time"
 
-	"goyavision/internal/domain"
+	"goyavision/internal/domain/media"
 
 	"github.com/google/uuid"
 )
@@ -79,24 +78,24 @@ type AssetListResponse struct {
 // minioEndpoint: MinIO 端点地址（如 "39.105.2.5:14250"）
 // minioBucket: MinIO 存储桶名称
 // minioUseSSL: 是否使用 SSL
-func AssetToResponse(a *domain.MediaAsset, minioEndpoint, minioBucket string, minioUseSSL bool) *AssetResponse {
+func AssetToResponse(a *media.Asset, minioEndpoint, minioBucket string, minioUseSSL bool) *AssetResponse {
 	if a == nil {
 		return nil
 	}
 
-	var metadata map[string]interface{}
-	if a.Metadata != nil && len(a.Metadata) > 0 {
-		json.Unmarshal(a.Metadata, &metadata)
+	metadata := a.Metadata
+	if metadata == nil {
+		metadata = make(map[string]interface{})
 	}
 
-	var tags []string
-	if a.Tags != nil && len(a.Tags) > 0 {
-		json.Unmarshal(a.Tags, &tags)
+	tags := a.Tags
+	if tags == nil {
+		tags = []string{}
 	}
 
 	// 生成完整的文件 URL
 	path := a.Path
-	if a.SourceType == domain.AssetSourceUpload || a.SourceType == domain.AssetSourceGenerated {
+	if a.SourceType == media.AssetSourceUpload || a.SourceType == media.AssetSourceGenerated {
 		// 如果是上传或生成的文件，且 path 不是完整 URL，则生成 MinIO 完整 URL
 		if !strings.HasPrefix(path, "http://") && !strings.HasPrefix(path, "https://") {
 			protocol := "http"
@@ -127,7 +126,7 @@ func AssetToResponse(a *domain.MediaAsset, minioEndpoint, minioBucket string, mi
 }
 
 // AssetsToResponse 转换为响应列表
-func AssetsToResponse(assets []*domain.MediaAsset, minioEndpoint, minioBucket string, minioUseSSL bool) []*AssetResponse {
+func AssetsToResponse(assets []*media.Asset, minioEndpoint, minioBucket string, minioUseSSL bool) []*AssetResponse {
 	result := make([]*AssetResponse, len(assets))
 	for i, a := range assets {
 		result[i] = AssetToResponse(a, minioEndpoint, minioBucket, minioUseSSL)

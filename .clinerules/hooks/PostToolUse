@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+input=$(cat)
+
+tool_name=$(echo "$input" | jq -r '.postToolUse.toolName // ""')
+success=$(echo "$input" | jq -r '.postToolUse.success // false')
+execution_time=$(echo "$input" | jq -r '.postToolUse.executionTimeMs // 0')
+
+if [[ "$success" != "true" ]]; then
+  echo '{"cancel": false}'
+  exit 0
+fi
+
+if (( execution_time > 5000 )); then
+  context="PERFORMANCE: 工具 ${tool_name} 执行耗时 ${execution_time}ms，可关注系统资源或拆分操作。"
+  jq -n --arg ctx "$context" '{"cancel": false, "contextModification": $ctx}'
+  exit 0
+fi
+
+echo '{"cancel": false}'

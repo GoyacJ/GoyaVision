@@ -180,9 +180,8 @@ async function handleChangePassword() {
 
 .layout-header {
   height: 70px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  box-shadow: 0 4px 24px rgba(31, 38, 135, 0.1);
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -190,7 +189,7 @@ async function handleChangePassword() {
   position: sticky;
   top: 0;
   z-index: 1000;
-  border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+  border-bottom: 1px solid #E5E5E5;
 }
 
 .header-left {
@@ -207,20 +206,12 @@ async function handleChangePassword() {
   margin-right: 48px;
   flex-shrink: 0;
   cursor: pointer;
-  transition: transform 0.3s;
-}
-
-.logo:hover {
-  transform: scale(1.05);
 }
 
 .logo-text {
   font-size: 26px;
-  font-weight: 800;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-weight: 700;
+  color: #262626;
   letter-spacing: -0.5px;
 }
 
@@ -236,10 +227,10 @@ async function handleChangePassword() {
   height: 70px;
   line-height: 70px;
   font-weight: 500;
-  transition: all 0.3s;
+  transition: color 150ms;
   position: relative;
   margin: 0 4px;
-  border-radius: 8px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
 }
@@ -247,13 +238,13 @@ async function handleChangePassword() {
 .layout-menu :deep(.el-menu-item:hover),
 .layout-menu :deep(.el-sub-menu__title:hover) {
   background: transparent;
-  color: #667eea;
+  color: #4F5B93;
 }
 
 .layout-menu :deep(.el-menu-item.is-active) {
-  color: #667eea;
+  color: #4F5B93;
   background: transparent;
-  border-radius: 8px;
+  border-radius: 6px;
   font-weight: 600;
 }
 
@@ -263,9 +254,9 @@ async function handleChangePassword() {
   bottom: 0;
   left: 20%;
   right: 20%;
-  height: 3px;
-  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-  border-radius: 2px;
+  height: 2px;
+  background: #4F5B93;
+  border-radius: 1px;
 }
 
 .header-right {
@@ -280,26 +271,23 @@ async function handleChangePassword() {
   gap: 12px;
   cursor: pointer;
   padding: 10px 16px;
-  border-radius: 12px;
-  transition: all 0.3s;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+  border-radius: 6px;
+  transition: background-color 150ms;
+  background: #F5F5F5;
 }
 
 .user-info:hover {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  background: #E5E5E5;
 }
 
 .user-info :deep(.el-avatar) {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  background: #4F5B93;
 }
 
 .username {
-  color: #333;
+  color: #262626;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .layout-main {
@@ -312,40 +300,35 @@ async function handleChangePassword() {
 
 .fade-enter-active,
 .fade-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 150ms ease;
 }
 
-.fade-enter-from {
-  opacity: 0;
-  transform: translateY(10px);
-}
-
+.fade-enter-from,
 .fade-leave-to {
   opacity: 0;
-  transform: translateY(-10px);
 }
 
 :deep(.el-dropdown-menu) {
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
-  border: 1px solid rgba(102, 126, 234, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border: 1px solid #E5E5E5;
   padding: 8px;
 }
 
 :deep(.el-dropdown-menu__item) {
-  border-radius: 8px;
+  border-radius: 6px;
   margin: 4px 0;
-  transition: all 0.3s;
+  transition: background-color 150ms;
 }
 
 :deep(.el-dropdown-menu__item:hover) {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-  color: #667eea;
+  background: #F5F5F5;
+  color: #4F5B93;
 }
 
 :deep(.el-dialog) {
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(31, 38, 135, 0.2);
+  border-radius: 8px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
 :deep(.el-dialog__header) {

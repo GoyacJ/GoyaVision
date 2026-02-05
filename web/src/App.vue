@@ -14,7 +14,6 @@
 
 :root {
   --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
   --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
   --info-gradient: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
   --card-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);

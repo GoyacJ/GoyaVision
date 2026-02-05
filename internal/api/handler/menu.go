@@ -10,19 +10,19 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func RegisterMenu(g *echo.Group, d Deps) {
-	svc := app.NewMenuService(d.Repo)
-	permSvc := app.NewPermissionService(d.Repo)
-	h := menuHandler{svc: svc, permSvc: permSvc}
+func RegisterMenu(g *echo.Group, h *Handlers) {
+	svc := app.NewMenuService(h.Repo)
+	permSvc := app.NewPermissionService(h.Repo)
+	mh := menuHandler{svc: svc, permSvc: permSvc}
 
-	g.GET("/menus", h.List)
-	g.GET("/menus/tree", h.ListTree)
-	g.POST("/menus", h.Create)
-	g.GET("/menus/:id", h.Get)
-	g.PUT("/menus/:id", h.Update)
-	g.DELETE("/menus/:id", h.Delete)
+	g.GET("/menus", mh.List)
+	g.GET("/menus/tree", mh.ListTree)
+	g.POST("/menus", mh.Create)
+	g.GET("/menus/:id", mh.Get)
+	g.PUT("/menus/:id", mh.Update)
+	g.DELETE("/menus/:id", mh.Delete)
 
-	g.GET("/permissions", h.ListPermissions)
+	g.GET("/permissions", mh.ListPermissions)
 }
 
 type menuHandler struct {

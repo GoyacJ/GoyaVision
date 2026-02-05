@@ -3,43 +3,68 @@ package api
 import (
 	"io/fs"
 
+	"goyavision/config"
+	"goyavision/internal/adapter/mediamtx"
 	"goyavision/internal/api/handler"
+	"goyavision/internal/app"
+	"goyavision/internal/app/port"
+	portrepo "goyavision/internal/port"
 	authMiddleware "goyavision/internal/api/middleware"
+	"goyavision/pkg/storage"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
-// HandlerDeps 处理器依赖
-type HandlerDeps = handler.Deps
+func NewHandlers(
+	uow port.UnitOfWork,
+	mediaGateway port.MediaGateway,
+	tokenService port.TokenService,
+	cfg *config.Config,
+	mtxCli *mediamtx.Client,
+	minioClient *storage.MinIOClient,
+	workflowScheduler *app.WorkflowScheduler,
+	repo portrepo.Repository,
+) *handler.Handlers {
+	return handler.NewHandlers(
+		uow,
+		mediaGateway,
+		tokenService,
+		cfg,
+		mtxCli,
+		minioClient,
+		workflowScheduler,
+		repo,
+	)
+}
 
-func RegisterRouter(e *echo.Echo, d HandlerDeps, webFS fs.FS) {
+func RegisterRouter(e *echo.Echo, h *handler.Handlers, webFS fs.FS) {
 	e.HTTPErrorHandler = ErrorHandler
 	e.Use(middleware.Logger(), middleware.Recover())
 
 	authGroup := e.Group("/api/v1/auth")
-	handler.RegisterAuth(authGroup, d)
+	handler.RegisterAuth(authGroup, h)
 
-	api := e.Group("/api/v1", authMiddleware.JWTAuth(d.Cfg.JWT))
+	api := e.Group("/api/v1", authMiddleware.JWTAuth(h.Cfg.JWT))
 
 	authProtected := api.Group("/auth")
-	handler.RegisterAuthProtected(authProtected, d)
+	handler.RegisterAuthProtected(authProtected, h)
 
-	api.Use(authMiddleware.LoadUserPermissions(d.Repo))
+	api.Use(authMiddleware.LoadUserPermissions(h.Repo))
 
-	handler.RegisterAsset(api, d)
-	handler.RegisterSource(api, d)
-	handler.RegisterUpload(api, d)
-	handler.RegisterFile(api, d)
-	handler.RegisterOperator(api, d)
-	handler.RegisterWorkflow(api, d)
-	handler.RegisterTask(api, d)
-	handler.RegisterArtifact(api, d)
+	handler.RegisterAsset(api, h)
+	handler.RegisterSource(api, h)
+	handler.RegisterUpload(api, h)
+	handler.RegisterFile(api, h)
+	handler.RegisterOperator(api, h)
+	handler.RegisterWorkflow(api, h)
+	handler.RegisterTask(api, h)
+	handler.RegisterArtifact(api, h)
 
 	admin := api.Group("")
-	handler.RegisterUser(admin, d)
-	handler.RegisterRole(admin, d)
-	handler.RegisterMenu(admin, d)
+	handler.RegisterUser(admin, h)
+	handler.RegisterRole(admin, h)
+	handler.RegisterMenu(admin, h)
 
 	RegisterStatic(e, webFS)
 }

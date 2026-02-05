@@ -92,7 +92,7 @@ const spinnerClasses = computed(() => {
   // 颜色
   const colorClasses = {
     primary: 'text-primary-600',
-    secondary: 'text-secondary-600',
+    secondary: 'text-neutral-600',
     success: 'text-success-600',
     error: 'text-error-600',
     warning: 'text-warning-600',
@@ -132,7 +132,6 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   background-color: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(2px);
   border-radius: inherit;
   z-index: 10;
 }

@@ -3,7 +3,7 @@ package dto
 import (
 	"time"
 
-	"goyavision/internal/domain"
+	"goyavision/internal/domain/media"
 
 	"github.com/google/uuid"
 )
@@ -63,7 +63,7 @@ type SourcePreviewResponse struct {
 }
 
 // SourceToResponse 转换为响应
-func SourceToResponse(s *domain.MediaSource) *SourceResponse {
+func SourceToResponse(s *media.Source) *SourceResponse {
 	if s == nil {
 		return nil
 	}
@@ -82,7 +82,7 @@ func SourceToResponse(s *domain.MediaSource) *SourceResponse {
 }
 
 // SourcesToResponse 转换为响应列表
-func SourcesToResponse(list []*domain.MediaSource) []*SourceResponse {
+func SourcesToResponse(list []*media.Source) []*SourceResponse {
 	out := make([]*SourceResponse, len(list))
 	for i, s := range list {
 		out[i] = SourceToResponse(s)

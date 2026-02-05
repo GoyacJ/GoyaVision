@@ -11,7 +11,7 @@
             placeholder="搜索媒体源名称"
             class="w-80"
             immediate
-            @search="loadSources"
+            @search="refreshTable"
           />
           <GvButton @click="showCreateDialog = true">
             <template #icon>
@@ -23,7 +23,25 @@
       </template>
     </PageHeader>
 
+    <ErrorState
+      v-if="error && !loading"
+      :error="error"
+      title="加载失败"
+      @retry="refreshTable"
+    />
+
+    <EmptyState
+      v-else-if="!loading && sources.length === 0"
+      icon="📡"
+      title="还没有媒体源"
+      description="创建拉流/推流媒体源，用于接入流媒体资产"
+      action-text="添加媒体源"
+      show-action
+      @action="showCreateDialog = true"
+    />
+
     <GvTable
+      v-else
       :data="sources"
       :columns="columns"
       :loading="loading"
@@ -188,10 +206,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { sourceApi, type MediaSource, type SourceCreateReq, type SourcePreviewResponse } from '@/api/source'
+import { useTable } from '@/composables'
 import GvContainer from '@/components/layout/GvContainer/index.vue'
 import GvTable from '@/components/base/GvTable/index.vue'
 import GvModal from '@/components/base/GvModal/index.vue'
@@ -201,9 +220,9 @@ import GvTag from '@/components/base/GvTag/index.vue'
 import GvInput from '@/components/base/GvInput/index.vue'
 import PageHeader from '@/components/business/PageHeader/index.vue'
 import SearchBar from '@/components/business/SearchBar/index.vue'
+import { ErrorState, EmptyState } from '@/components/common'
 
-const loading = ref(false)
-const sources = ref<MediaSource[]>([])
+// UI 状态
 const searchName = ref('')
 const showCreateDialog = ref(false)
 const showEditDialog = ref(false)
@@ -218,15 +237,36 @@ const updating = ref(false)
 const createFormRef = ref<FormInstance>()
 const editFormRef = ref<FormInstance>()
 
-const pagination = reactive({
-  total: 0,
-  page: 1,
-  page_size: 20
-})
+// 使用 useTable 管理媒体源列表
+const {
+  items: sources,
+  isLoading: loading,
+  error,
+  pagination,
+  goToPage,
+  changePageSize,
+  refreshTable
+} = useTable(
+  async (params) => {
+    // 将 page/page_size 转换为 limit/offset
+    const res = await sourceApi.list({
+      limit: params.page_size,
+      offset: (params.page - 1) * params.page_size
+    })
+    return {
+      items: res.data?.items ?? [],
+      total: res.data?.total ?? 0
+    }
+  },
+  {
+    immediate: true,
+    initialPageSize: 20
+  }
+)
 
 const paginationConfig = computed(() => ({
   currentPage: pagination.page,
-  pageSize: pagination.page_size,
+  pageSize: pagination.pageSize,
   total: pagination.total
 }))
 
@@ -279,32 +319,9 @@ function formatDate(s: string) {
   return d.toLocaleString('zh-CN')
 }
 
-async function loadSources() {
-  loading.value = true
-  try {
-    const res = await sourceApi.list({
-      limit: pagination.page_size,
-      offset: (pagination.page - 1) * pagination.page_size
-    })
-    sources.value = res.data?.items ?? []
-    pagination.total = res.data?.total ?? 0
-  } catch (e: any) {
-    ElMessage.error(e.response?.data?.message || '加载失败')
-  } finally {
-    loading.value = false
-  }
-}
-
-function handlePageChange(page: number) {
-  pagination.page = page
-  loadSources()
-}
-
-function handleSizeChange(size: number) {
-  pagination.page_size = size
-  pagination.page = 1
-  loadSources()
-}
+// 直接使用 useTable 提供的方法
+const handlePageChange = goToPage
+const handleSizeChange = changePageSize
 
 async function handleCreate() {
   if (!createFormRef.value) return
@@ -324,7 +341,7 @@ async function handleCreate() {
       createForm.type = 'pull'
       createForm.url = ''
       createForm.enabled = true
-      loadSources()
+      refreshTable()
     } catch (e: any) {
       ElMessage.error(e.response?.data?.message || '创建失败')
     } finally {
@@ -392,7 +409,7 @@ async function handleUpdate() {
       })
       ElMessage.success('更新成功')
       showEditDialog.value = false
-      loadSources()
+      refreshTable()
     } catch (e: any) {
       ElMessage.error(e.response?.data?.message || '更新失败')
     } finally {
@@ -408,7 +425,7 @@ async function handleDelete(row: MediaSource) {
     })
     await sourceApi.remove(row.id)
     ElMessage.success('删除成功')
-    loadSources()
+    refreshTable()
   } catch (e: any) {
     if (e !== 'cancel') {
       ElMessage.error(e.response?.data?.message || '删除失败')
@@ -416,7 +433,4 @@ async function handleDelete(row: MediaSource) {
   }
 }
 
-onMounted(() => {
-  loadSources()
-})
 </script>

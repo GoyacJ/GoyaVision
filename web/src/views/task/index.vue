@@ -58,12 +58,27 @@
       :fields="filterFields"
       :columns="1"
       :loading="loading"
-      @filter="loadTasks"
+      @filter="() => { pagination.page = 1 }"
       @reset="handleResetFilter"
+    />
+
+    <ErrorState
+      v-if="error && !loading"
+      :error="error"
+      title="加载失败"
+      @retry="handleRefresh"
+    />
+
+    <EmptyState
+      v-else-if="!loading && tasks.length === 0"
+      icon="📋"
+      title="还没有任务"
+      description="触发工作流后将在这里显示执行任务"
     />
 
     <!-- 数据表格 -->
     <GvTable
+      v-else
       :data="tasks"
       :columns="columns"
       :loading="loading"
@@ -158,10 +173,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
 import { taskApi, type Task, type TaskStats } from '@/api/task'
+import { useTable, useAsyncData } from '@/composables'
 import GvContainer from '@/components/layout/GvContainer/index.vue'
 import GvGrid from '@/components/layout/GvGrid/index.vue'
 import GvCard from '@/components/base/GvCard/index.vue'
@@ -173,11 +189,11 @@ import GvAlert from '@/components/base/GvAlert/index.vue'
 import PageHeader from '@/components/business/PageHeader/index.vue'
 import FilterBar from '@/components/business/FilterBar/index.vue'
 import StatusBadge from '@/components/business/StatusBadge/index.vue'
+import { ErrorState, EmptyState } from '@/components/common'
 import type { TableColumn } from '@/components/base/GvTable/types'
 import type { FilterField } from '@/components/business/FilterBar/types'
 
-const loading = ref(false)
-const tasks = ref<Task[]>([])
+// UI 状态
 const showViewDialog = ref(false)
 const currentTask = ref<Task | null>(null)
 
@@ -185,13 +201,39 @@ const filters = ref({
   status: ''
 })
 
-const pagination = reactive({
-  page: 1,
-  page_size: 20,
-  total: 0
-})
+// 计算筛选参数
+const filterParams = computed(() => ({
+  status: filters.value.status || undefined
+}))
 
-const stats = reactive<TaskStats>({
+// 使用 useTable 管理任务列表
+const {
+  items: tasks,
+  isLoading: loading,
+  error,
+  pagination,
+  goToPage,
+  changePageSize,
+  refreshTable
+} = useTable(
+  (params) => taskApi.list(params),
+  {
+    immediate: true,
+    initialPageSize: 20,
+    extraParams: filterParams
+  }
+)
+
+// 使用 useAsyncData 管理统计数据
+const {
+  data: statsData,
+  execute: loadStats
+} = useAsyncData(
+  () => taskApi.getStats(),
+  { immediate: true }
+)
+
+const stats = computed(() => statsData.value?.data || {
   total: 0,
   pending: 0,
   running: 0,
@@ -232,59 +274,22 @@ const columns: TableColumn[] = [
 
 const paginationConfig = computed(() => ({
   currentPage: pagination.page,
-  pageSize: pagination.page_size,
+  pageSize: pagination.pageSize,
   total: pagination.total
 }))
 
-onMounted(() => {
-  loadTasks()
-  loadStats()
-})
-
-async function loadTasks() {
-  loading.value = true
-  try {
-    const response = await taskApi.list({
-      status: filters.value.status as any,
-      page: pagination.page,
-      page_size: pagination.page_size
-    })
-    tasks.value = response.data.items
-    pagination.total = response.data.total
-  } catch (error: any) {
-    ElMessage.error(error.response?.data?.message || '加载失败')
-  } finally {
-    loading.value = false
-  }
-}
-
-async function loadStats() {
-  try {
-    const response = await taskApi.getStats()
-    Object.assign(stats, response.data)
-  } catch (error: any) {
-    ElMessage.error(error.response?.data?.message || '加载统计失败')
-  }
-}
-
 function handleRefresh() {
-  loadTasks()
+  refreshTable()
   loadStats()
 }
 
-function handlePageChange(page: number) {
-  pagination.page = page
-  loadTasks()
-}
-
-function handleSizeChange(size: number) {
-  pagination.page_size = size
-  pagination.page = 1
-  loadTasks()
-}
+// 直接使用 useTable 提供的方法
+const handlePageChange = goToPage
+const handleSizeChange = changePageSize
 
 function handleResetFilter() {
-  loadTasks()
+  pagination.page = 1
+  // useTable 监听 pagination.page 变化会自动重新加载
 }
 
 function handleView(row: Task) {
@@ -303,7 +308,7 @@ async function handleCancel(row: Task) {
     })
     await taskApi.cancel(row.id)
     ElMessage.success('取消成功')
-    loadTasks()
+    refreshTable()
     loadStats()
   } catch (error: any) {
     if (error !== 'cancel') {
@@ -319,7 +324,7 @@ async function handleDelete(row: Task) {
     })
     await taskApi.delete(row.id)
     ElMessage.success('删除成功')
-    loadTasks()
+    refreshTable()
     loadStats()
   } catch (error: any) {
     if (error !== 'cancel') {

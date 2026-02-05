@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"goyavision/internal/domain"
+	"goyavision/internal/domain/identity"
 	"goyavision/internal/port"
 
 	"github.com/google/uuid"
@@ -42,7 +42,7 @@ type CreateUserRequest struct {
 	RoleIDs  []uuid.UUID
 }
 
-func (s *UserService) Create(ctx context.Context, req *CreateUserRequest) (*domain.User, error) {
+func (s *UserService) Create(ctx context.Context, req *CreateUserRequest) (*identity.User, error) {
 	existing, err := s.repo.GetUserByUsername(ctx, req.Username)
 	if err == nil && existing != nil {
 		return nil, ErrUsernameExists
@@ -56,7 +56,7 @@ func (s *UserService) Create(ctx context.Context, req *CreateUserRequest) (*doma
 		return nil, err
 	}
 
-	user := &domain.User{
+	user := &identity.User{
 		ID:       uuid.New(),
 		Username: req.Username,
 		Password: string(hashedPassword),
@@ -68,7 +68,7 @@ func (s *UserService) Create(ctx context.Context, req *CreateUserRequest) (*doma
 	}
 
 	if user.Status == 0 {
-		user.Status = domain.UserStatusEnabled
+		user.Status = identity.UserStatusEnabled
 	}
 
 	if err := s.repo.CreateUser(ctx, user); err != nil {
@@ -84,11 +84,11 @@ func (s *UserService) Create(ctx context.Context, req *CreateUserRequest) (*doma
 	return s.repo.GetUserWithRoles(ctx, user.ID)
 }
 
-func (s *UserService) Get(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+func (s *UserService) Get(ctx context.Context, id uuid.UUID) (*identity.User, error) {
 	return s.repo.GetUserWithRoles(ctx, id)
 }
 
-func (s *UserService) List(ctx context.Context, status *int, limit, offset int) ([]*domain.User, int64, error) {
+func (s *UserService) List(ctx context.Context, status *int, limit, offset int) ([]*identity.User, int64, error) {
 	return s.repo.ListUsers(ctx, status, limit, offset)
 }
 
@@ -102,7 +102,7 @@ type UpdateUserRequest struct {
 	RoleIDs  []uuid.UUID
 }
 
-func (s *UserService) Update(ctx context.Context, id uuid.UUID, req *UpdateUserRequest) (*domain.User, error) {
+func (s *UserService) Update(ctx context.Context, id uuid.UUID, req *UpdateUserRequest) (*identity.User, error) {
 	user, err := s.repo.GetUser(ctx, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -194,7 +194,7 @@ type CreateRoleRequest struct {
 	MenuIDs       []uuid.UUID
 }
 
-func (s *RoleService) Create(ctx context.Context, req *CreateRoleRequest) (*domain.Role, error) {
+func (s *RoleService) Create(ctx context.Context, req *CreateRoleRequest) (*identity.Role, error) {
 	existing, err := s.repo.GetRoleByCode(ctx, req.Code)
 	if err == nil && existing != nil {
 		return nil, ErrRoleCodeExists
@@ -203,7 +203,7 @@ func (s *RoleService) Create(ctx context.Context, req *CreateRoleRequest) (*doma
 		return nil, err
 	}
 
-	role := &domain.Role{
+	role := &identity.Role{
 		ID:          uuid.New(),
 		Code:        req.Code,
 		Name:        req.Name,
@@ -212,7 +212,7 @@ func (s *RoleService) Create(ctx context.Context, req *CreateRoleRequest) (*doma
 	}
 
 	if role.Status == 0 {
-		role.Status = domain.RoleStatusEnabled
+		role.Status = identity.RoleStatusEnabled
 	}
 
 	if err := s.repo.CreateRole(ctx, role); err != nil {
@@ -234,11 +234,11 @@ func (s *RoleService) Create(ctx context.Context, req *CreateRoleRequest) (*doma
 	return s.repo.GetRoleWithPermissions(ctx, role.ID)
 }
 
-func (s *RoleService) Get(ctx context.Context, id uuid.UUID) (*domain.Role, error) {
+func (s *RoleService) Get(ctx context.Context, id uuid.UUID) (*identity.Role, error) {
 	return s.repo.GetRoleWithPermissions(ctx, id)
 }
 
-func (s *RoleService) List(ctx context.Context, status *int) ([]*domain.Role, error) {
+func (s *RoleService) List(ctx context.Context, status *int) ([]*identity.Role, error) {
 	return s.repo.ListRoles(ctx, status)
 }
 
@@ -250,7 +250,7 @@ type UpdateRoleRequest struct {
 	MenuIDs       []uuid.UUID
 }
 
-func (s *RoleService) Update(ctx context.Context, id uuid.UUID, req *UpdateRoleRequest) (*domain.Role, error) {
+func (s *RoleService) Update(ctx context.Context, id uuid.UUID, req *UpdateRoleRequest) (*identity.Role, error) {
 	role, err := s.repo.GetRole(ctx, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -322,7 +322,7 @@ type CreateMenuRequest struct {
 	Status     int
 }
 
-func (s *MenuService) Create(ctx context.Context, req *CreateMenuRequest) (*domain.Menu, error) {
+func (s *MenuService) Create(ctx context.Context, req *CreateMenuRequest) (*identity.Menu, error) {
 	existing, err := s.repo.GetMenuByCode(ctx, req.Code)
 	if err == nil && existing != nil {
 		return nil, ErrMenuCodeExists
@@ -331,23 +331,23 @@ func (s *MenuService) Create(ctx context.Context, req *CreateMenuRequest) (*doma
 		return nil, err
 	}
 
-	menu := &domain.Menu{
+	menu := &identity.Menu{
 		ID:         uuid.New(),
 		ParentID:   req.ParentID,
 		Code:       req.Code,
 		Name:       req.Name,
-		Type:       req.Type,
+		Type:       identity.MenuType(req.Type),
 		Path:       req.Path,
 		Icon:       req.Icon,
 		Component:  req.Component,
 		Permission: req.Permission,
 		Sort:       req.Sort,
 		Visible:    req.Visible,
-		Status:     req.Status,
+		Status:     identity.MenuStatus(req.Status),
 	}
 
 	if menu.Status == 0 {
-		menu.Status = domain.MenuStatusEnabled
+		menu.Status = identity.MenuStatusEnabled
 	}
 
 	if err := s.repo.CreateMenu(ctx, menu); err != nil {
@@ -357,15 +357,15 @@ func (s *MenuService) Create(ctx context.Context, req *CreateMenuRequest) (*doma
 	return menu, nil
 }
 
-func (s *MenuService) Get(ctx context.Context, id uuid.UUID) (*domain.Menu, error) {
+func (s *MenuService) Get(ctx context.Context, id uuid.UUID) (*identity.Menu, error) {
 	return s.repo.GetMenu(ctx, id)
 }
 
-func (s *MenuService) List(ctx context.Context, status *int) ([]*domain.Menu, error) {
+func (s *MenuService) List(ctx context.Context, status *int) ([]*identity.Menu, error) {
 	return s.repo.ListMenus(ctx, status)
 }
 
-func (s *MenuService) ListTree(ctx context.Context, status *int) ([]*domain.Menu, error) {
+func (s *MenuService) ListTree(ctx context.Context, status *int) ([]*identity.Menu, error) {
 	menus, err := s.repo.ListMenus(ctx, status)
 	if err != nil {
 		return nil, err
@@ -386,7 +386,7 @@ type UpdateMenuRequest struct {
 	Status     *int
 }
 
-func (s *MenuService) Update(ctx context.Context, id uuid.UUID, req *UpdateMenuRequest) (*domain.Menu, error) {
+func (s *MenuService) Update(ctx context.Context, id uuid.UUID, req *UpdateMenuRequest) (*identity.Menu, error) {
 	menu, err := s.repo.GetMenu(ctx, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -402,7 +402,7 @@ func (s *MenuService) Update(ctx context.Context, id uuid.UUID, req *UpdateMenuR
 		menu.Name = *req.Name
 	}
 	if req.Type != nil {
-		menu.Type = *req.Type
+		menu.Type = identity.MenuType(*req.Type)
 	}
 	if req.Path != nil {
 		menu.Path = *req.Path
@@ -423,7 +423,7 @@ func (s *MenuService) Update(ctx context.Context, id uuid.UUID, req *UpdateMenuR
 		menu.Visible = *req.Visible
 	}
 	if req.Status != nil {
-		menu.Status = *req.Status
+		menu.Status = identity.MenuStatus(*req.Status)
 	}
 
 	if err := s.repo.UpdateMenu(ctx, menu); err != nil {
@@ -444,6 +444,32 @@ func (s *MenuService) Delete(ctx context.Context, id uuid.UUID) error {
 	return s.repo.DeleteMenu(ctx, id)
 }
 
+func buildMenuTree(menus []*identity.Menu) []*identity.Menu {
+	menuMap := make(map[uuid.UUID]*identity.Menu)
+	var roots []*identity.Menu
+
+	for _, m := range menus {
+		menuCopy := *m
+		menuCopy.Children = []identity.Menu{}
+		menuMap[m.ID] = &menuCopy
+	}
+
+	for _, m := range menus {
+		menu := menuMap[m.ID]
+		if m.ParentID == nil {
+			roots = append(roots, menu)
+		} else {
+			if parent, ok := menuMap[*m.ParentID]; ok {
+				parent.Children = append(parent.Children, *menu)
+			} else {
+				roots = append(roots, menu)
+			}
+		}
+	}
+
+	return roots
+}
+
 // PermissionService 权限管理服务
 type PermissionService struct {
 	repo port.Repository
@@ -453,11 +479,11 @@ func NewPermissionService(repo port.Repository) *PermissionService {
 	return &PermissionService{repo: repo}
 }
 
-func (s *PermissionService) List(ctx context.Context) ([]*domain.Permission, error) {
+func (s *PermissionService) List(ctx context.Context) ([]*identity.Permission, error) {
 	return s.repo.ListPermissions(ctx)
 }
 
-func (s *PermissionService) Get(ctx context.Context, id uuid.UUID) (*domain.Permission, error) {
+func (s *PermissionService) Get(ctx context.Context, id uuid.UUID) (*identity.Permission, error) {
 	return s.repo.GetPermission(ctx, id)
 }
 
@@ -469,7 +495,7 @@ type CreatePermissionRequest struct {
 	Description string
 }
 
-func (s *PermissionService) Create(ctx context.Context, req *CreatePermissionRequest) (*domain.Permission, error) {
+func (s *PermissionService) Create(ctx context.Context, req *CreatePermissionRequest) (*identity.Permission, error) {
 	existing, err := s.repo.GetPermissionByCode(ctx, req.Code)
 	if err == nil && existing != nil {
 		return nil, ErrPermissionExists
@@ -478,7 +504,7 @@ func (s *PermissionService) Create(ctx context.Context, req *CreatePermissionReq
 		return nil, err
 	}
 
-	permission := &domain.Permission{
+	permission := &identity.Permission{
 		ID:          uuid.New(),
 		Code:        req.Code,
 		Name:        req.Name,

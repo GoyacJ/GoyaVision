@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	"goyavision/internal/domain"
+	"goyavision/internal/domain/identity"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -96,7 +96,7 @@ func initPermissions(ctx context.Context, repo *repository) error {
 		if existing != nil {
 			continue
 		}
-		perm := &domain.Permission{
+		perm := &identity.Permission{
 			ID:          uuid.New(),
 			Code:        p.Code,
 			Name:        p.Name,
@@ -143,19 +143,19 @@ func initMenus(ctx context.Context, repo *repository) error {
 		if existing != nil {
 			continue
 		}
-		menu := &domain.Menu{
+		menu := &identity.Menu{
 			ID:         m.ID,
 			ParentID:   m.ParentID,
 			Code:       m.Code,
 			Name:       m.Name,
-			Type:       m.Type,
+			Type:       identity.MenuType(m.Type),
 			Path:       m.Path,
 			Icon:       m.Icon,
 			Component:  m.Component,
 			Permission: m.Permission,
 			Sort:       m.Sort,
 			Visible:    m.Visible,
-			Status:     domain.MenuStatusEnabled,
+			Status:     identity.MenuStatusEnabled,
 		}
 		if err := repo.CreateMenu(ctx, menu); err != nil {
 			log.Printf("创建菜单失败 %s: %v", m.Code, err)
@@ -171,12 +171,12 @@ func initRoles(ctx context.Context, repo *repository) error {
 		return nil
 	}
 
-	role := &domain.Role{
+	role := &identity.Role{
 		ID:          uuid.MustParse("00000000-0000-0000-0000-000000000100"),
 		Code:        "super_admin",
 		Name:        "超级管理员",
 		Description: "拥有所有权限",
-		Status:      domain.RoleStatusEnabled,
+		Status:      identity.RoleStatusEnabled,
 	}
 
 	if err := repo.CreateRole(ctx, role); err != nil {
@@ -215,12 +215,12 @@ func initAdminUser(ctx context.Context, repo *repository) error {
 		return err
 	}
 
-	user := &domain.User{
+	user := &identity.User{
 		ID:       uuid.MustParse("00000000-0000-0000-0000-000000000200"),
 		Username: "admin",
 		Password: string(hashedPassword),
 		Nickname: "管理员",
-		Status:   domain.UserStatusEnabled,
+		Status:   identity.UserStatusEnabled,
 	}
 
 	if err := repo.CreateUser(ctx, user); err != nil {

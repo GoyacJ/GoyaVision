@@ -1,97 +1,89 @@
 package handler
 
 import (
+	"net/http"
 	"strings"
 
+	appdto "goyavision/internal/app/dto"
 	"goyavision/internal/api/dto"
-	"goyavision/internal/app"
-	"goyavision/internal/domain"
+	"goyavision/internal/domain/workflow"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
-func RegisterWorkflow(g *echo.Group, d Deps) {
-	svc := app.NewWorkflowService(d.Repo)
-	h := workflowHandler{
-		svc:       svc,
-		scheduler: d.WorkflowScheduler,
-	}
-	g.GET("/workflows", h.List)
-	g.POST("/workflows", h.Create)
-	g.GET("/workflows/:id", h.Get)
-	g.PUT("/workflows/:id", h.Update)
-	g.DELETE("/workflows/:id", h.Delete)
-	g.POST("/workflows/:id/enable", h.Enable)
-	g.POST("/workflows/:id/disable", h.Disable)
-	g.POST("/workflows/:id/trigger", h.Trigger)
+func RegisterWorkflow(g *echo.Group, h *Handlers) {
+	handler := &workflowHandler{h: h}
+	g.GET("/workflows", handler.List)
+	g.POST("/workflows", handler.Create)
+	g.GET("/workflows/:id", handler.Get)
+	g.PUT("/workflows/:id", handler.Update)
+	g.DELETE("/workflows/:id", handler.Delete)
+	g.POST("/workflows/:id/enable", handler.Enable)
+	g.POST("/workflows/:id/disable", handler.Disable)
+	g.POST("/workflows/:id/trigger", handler.Trigger)
 }
 
 type workflowHandler struct {
-	svc       *app.WorkflowService
-	scheduler *app.WorkflowScheduler
+	h *Handlers
 }
 
 func (h *workflowHandler) List(c echo.Context) error {
 	var query dto.WorkflowListQuery
 	if err := c.Bind(&query); err != nil {
-		return c.JSON(400, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid query parameters",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid query parameters")
 	}
 
-	req := &app.ListWorkflowsRequest{
-		Limit:  query.Limit,
-		Offset: query.Offset,
+	q := appdto.ListWorkflowsQuery{
+		Pagination: appdto.Pagination{
+			Limit:  query.Limit,
+			Offset: query.Offset,
+		},
 	}
 
 	if query.Status != nil {
-		s := domain.WorkflowStatus(*query.Status)
-		req.Status = &s
+		s := workflow.Status(*query.Status)
+		q.Status = &s
 	}
 
 	if query.TriggerType != nil {
-		t := domain.TriggerType(*query.TriggerType)
-		req.TriggerType = &t
+		t := workflow.TriggerType(*query.TriggerType)
+		q.TriggerType = &t
 	}
 
 	if query.Tags != nil && *query.Tags != "" {
-		req.Tags = strings.Split(*query.Tags, ",")
+		q.Tags = strings.Split(*query.Tags, ",")
 	}
 
 	if query.Keyword != nil {
-		req.Keyword = *query.Keyword
+		q.Keyword = *query.Keyword
 	}
 
-	workflows, total, err := h.svc.List(c.Request().Context(), req)
+	result, err := h.h.ListWorkflows.Handle(c.Request().Context(), q)
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(200, dto.WorkflowListResponse{
-		Items: dto.WorkflowsToResponse(workflows),
-		Total: total,
+	return c.JSON(http.StatusOK, dto.WorkflowListResponse{
+		Items: dto.WorkflowsToResponse(result.Items),
+		Total: result.Total,
 	})
 }
 
 func (h *workflowHandler) Create(c echo.Context) error {
 	var req dto.WorkflowCreateReq
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(400, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid request body",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
 	}
 
-	status := domain.WorkflowStatusDraft
+	status := workflow.StatusDraft
 	if req.Status != "" {
-		status = domain.WorkflowStatus(req.Status)
+		status = workflow.Status(req.Status)
 	}
 
-	nodes := make([]app.WorkflowNodeInput, len(req.Nodes))
+	nodes := make([]appdto.WorkflowNodeInput, len(req.Nodes))
 	for i, n := range req.Nodes {
-		nodes[i] = app.WorkflowNodeInput{
+		nodes[i] = appdto.WorkflowNodeInput{
 			NodeKey:    n.NodeKey,
 			NodeType:   n.NodeType,
 			OperatorID: n.OperatorID,
@@ -100,21 +92,21 @@ func (h *workflowHandler) Create(c echo.Context) error {
 		}
 	}
 
-	edges := make([]app.WorkflowEdgeInput, len(req.Edges))
+	edges := make([]appdto.WorkflowEdgeInput, len(req.Edges))
 	for i, e := range req.Edges {
-		edges[i] = app.WorkflowEdgeInput{
+		edges[i] = appdto.WorkflowEdgeInput{
 			SourceKey: e.SourceKey,
 			TargetKey: e.TargetKey,
 			Condition: e.Condition,
 		}
 	}
 
-	createReq := &app.CreateWorkflowRequest{
+	cmd := appdto.CreateWorkflowCommand{
 		Code:        req.Code,
 		Name:        req.Name,
 		Description: req.Description,
 		Version:     req.Version,
-		TriggerType: domain.TriggerType(req.TriggerType),
+		TriggerType: workflow.TriggerType(req.TriggerType),
 		TriggerConf: req.TriggerConf,
 		Status:      status,
 		Tags:        req.Tags,
@@ -122,62 +114,53 @@ func (h *workflowHandler) Create(c echo.Context) error {
 		Edges:       edges,
 	}
 
-	workflow, err := h.svc.Create(c.Request().Context(), createReq)
+	wf, err := h.h.CreateWorkflow.Handle(c.Request().Context(), cmd)
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(201, dto.WorkflowToResponseWithNodes(workflow))
+	return c.JSON(http.StatusCreated, dto.WorkflowToResponseWithNodes(wf))
 }
 
 func (h *workflowHandler) Get(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		return c.JSON(400, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid workflow id",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid workflow id")
 	}
 
 	withNodes := c.QueryParam("with_nodes") == "true"
 	if withNodes {
-		workflow, err := h.svc.GetWithNodes(c.Request().Context(), id)
+		wf, err := h.h.GetWorkflowWithNodes.Handle(c.Request().Context(), appdto.GetWorkflowWithNodesQuery{ID: id})
 		if err != nil {
 			return err
 		}
-		return c.JSON(200, dto.WorkflowToResponseWithNodes(workflow))
+		return c.JSON(http.StatusOK, dto.WorkflowToResponseWithNodes(wf))
 	}
 
-	workflow, err := h.svc.Get(c.Request().Context(), id)
+	wf, err := h.h.GetWorkflow.Handle(c.Request().Context(), appdto.GetWorkflowQuery{ID: id})
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(200, dto.WorkflowToResponse(workflow))
+	return c.JSON(http.StatusOK, dto.WorkflowToResponse(wf))
 }
 
 func (h *workflowHandler) Update(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		return c.JSON(400, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid workflow id",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid workflow id")
 	}
 
 	var req dto.WorkflowUpdateReq
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(400, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid request body",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
 	}
 
-	nodes := make([]app.WorkflowNodeInput, len(req.Nodes))
+	nodes := make([]appdto.WorkflowNodeInput, len(req.Nodes))
 	for i, n := range req.Nodes {
-		nodes[i] = app.WorkflowNodeInput{
+		nodes[i] = appdto.WorkflowNodeInput{
 			NodeKey:    n.NodeKey,
 			NodeType:   n.NodeType,
 			OperatorID: n.OperatorID,
@@ -186,16 +169,17 @@ func (h *workflowHandler) Update(c echo.Context) error {
 		}
 	}
 
-	edges := make([]app.WorkflowEdgeInput, len(req.Edges))
+	edges := make([]appdto.WorkflowEdgeInput, len(req.Edges))
 	for i, e := range req.Edges {
-		edges[i] = app.WorkflowEdgeInput{
+		edges[i] = appdto.WorkflowEdgeInput{
 			SourceKey: e.SourceKey,
 			TargetKey: e.TargetKey,
 			Condition: e.Condition,
 		}
 	}
 
-	updateReq := &app.UpdateWorkflowRequest{
+	cmd := appdto.UpdateWorkflowCommand{
+		ID:          id,
 		Name:        req.Name,
 		Description: req.Description,
 		TriggerConf: req.TriggerConf,
@@ -205,102 +189,85 @@ func (h *workflowHandler) Update(c echo.Context) error {
 	}
 
 	if req.Status != nil {
-		s := domain.WorkflowStatus(*req.Status)
-		updateReq.Status = &s
+		s := workflow.Status(*req.Status)
+		cmd.Status = &s
 	}
 
-	workflow, err := h.svc.Update(c.Request().Context(), id, updateReq)
+	result, err := h.h.UpdateWorkflow.Handle(c.Request().Context(), cmd)
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(200, dto.WorkflowToResponseWithNodes(workflow))
+	return c.JSON(http.StatusOK, dto.WorkflowToResponseWithNodes(result))
 }
 
 func (h *workflowHandler) Delete(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		return c.JSON(400, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid workflow id",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid workflow id")
 	}
 
-	if err := h.svc.Delete(c.Request().Context(), id); err != nil {
+	err = h.h.DeleteWorkflow.Handle(c.Request().Context(), appdto.DeleteWorkflowCommand{ID: id})
+	if err != nil {
 		return err
 	}
 
-	return c.NoContent(204)
+	return c.NoContent(http.StatusNoContent)
 }
 
 func (h *workflowHandler) Enable(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		return c.JSON(400, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid workflow id",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid workflow id")
 	}
 
-	workflow, err := h.svc.Enable(c.Request().Context(), id)
+	result, err := h.h.EnableWorkflow.Handle(c.Request().Context(), appdto.EnableWorkflowCommand{ID: id, Enabled: true})
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(200, dto.WorkflowToResponseWithNodes(workflow))
+	return c.JSON(http.StatusOK, dto.WorkflowToResponseWithNodes(result))
 }
 
 func (h *workflowHandler) Disable(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		return c.JSON(400, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid workflow id",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid workflow id")
 	}
 
-	workflow, err := h.svc.Disable(c.Request().Context(), id)
+	result, err := h.h.EnableWorkflow.Handle(c.Request().Context(), appdto.EnableWorkflowCommand{ID: id, Enabled: false})
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(200, dto.WorkflowToResponse(workflow))
+	return c.JSON(http.StatusOK, dto.WorkflowToResponse(result))
 }
 
 func (h *workflowHandler) Trigger(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		return c.JSON(400, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid workflow id",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid workflow id")
 	}
 
 	var req struct {
 		AssetID *uuid.UUID `json:"asset_id,omitempty"`
 	}
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(400, dto.ErrorResponse{
-			Error:   "Bad Request",
-			Message: "invalid request body",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
 	}
 
-	if h.scheduler == nil {
-		return c.JSON(500, dto.ErrorResponse{
-			Error:   "Internal Server Error",
-			Message: "scheduler not available",
-		})
+	if h.h.WorkflowScheduler == nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "scheduler not available")
 	}
 
-	task, err := h.scheduler.TriggerWorkflow(c.Request().Context(), id, req.AssetID)
+	task, err := h.h.WorkflowScheduler.TriggerWorkflow(c.Request().Context(), id, req.AssetID)
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(202, dto.TaskToResponse(task))
+	return c.JSON(http.StatusAccepted, dto.TaskToResponse(task))
 }

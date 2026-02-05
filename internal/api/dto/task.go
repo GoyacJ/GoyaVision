@@ -1,10 +1,10 @@
 package dto
 
 import (
-	"encoding/json"
 	"time"
 
-	"goyavision/internal/domain"
+	"goyavision/internal/domain/media"
+	"goyavision/internal/domain/workflow"
 
 	"github.com/google/uuid"
 )
@@ -88,14 +88,14 @@ type TaskStatsResponse struct {
 }
 
 // TaskToResponse 转换为响应
-func TaskToResponse(t *domain.Task) *TaskResponse {
+func TaskToResponse(t *workflow.Task) *TaskResponse {
 	if t == nil {
 		return nil
 	}
 
-	var inputParams map[string]interface{}
-	if t.InputParams != nil && len(t.InputParams) > 0 {
-		json.Unmarshal(t.InputParams, &inputParams)
+	inputParams := t.InputParams
+	if inputParams == nil {
+		inputParams = make(map[string]interface{})
 	}
 
 	return &TaskResponse{
@@ -116,14 +116,14 @@ func TaskToResponse(t *domain.Task) *TaskResponse {
 }
 
 // TaskToResponseWithRelations 转换为包含关联数据的响应
-func TaskToResponseWithRelations(t *domain.Task, minioEndpoint, minioBucket string, minioUseSSL bool) *TaskWithRelationsResponse {
+func TaskToResponseWithRelations(t *workflow.Task, workflow *workflow.Workflow, asset *media.Asset, minioEndpoint, minioBucket string, minioUseSSL bool) *TaskWithRelationsResponse {
 	if t == nil {
 		return nil
 	}
 
-	var inputParams map[string]interface{}
-	if t.InputParams != nil && len(t.InputParams) > 0 {
-		json.Unmarshal(t.InputParams, &inputParams)
+	inputParams := t.InputParams
+	if inputParams == nil {
+		inputParams = make(map[string]interface{})
 	}
 
 	resp := &TaskWithRelationsResponse{
@@ -142,19 +142,19 @@ func TaskToResponseWithRelations(t *domain.Task, minioEndpoint, minioBucket stri
 		UpdatedAt:   t.UpdatedAt,
 	}
 
-	if t.Workflow != nil {
-		resp.Workflow = WorkflowToResponse(t.Workflow)
+	if workflow != nil {
+		resp.Workflow = WorkflowToResponse(workflow)
 	}
 
-	if t.Asset != nil {
-		resp.Asset = AssetToResponse(t.Asset, minioEndpoint, minioBucket, minioUseSSL)
+	if asset != nil {
+		resp.Asset = AssetToResponse(asset, minioEndpoint, minioBucket, minioUseSSL)
 	}
 
 	return resp
 }
 
 // TasksToResponse 转换为响应列表
-func TasksToResponse(tasks []*domain.Task) []*TaskResponse {
+func TasksToResponse(tasks []*workflow.Task) []*TaskResponse {
 	result := make([]*TaskResponse, len(tasks))
 	for i, t := range tasks {
 		result[i] = TaskToResponse(t)
@@ -163,7 +163,7 @@ func TasksToResponse(tasks []*domain.Task) []*TaskResponse {
 }
 
 // TaskStatsToResponse 转换统计为响应
-func TaskStatsToResponse(stats *domain.TaskStats) *TaskStatsResponse {
+func TaskStatsToResponse(stats *workflow.TaskStats) *TaskStatsResponse {
 	if stats == nil {
 		return nil
 	}

@@ -13,6 +13,10 @@ import (
 	"goyavision"
 	"goyavision/config"
 	"goyavision/internal/adapter/engine"
+	inframediamtx "goyavision/internal/infra/mediamtx"
+	infrapersistence "goyavision/internal/infra/persistence"
+	infraauth "goyavision/internal/infra/auth"
+	infraengine "goyavision/internal/infra/engine"
 	"goyavision/internal/adapter/mediamtx"
 	"goyavision/internal/adapter/persistence"
 	"goyavision/internal/api"
@@ -49,6 +53,12 @@ func main() {
 	}
 
 	repo := persistence.NewRepository(db)
+	uow := infrapersistence.NewUnitOfWork(db)
+	mediaGateway := inframediamtx.NewGateway(cfg.MediaMTX.APIAddress)
+	tokenService, err := infraauth.NewJWTService(&cfg.JWT)
+	if err != nil {
+		log.Fatalf("create jwt service: %v", err)
+	}
 
 	mtxCli := mediamtx.NewClient(cfg.MediaMTX.APIAddress)
 	if err := mtxCli.Ping(context.Background()); err != nil {
@@ -56,8 +66,6 @@ func main() {
 	} else {
 		log.Printf("mediamtx connected: %s", cfg.MediaMTX.APIAddress)
 	}
-	mtxPathSync := mediamtx.NewPathSync(mtxCli)
-	mediaSourceService := app.NewMediaSourceService(repo, mtxPathSync)
 
 	minioClient, err := storage.NewMinIOClient(
 		cfg.MinIO.Endpoint,
@@ -76,7 +84,7 @@ func main() {
 		ctx := context.Background()
 
 		executor := engine.NewHTTPOperatorExecutor()
-		workflowEngine := engine.NewSimpleWorkflowEngine(repo, executor)
+		workflowEngine := infraengine.NewDAGWorkflowEngine(uow, executor)
 		workflowScheduler, err = app.NewWorkflowScheduler(repo, workflowEngine)
 		if err != nil {
 			log.Fatalf("create workflow scheduler: %v", err)
@@ -85,7 +93,7 @@ func main() {
 		if err := workflowScheduler.Start(ctx); err != nil {
 			log.Fatalf("start workflow scheduler: %v", err)
 		}
-		log.Print("workflow scheduler started")
+		log.Print("workflow scheduler started (DAG engine)")
 		defer workflowScheduler.Stop()
 	}
 
@@ -96,15 +104,17 @@ func main() {
 		webDist = sub
 	}
 
-	deps := api.HandlerDeps{
-		Repo:               repo,
-		Cfg:                cfg,
-		MtxCli:             mtxCli,
-		MediaSourceService:  mediaSourceService,
-		MinIOClient:        minioClient,
-		WorkflowScheduler:  workflowScheduler,
-	}
-	api.RegisterRouter(e, deps, webDist)
+	handlers := api.NewHandlers(
+		uow,
+		mediaGateway,
+		tokenService,
+		cfg,
+		mtxCli,
+		minioClient,
+		workflowScheduler,
+		repo,
+	)
+	api.RegisterRouter(e, handlers, webDist)
 
 	srv := &http.Server{Addr: cfg.Server.Addr(), Handler: e}
 	go func() {

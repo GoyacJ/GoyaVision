@@ -3,7 +3,7 @@ package dto
 import (
 	"time"
 
-	"goyavision/internal/domain"
+	"goyavision/internal/domain/identity"
 
 	"github.com/google/uuid"
 )
@@ -61,8 +61,8 @@ type MenuResponse struct {
 	UpdatedAt  time.Time       `json:"updated_at"`
 }
 
-// MenuToResponse 将 domain.Menu 转换为 MenuResponse
-func MenuToResponse(m *domain.Menu) *MenuResponse {
+// MenuToResponse 将 identity.Menu 转换为 MenuResponse
+func MenuToResponse(m *identity.Menu) *MenuResponse {
 	if m == nil {
 		return nil
 	}
@@ -76,14 +76,14 @@ func MenuToResponse(m *domain.Menu) *MenuResponse {
 		ParentID:   m.ParentID,
 		Code:       m.Code,
 		Name:       m.Name,
-		Type:       m.Type,
+		Type:       int(m.Type),
 		Path:       m.Path,
 		Icon:       m.Icon,
 		Component:  m.Component,
 		Permission: m.Permission,
 		Sort:       m.Sort,
 		Visible:    m.Visible,
-		Status:     m.Status,
+		Status:     int(m.Status),
 		Children:   children,
 		CreatedAt:  m.CreatedAt,
 		UpdatedAt:  m.UpdatedAt,
@@ -91,7 +91,7 @@ func MenuToResponse(m *domain.Menu) *MenuResponse {
 }
 
 // MenusToResponse 批量转换
-func MenusToResponse(menus []*domain.Menu) []*MenuResponse {
+func MenusToResponse(menus []*identity.Menu) []*MenuResponse {
 	result := make([]*MenuResponse, len(menus))
 	for i, m := range menus {
 		result[i] = MenuToResponse(m)
@@ -111,8 +111,8 @@ type PermissionResponse struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-// PermissionToResponse 将 domain.Permission 转换为 PermissionResponse
-func PermissionToResponse(p *domain.Permission) *PermissionResponse {
+// PermissionToResponse 将 identity.Permission 转换为 PermissionResponse
+func PermissionToResponse(p *identity.Permission) *PermissionResponse {
 	if p == nil {
 		return nil
 	}
@@ -129,7 +129,7 @@ func PermissionToResponse(p *domain.Permission) *PermissionResponse {
 }
 
 // PermissionsToResponse 批量转换
-func PermissionsToResponse(permissions []*domain.Permission) []*PermissionResponse {
+func PermissionsToResponse(permissions []*identity.Permission) []*PermissionResponse {
 	result := make([]*PermissionResponse, len(permissions))
 	for i, p := range permissions {
 		result[i] = PermissionToResponse(p)

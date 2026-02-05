@@ -10,15 +10,15 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func RegisterRole(g *echo.Group, d Deps) {
-	svc := app.NewRoleService(d.Repo)
-	h := roleHandler{svc: svc}
+func RegisterRole(g *echo.Group, h *Handlers) {
+	svc := app.NewRoleService(h.Repo)
+	rh := roleHandler{svc: svc}
 
-	g.GET("/roles", h.List)
-	g.POST("/roles", h.Create)
-	g.GET("/roles/:id", h.Get)
-	g.PUT("/roles/:id", h.Update)
-	g.DELETE("/roles/:id", h.Delete)
+	g.GET("/roles", rh.List)
+	g.POST("/roles", rh.Create)
+	g.GET("/roles/:id", rh.Get)
+	g.PUT("/roles/:id", rh.Update)
+	g.DELETE("/roles/:id", rh.Delete)
 }
 
 type roleHandler struct {

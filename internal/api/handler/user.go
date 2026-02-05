@@ -10,16 +10,16 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func RegisterUser(g *echo.Group, d Deps) {
-	svc := app.NewUserService(d.Repo)
-	h := userHandler{svc: svc}
+func RegisterUser(g *echo.Group, h *Handlers) {
+	svc := app.NewUserService(h.Repo)
+	uh := userHandler{svc: svc}
 
-	g.GET("/users", h.List)
-	g.POST("/users", h.Create)
-	g.GET("/users/:id", h.Get)
-	g.PUT("/users/:id", h.Update)
-	g.DELETE("/users/:id", h.Delete)
-	g.POST("/users/:id/reset-password", h.ResetPassword)
+	g.GET("/users", uh.List)
+	g.POST("/users", uh.Create)
+	g.GET("/users/:id", uh.Get)
+	g.PUT("/users/:id", uh.Update)
+	g.DELETE("/users/:id", uh.Delete)
+	g.POST("/users/:id/reset-password", uh.ResetPassword)
 }
 
 type userHandler struct {

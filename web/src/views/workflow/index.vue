@@ -12,7 +12,7 @@
             placeholder="搜索工作流"
             class="w-80"
             immediate
-            @search="loadWorkflows"
+            @search="() => { pagination.page = 1 }"
           />
           <GvButton @click="showCreateDialog = true">
             <template #icon>
@@ -30,12 +30,30 @@
       :fields="filterFields"
       :columns="2"
       :loading="loading"
-      @filter="loadWorkflows"
+      @filter="() => { pagination.page = 1 }"
       @reset="handleResetFilter"
+    />
+
+    <ErrorState
+      v-if="error && !loading"
+      :error="error"
+      title="加载失败"
+      @retry="refreshTable"
+    />
+
+    <EmptyState
+      v-else-if="!loading && workflows.length === 0"
+      icon="🔄"
+      title="还没有工作流"
+      description="创建工作流以编排 AI 算子处理任务"
+      action-text="创建工作流"
+      show-action
+      @action="showCreateDialog = true"
     />
 
     <!-- 数据表格 -->
     <GvTable
+      v-else
       :data="workflows"
       :columns="columns"
       :loading="loading"
@@ -170,11 +188,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { workflowApi, type Workflow, type WorkflowCreateReq } from '@/api/workflow'
 import { useRouter } from 'vue-router'
+import { useTable } from '@/composables'
 import GvContainer from '@/components/layout/GvContainer/index.vue'
 import GvTable from '@/components/base/GvTable/index.vue'
 import GvModal from '@/components/base/GvModal/index.vue'
@@ -187,14 +206,15 @@ import PageHeader from '@/components/business/PageHeader/index.vue'
 import FilterBar from '@/components/business/FilterBar/index.vue'
 import SearchBar from '@/components/business/SearchBar/index.vue'
 import StatusBadge from '@/components/business/StatusBadge/index.vue'
+import { ErrorState, EmptyState } from '@/components/common'
 import type { TableColumn } from '@/components/base/GvTable/types'
 import type { FilterField } from '@/components/business/FilterBar/types'
 
 const router = useRouter()
-const loading = ref(false)
+
+// UI 状态
 const creating = ref(false)
 const triggering = ref(false)
-const workflows = ref<Workflow[]>([])
 const showCreateDialog = ref(false)
 const showViewDialog = ref(false)
 const showTriggerDialog = ref(false)
@@ -208,11 +228,30 @@ const filters = ref({
   status: ''
 })
 
-const pagination = reactive({
-  page: 1,
-  page_size: 20,
-  total: 0
-})
+// 计算筛选参数
+const filterParams = computed(() => ({
+  keyword: searchKeyword.value || undefined,
+  trigger_type: filters.value.trigger_type || undefined,
+  status: filters.value.status || undefined
+}))
+
+// 使用 useTable 管理工作流列表
+const {
+  items: workflows,
+  isLoading: loading,
+  error,
+  pagination,
+  goToPage,
+  changePageSize,
+  refreshTable
+} = useTable(
+  (params) => workflowApi.list(params),
+  {
+    immediate: true,
+    initialPageSize: 20,
+    extraParams: filterParams
+  }
+)
 
 const createForm = reactive<WorkflowCreateReq>({
   code: '',
@@ -273,32 +312,9 @@ const columns: TableColumn[] = [
 
 const paginationConfig = computed(() => ({
   currentPage: pagination.page,
-  pageSize: pagination.page_size,
+  pageSize: pagination.pageSize,
   total: pagination.total
 }))
-
-onMounted(() => {
-  loadWorkflows()
-})
-
-async function loadWorkflows() {
-  loading.value = true
-  try {
-    const response = await workflowApi.list({
-      keyword: searchKeyword.value || undefined,
-      trigger_type: filters.value.trigger_type as any,
-      status: filters.value.status as any,
-      page: pagination.page,
-      page_size: pagination.page_size
-    })
-    workflows.value = response.data.items
-    pagination.total = response.data.total
-  } catch (error: any) {
-    ElMessage.error(error.response?.data?.message || '加载失败')
-  } finally {
-    loading.value = false
-  }
-}
 
 async function handleCreate() {
   if (!createFormRef.value) return
@@ -309,7 +325,7 @@ async function handleCreate() {
       await workflowApi.create(createForm)
       ElMessage.success('创建成功')
       showCreateDialog.value = false
-      loadWorkflows()
+      refreshTable()
     } catch (error: any) {
       ElMessage.error(error.response?.data?.message || '创建失败')
     } finally {
@@ -353,7 +369,7 @@ async function handleEnable(row: Workflow) {
   try {
     await workflowApi.enable(row.id)
     ElMessage.success('启用成功')
-    loadWorkflows()
+    refreshTable()
   } catch (error: any) {
     ElMessage.error(error.response?.data?.message || '启用失败')
   }
@@ -363,7 +379,7 @@ async function handleDisable(row: Workflow) {
   try {
     await workflowApi.disable(row.id)
     ElMessage.success('禁用成功')
-    loadWorkflows()
+    refreshTable()
   } catch (error: any) {
     ElMessage.error(error.response?.data?.message || '禁用失败')
   }
@@ -376,7 +392,7 @@ async function handleDelete(row: Workflow) {
     })
     await workflowApi.delete(row.id)
     ElMessage.success('删除成功')
-    loadWorkflows()
+    refreshTable()
   } catch (error: any) {
     if (error !== 'cancel') {
       ElMessage.error(error.response?.data?.message || '删除失败')
@@ -384,20 +400,14 @@ async function handleDelete(row: Workflow) {
   }
 }
 
-function handlePageChange(page: number) {
-  pagination.page = page
-  loadWorkflows()
-}
-
-function handleSizeChange(size: number) {
-  pagination.page_size = size
-  pagination.page = 1
-  loadWorkflows()
-}
+// 直接使用 useTable 提供的方法
+const handlePageChange = goToPage
+const handleSizeChange = changePageSize
 
 function handleResetFilter() {
   searchKeyword.value = ''
-  loadWorkflows()
+  pagination.page = 1
+  // useTable 监听 pagination.page 变化会自动重新加载
 }
 
 function getTriggerTypeLabel(type: string) {

@@ -16,6 +16,7 @@ export type ButtonVariant = 'filled' | 'tonal' | 'outlined' | 'text'
 
 /**
  * 按钮颜色
+ * @deprecated secondary 已弃用，自动映射为 neutral
  */
 export type ButtonColor = 'primary' | 'secondary' | 'success' | 'error' | 'warning' | 'info'
 
