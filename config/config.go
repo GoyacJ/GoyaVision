@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 )
 
@@ -91,6 +92,8 @@ func Load() (*Config, error) {
 		env = "dev"
 	}
 
+	_ = godotenv.Overload("./configs/.env")
+
 	v.SetConfigName(fmt.Sprintf("config.%s", env))
 	v.SetConfigType("yaml")
 	v.AddConfigPath("./configs")
@@ -100,6 +103,7 @@ func Load() (*Config, error) {
 	}
 
 	v.SetEnvPrefix("GOYAVISION")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
 
 	cfg := &Config{
