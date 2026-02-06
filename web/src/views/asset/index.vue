@@ -1,21 +1,19 @@
 <template>
   <GvContainer max-width="full" class="h-full">
     <div class="flex h-full gap-4">
-      <!-- 左侧：类型和标签筛选 -->
+      <!-- 左侧：类型和标签筛选（保留左右布局） -->
       <aside class="w-64 flex-shrink-0">
-        <!-- 页面标题 -->
         <div class="mb-4">
           <h1 class="text-2xl font-bold text-text-primary">媒体资产库</h1>
         </div>
 
         <GvCard shadow="sm" padding="md" class="sticky top-4">
-          <!-- 媒体类型筛选 -->
           <div class="mb-6">
             <h3 class="text-sm font-semibold text-text-primary mb-3">媒体类型</h3>
             <div class="space-y-2">
               <div
                 v-for="type in mediaTypes"
-                :key="type.value"
+                :key="String(type.value)"
                 :class="[
                   'flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all',
                   selectedType === type.value
@@ -30,19 +28,10 @@
                   </el-icon>
                   <span class="text-sm">{{ type.label }}</span>
                 </div>
-                <GvBadge
-                  v-if="type.count !== undefined"
-                  :color="selectedType === type.value ? 'primary' : 'neutral'"
-                  size="small"
-                  variant="tonal"
-                >
-                  {{ type.count }}
-                </GvBadge>
               </div>
             </div>
           </div>
 
-          <!-- 标签筛选 -->
           <div>
             <div class="flex items-center justify-between mb-3">
               <h3 class="text-sm font-semibold text-text-primary">标签</h3>
@@ -77,7 +66,6 @@
         </GvCard>
       </aside>
 
-      <!-- 右侧：资产列表 -->
       <main class="flex-1 min-w-0">
         <!-- 操作栏 -->
         <div class="flex items-center justify-between mb-6">
@@ -142,8 +130,8 @@
               v-for="asset in assets"
               :key="asset.id"
               :asset="asset"
-              @view="handleView"
-              @edit="handleEdit"
+              :can-edit="canEditPermission"
+              @click="handleDetail"
               @delete="handleDelete"
             />
           </div>
@@ -196,9 +184,8 @@
             </template>
             <template #actions="{ row }">
               <GvSpace size="xs">
-                <GvButton variant="text" size="small" @click="handleView(row)">查看</GvButton>
-                <GvButton variant="text" size="small" @click="handleEdit(row)">编辑</GvButton>
-                <GvButton variant="text" size="small" color="error" @click="handleDelete(row)">删除</GvButton>
+                <GvButton variant="text" size="small" @click="handleDetail(row)">详情</GvButton>
+                <GvButton v-if="canEditPermission" variant="text" size="small" color="error" @click="handleDelete(row)">删除</GvButton>
               </GvSpace>
             </template>
           </GvTable>
@@ -286,114 +273,28 @@
           </el-form>
         </GvModal>
 
-        <!-- 编辑资产对话框 -->
-        <GvModal
-          v-model="showEditDialog"
-          title="编辑资产"
-          @confirm="handleUpdate"
-          @cancel="showEditDialog = false"
-        >
-          <el-form ref="editFormRef" :model="editForm" :rules="editRules" label-width="100px">
-            <el-form-item label="资产名称" prop="name">
-              <GvInput v-model="editForm.name" />
-            </el-form-item>
-            <el-form-item label="状态" prop="status">
-              <GvSelect
-                v-model="editForm.status"
-                :options="statusOptions"
-              />
-            </el-form-item>
-            <el-form-item label="标签" prop="tags">
-              <el-select
-                v-model="editForm.tags"
-                multiple
-                filterable
-                allow-create
-                placeholder="输入标签并回车"
-                class="w-full"
-              >
-                <el-option
-                  v-for="tag in tags"
-                  :key="tag"
-                  :label="tag"
-                  :value="tag"
-                />
-              </el-select>
-            </el-form-item>
-          </el-form>
-        </GvModal>
-
-        <!-- 资产详情对话框 -->
-        <GvModal
-          v-model="showViewDialog"
+        <!-- 资产详情抽屉（查看 + 编辑一体化） -->
+        <GvDrawer
+          v-model="showDetailDrawer"
           title="资产详情"
+          direction="right"
           size="large"
-          :show-confirm="false"
-          cancel-text="关闭"
+          :show-footer="false"
         >
-          <div v-if="currentAsset" class="asset-detail-container">
-            <!-- 左侧：资产信息 -->
-            <div class="asset-detail-info">
-              <div class="info-section">
-                <div class="info-item">
-                  <span class="info-label">名称</span>
-                  <span class="info-value">{{ currentAsset.name }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">类型</span>
-                  <GvTag :color="getTypeColor(currentAsset.type)" size="small">
-                    {{ getTypeLabel(currentAsset.type) }}
-                  </GvTag>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">来源</span>
-                  <GvTag color="info" size="small" variant="tonal">
-                    {{ getSourceTypeLabel(currentAsset.source_type) }}
-                  </GvTag>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">格式</span>
-                  <span class="info-value">{{ currentAsset.format || '-' }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">大小</span>
-                  <span class="info-value">{{ formatSize(currentAsset.size) }}</span>
-                </div>
-                <div v-if="currentAsset.duration" class="info-item">
-                  <span class="info-label">时长</span>
-                  <span class="info-value">{{ formatDuration(currentAsset.duration) }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">状态</span>
-                  <StatusBadge :status="mapStatus(currentAsset.status)" />
-                </div>
-                <div v-if="currentAsset.tags && currentAsset.tags.length > 0" class="info-item">
-                  <span class="info-label">标签</span>
-                  <GvSpace size="xs" wrap>
-                    <GvTag v-for="tag in currentAsset.tags" :key="tag" size="small" color="primary" variant="tonal">
-                      {{ tag }}
-                    </GvTag>
-                  </GvSpace>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">创建时间</span>
-                  <span class="info-value text-xs">{{ formatDate(currentAsset.created_at) }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">ID</span>
-                  <span class="info-value text-xs text-text-tertiary">{{ currentAsset.id }}</span>
-                </div>
-              </div>
+          <div v-if="currentAsset" class="asset-detail-panel">
+            <div class="asset-detail-toolbar">
+              <GvButton size="small" variant="tonal" @click="handleCopyLink">复制链接</GvButton>
+              <GvButton size="small" variant="tonal" @click="handleDownload">下载</GvButton>
             </div>
 
-            <!-- 右侧：资源预览 -->
-            <div class="asset-detail-preview">
+            <div class="asset-preview-card">
               <!-- 视频预览 -->
               <div v-if="currentAsset.type === 'video'" class="preview-container">
                 <video
                   :src="currentAsset.path"
                   controls
-                  class="preview-media"
+                  class="preview-media preview-media--zoomable"
+                  @dblclick="openVideoPreview"
                 >
                   您的浏览器不支持视频播放
                 </video>
@@ -404,7 +305,8 @@
                 <img
                   :src="currentAsset.path"
                   :alt="currentAsset.name"
-                  class="preview-media"
+                  class="preview-media preview-media--zoomable"
+                  @dblclick="openImagePreview"
                 />
               </div>
 
@@ -434,8 +336,102 @@
                 </div>
               </div>
             </div>
+
+            <div class="asset-form-grid">
+              <div class="info-item info-item--full">
+                <span class="info-label">名称</span>
+                <template v-if="canEditPermission">
+                  <GvInput v-model="editForm.name" />
+                </template>
+                <span v-else class="info-value">{{ currentAsset.name }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">类型</span>
+                <GvTag :color="getTypeColor(currentAsset.type)" size="small">
+                  {{ getTypeLabel(currentAsset.type) }}
+                </GvTag>
+              </div>
+              <div class="info-item">
+                <span class="info-label">来源</span>
+                <GvTag color="info" size="small" variant="tonal">
+                  {{ getSourceTypeLabel(currentAsset.source_type) }}
+                </GvTag>
+              </div>
+              <div class="info-item">
+                <span class="info-label">格式</span>
+                <span class="info-value">{{ currentAsset.format || '-' }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">大小</span>
+                <span class="info-value">{{ formatSize(currentAsset.size) }}</span>
+              </div>
+              <div v-if="currentAsset.duration" class="info-item">
+                <span class="info-label">时长</span>
+                <span class="info-value">{{ formatDuration(currentAsset.duration) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">状态</span>
+                <template v-if="canEditPermission">
+                  <GvSelect v-model="editForm.status" :options="statusOptions" />
+                </template>
+                <StatusBadge v-else :status="mapStatus(currentAsset.status)" />
+              </div>
+              <div class="info-item info-item--full">
+                <span class="info-label">标签</span>
+                <template v-if="canEditPermission">
+                  <el-select
+                    v-model="editForm.tags"
+                    multiple
+                    filterable
+                    allow-create
+                    placeholder="输入标签并回车"
+                    class="w-full"
+                  >
+                    <el-option
+                      v-for="tag in tags"
+                      :key="tag"
+                      :label="tag"
+                      :value="tag"
+                    />
+                  </el-select>
+                </template>
+                <GvSpace v-else-if="currentAsset.tags && currentAsset.tags.length > 0" size="xs" wrap>
+                  <GvTag v-for="tag in currentAsset.tags" :key="tag" size="small" color="primary" variant="tonal">{{ tag }}</GvTag>
+                </GvSpace>
+                <span v-else class="info-value">-</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">创建时间</span>
+                <span class="info-value text-xs">{{ formatDate(currentAsset.created_at) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">ID</span>
+                <span class="info-value text-xs text-text-tertiary">{{ currentAsset.id }}</span>
+              </div>
+            </div>
+
+            <div v-if="canEditPermission" class="asset-detail-actions">
+              <GvButton size="small" variant="filled" :loading="savingSection === 'all'" @click="saveAll">保存</GvButton>
+            </div>
+            <div v-else class="pt-2">
+              <GvButton size="small" variant="tonal" @click="showDetailDrawer = false">关闭</GvButton>
+            </div>
           </div>
-        </GvModal>
+        </GvDrawer>
+
+        <el-dialog v-model="showImagePreview" title="图片预览" width="70%" append-to-body>
+          <div class="preview-dialog-content">
+            <img v-if="currentAsset" :src="currentAsset.path" :alt="currentAsset.name" class="preview-dialog-image" />
+          </div>
+        </el-dialog>
+
+        <el-dialog v-model="showVideoPreview" title="视频预览" width="80%" append-to-body>
+          <div class="preview-dialog-content">
+            <video v-if="currentAsset" :src="currentAsset.path" controls autoplay class="preview-dialog-video">
+              您的浏览器不支持视频播放
+            </video>
+          </div>
+        </el-dialog>
       </main>
     </div>
   </GvContainer>
@@ -450,39 +446,42 @@ import { useTable, useAsyncData } from '@/composables'
 import GvContainer from '@/components/layout/GvContainer/index.vue'
 import GvCard from '@/components/base/GvCard/index.vue'
 import GvModal from '@/components/base/GvModal/index.vue'
+import GvDrawer from '@/components/base/GvDrawer/index.vue'
 import GvButton from '@/components/base/GvButton/index.vue'
 import GvSpace from '@/components/layout/GvSpace/index.vue'
 import GvTag from '@/components/base/GvTag/index.vue'
-import GvBadge from '@/components/base/GvBadge/index.vue'
 import GvInput from '@/components/base/GvInput/index.vue'
 import GvSelect from '@/components/base/GvSelect/index.vue'
 import GvLoading from '@/components/base/GvLoading/index.vue'
 import GvTable from '@/components/base/GvTable/index.vue'
 import GvUpload from '@/components/base/GvUpload/index.vue'
-import PageHeader from '@/components/business/PageHeader/index.vue'
 import SearchBar from '@/components/business/SearchBar/index.vue'
 import StatusBadge from '@/components/business/StatusBadge/index.vue'
 import AssetCard from '@/components/business/AssetCard/index.vue'
 import { LoadingState, ErrorState, EmptyState } from '@/components/common'
+import { useUserStore } from '@/store/user'
 
 // UI 状态
 const uploading = ref(false)
 const showUploadDialog = ref(false)
-const showEditDialog = ref(false)
-const showViewDialog = ref(false)
+const showDetailDrawer = ref(false)
+const savingSection = ref<'all' | ''>('')
 const currentAsset = ref<MediaAsset | null>(null)
 const uploadFormRef = ref<FormInstance>()
-const editFormRef = ref<FormInstance>()
 const uploadRef = ref()
 const uploadType = ref<'url' | 'file'>('url')
 const uploadFileList = ref<UploadFile[]>([])
 const selectedFile = ref<UploadFile | null>(null)
 const viewMode = ref<'grid' | 'list'>('grid')
+const showImagePreview = ref(false)
+const showVideoPreview = ref(false)
 
 // 筛选参数
 const searchName = ref('')
 const selectedType = ref<string | null>(null)
 const selectedTag = ref<string | null>(null)
+const userStore = useUserStore()
+const canEditPermission = computed(() => userStore.hasPermission('asset:update'))
 
 // 计算筛选参数
 const filterParams = computed(() => ({
@@ -570,10 +569,6 @@ const uploadRules: FormRules = {
   ]
 }
 
-const editRules: FormRules = {
-  name: [{ required: true, message: '请输入资产名称', trigger: 'blur' }]
-}
-
 const mediaTypes = computed(() => [
   { label: '全部', value: null, icon: FolderOpened },
   { label: '视频', value: 'video', icon: VideoCamera },
@@ -630,6 +625,10 @@ function handleFileChange(file: UploadFile, fileList: UploadFiles) {
     uploadForm.name = file.name.split('.')[0]
     uploadForm.size = file.size || 0
     uploadForm.format = file.name.split('.').pop() || ''
+    const detectedType = detectAssetType(file.name, file.raw.type)
+    if (detectedType) {
+      uploadForm.type = detectedType
+    }
   } else {
     selectedFile.value = null
     uploadForm.size = 0
@@ -706,34 +705,105 @@ function resetUploadForm() {
   uploadFormRef.value?.resetFields()
 }
 
-function handleView(asset: MediaAsset) {
-  currentAsset.value = asset
-  showViewDialog.value = true
+function detectAssetType(nameOrPath: string, mimeType?: string): 'video' | 'image' | 'audio' | null {
+  const source = (nameOrPath || '').toLowerCase()
+  const mime = (mimeType || '').toLowerCase()
+
+  if (mime.startsWith('image/')) return 'image'
+  if (mime.startsWith('video/')) return 'video'
+  if (mime.startsWith('audio/')) return 'audio'
+
+  const imageExt = /\.(jpg|jpeg|png|gif|webp|bmp|svg|heic)(\?.*)?$/i
+  const videoExt = /\.(mp4|mov|mkv|avi|webm|m4v)(\?.*)?$/i
+  const audioExt = /\.(mp3|wav|aac|m4a|flac|ogg)(\?.*)?$/i
+
+  if (imageExt.test(source)) return 'image'
+  if (videoExt.test(source)) return 'video'
+  if (audioExt.test(source)) return 'audio'
+
+  return null
 }
 
-function handleEdit(asset: MediaAsset) {
+watch(
+  () => uploadForm.path,
+  (val) => {
+    if (uploadType.value !== 'url') return
+    const detectedType = detectAssetType(val)
+    if (detectedType) {
+      uploadForm.type = detectedType
+    }
+  }
+)
+
+function handleDetail(asset: MediaAsset) {
   currentAsset.value = asset
   editForm.name = asset.name
   editForm.status = asset.status
   editForm.tags = asset.tags || []
-  showEditDialog.value = true
+  showDetailDrawer.value = true
 }
 
-async function handleUpdate() {
-  if (!editFormRef.value || !currentAsset.value) return
+function resetEditForm() {
+  if (!currentAsset.value) return
+  editForm.name = currentAsset.value.name
+  editForm.status = currentAsset.value.status
+  editForm.tags = currentAsset.value.tags || []
+}
 
-  await editFormRef.value.validate(async (valid) => {
-    if (!valid) return
-    try {
-      await assetApi.update(currentAsset.value!.id, editForm)
-      ElMessage.success('更新成功')
-      showEditDialog.value = false
-      refreshTable()
-      loadTags()
-    } catch (error: any) {
-      ElMessage.error(error.response?.data?.message || '更新失败')
+async function doUpdate(payload: AssetUpdateReq) {
+  if (!currentAsset.value) return
+
+  savingSection.value = 'all'
+  try {
+    const res = await assetApi.update(currentAsset.value.id, payload)
+    const updated = res.data as MediaAsset
+    currentAsset.value = updated
+    resetEditForm()
+    ElMessage.success('保存成功')
+    refreshTable()
+    loadTags()
+  } catch (error: any) {
+    if (error?.response?.status === 403) {
+      ElMessage.error('无编辑权限')
+      return
     }
+    ElMessage.error(error.response?.data?.message || '更新失败')
+  } finally {
+    savingSection.value = ''
+  }
+}
+
+async function saveAll() {
+  await doUpdate({
+    name: editForm.name,
+    status: editForm.status,
+    tags: editForm.tags || []
   })
+}
+
+async function handleCopyLink() {
+  if (!currentAsset.value?.path) return
+  try {
+    await navigator.clipboard.writeText(currentAsset.value.path)
+    ElMessage.success('链接已复制')
+  } catch {
+    ElMessage.error('复制失败，请手动复制')
+  }
+}
+
+function handleDownload() {
+  if (!currentAsset.value?.path) return
+  window.open(currentAsset.value.path, '_blank')
+}
+
+function openImagePreview() {
+  if (currentAsset.value?.type !== 'image') return
+  showImagePreview.value = true
+}
+
+function openVideoPreview() {
+  if (currentAsset.value?.type !== 'video') return
+  showVideoPreview.value = true
 }
 
 async function handleDelete(asset: MediaAsset) {
@@ -872,24 +942,44 @@ function formatDate(dateStr: string): string {
   opacity: 0;
 }
 
-/* 资产详情两栏布局 */
-.asset-detail-container {
-  display: grid;
-  grid-template-columns: 300px 1fr;
-  gap: 24px;
-  min-height: 400px;
-}
-
-/* 左侧信息区域 */
-.asset-detail-info {
-  border-right: 1px solid #e5e7eb;
-  padding-right: 24px;
-}
-
-.info-section {
+.asset-detail-panel {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.asset-detail-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.asset-preview-card {
+  background: #f9fafb;
+  border-radius: 8px;
+  overflow: hidden;
+  min-height: 260px;
+}
+
+.asset-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.info-item--full {
+  grid-column: 1 / -1;
+}
+
+.asset-detail-actions {
+  display: flex;
+  justify-content: flex-end;
+  position: sticky;
+  bottom: 0;
+  padding-top: 8px;
+  background: linear-gradient(to top, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.65));
+  backdrop-filter: blur(4px);
+  z-index: 2;
 }
 
 .info-item {
@@ -910,23 +1000,27 @@ function formatDate(dateStr: string): string {
   word-break: break-all;
 }
 
-/* 右侧预览区域 */
-.asset-detail-preview {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f9fafb;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
 .preview-container {
+  position: relative;
   width: 100%;
-  height: 100%;
+  min-height: 260px;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
+}
+
+.preview-dialog-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.preview-dialog-image,
+.preview-dialog-video {
+  max-width: 100%;
+  max-height: 70vh;
+  border-radius: 8px;
 }
 
 .preview-media {
@@ -936,6 +1030,10 @@ function formatDate(dateStr: string): string {
   height: auto;
   border-radius: 8px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.preview-media--zoomable {
+  cursor: zoom-in;
 }
 
 /* 音频预览 */
@@ -954,16 +1052,22 @@ function formatDate(dateStr: string): string {
 }
 
 /* 深色模式 */
-.dark .asset-detail-info {
-  border-right-color: #374151;
-}
-
 .dark .info-value {
   color: #f3f4f6;
 }
 
-.dark .asset-detail-preview {
+.dark .asset-preview-card {
   background: #1f2937;
+}
+
+.dark .asset-detail-actions {
+  background: linear-gradient(to top, rgba(17, 24, 39, 0.96), rgba(17, 24, 39, 0.65));
+}
+
+@media (max-width: 960px) {
+  .asset-form-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @keyframes pulse {

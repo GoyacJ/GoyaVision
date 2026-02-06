@@ -32,18 +32,6 @@
         </div>
       </div>
 
-      <!-- 类型标识（与标签同款 GvTag 样式） -->
-      <div class="asset-card__type-badge">
-        <GvTag :color="getTypeColor(asset.type)" size="small" variant="tonal">
-          <span class="inline-flex items-center gap-1">
-            <el-icon :size="14">
-              <component :is="getTypeIcon(asset.type)" />
-            </el-icon>
-            {{ getTypeLabel(asset.type) }}
-          </span>
-        </GvTag>
-      </div>
-
       <!-- 时长标识（视频/音频） -->
       <div
         v-if="asset.duration && (asset.type === 'video' || asset.type === 'audio')"
@@ -52,50 +40,25 @@
         {{ formatDuration(asset.duration) }}
       </div>
 
-      <!-- 悬停操作栏 -->
-      <div class="asset-card__actions">
-        <GvSpace size="xs">
-          <GvButton
-            size="small"
-            variant="filled"
-            color="primary"
-            @click.stop="handleView"
-          >
-            <template #icon>
-              <el-icon><View /></el-icon>
-            </template>
-            查看
-          </GvButton>
-          <GvButton
-            size="small"
-            variant="tonal"
-            @click.stop="handleEdit"
-          >
-            <template #icon>
-              <el-icon><Edit /></el-icon>
-            </template>
-            编辑
-          </GvButton>
-          <GvButton
-            size="small"
-            variant="text"
-            color="error"
-            @click.stop="handleDelete"
-          >
-            <template #icon>
-              <el-icon><Delete /></el-icon>
-            </template>
-            删除
-          </GvButton>
-        </GvSpace>
-      </div>
     </div>
 
     <!-- 信息区域 -->
     <div class="asset-card__info">
-      <!-- 名称 -->
-      <div class="asset-card__name" :title="asset.name">
-        {{ asset.name }}
+      <!-- 名称 + 类型（同一行，右对齐） -->
+      <div class="asset-card__title-row">
+        <div class="asset-card__name" :title="asset.name">
+          {{ asset.name }}
+        </div>
+        <div class="asset-card__type-badge">
+          <GvTag :color="getTypeColor(asset.type)" size="small" variant="tonal">
+            <span class="inline-flex items-center gap-1">
+              <el-icon :size="13">
+                <component :is="getTypeIcon(asset.type)" />
+              </el-icon>
+              {{ getTypeLabel(asset.type) }}
+            </span>
+          </GvTag>
+        </div>
       </div>
 
       <!-- 元信息 -->
@@ -131,19 +94,36 @@
         </GvSpace>
       </div>
     </div>
+
+    <div class="asset-card__actions">
+      <GvButton
+        v-if="canEdit"
+        class="asset-card__delete-btn"
+        size="small"
+        variant="tonal"
+        color="info"
+        @click.stop="handleDelete"
+      >
+        <template #icon>
+          <el-icon><Delete /></el-icon>
+        </template>
+        删除
+      </GvButton>
+    </div>
   </GvCard>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import { cn } from '@/utils/cn'
-import { VideoCamera, Picture, Headset, View, Edit, Delete } from '@element-plus/icons-vue'
-import { GvCard, GvBadge, GvButton, GvSpace, GvTag, StatusBadge } from '@/components'
+import { VideoCamera, Picture, Headset, Delete } from '@element-plus/icons-vue'
+import { GvCard, GvButton, GvSpace, GvTag } from '@/components'
 import type { AssetCardProps, AssetCardEmits } from './types'
 
 const props = withDefaults(defineProps<AssetCardProps>(), {
   selectable: false,
-  selected: false
+  selected: false,
+  canEdit: true
 })
 
 const emit = defineEmits<AssetCardEmits>()
@@ -190,16 +170,6 @@ function getTypeColor(type: string) {
   return colorMap[type] || 'neutral'
 }
 
-function mapStatus(status: string): any {
-  const statusMap: Record<string, string> = {
-    ready: 'success',
-    processing: 'processing',
-    pending: 'pending',
-    error: 'error'
-  }
-  return statusMap[status] || 'inactive'
-}
-
 function formatSize(size: number): string {
   if (size < 1024) return `${size} B`
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(2)} KB`
@@ -217,14 +187,6 @@ function formatDuration(seconds: number): string {
 
 function handleClick() {
   emit('click', props.asset)
-}
-
-function handleView() {
-  emit('view', props.asset)
-}
-
-function handleEdit() {
-  emit('edit', props.asset)
 }
 
 function handleDelete() {
@@ -261,22 +223,18 @@ function handleSelectToggle() {
   @apply w-full h-full flex items-center justify-center bg-neutral-50;
 }
 
-.asset-card__type-badge {
-  @apply absolute top-2 right-2 z-10;
-}
-
 .asset-card__duration {
   @apply absolute bottom-2 right-2 z-10;
   @apply px-2 py-1 bg-black/70 text-white text-xs rounded;
 }
 
 .asset-card__actions {
-  @apply absolute inset-0 flex items-center justify-center;
-  @apply bg-black/60 opacity-0 transition-opacity duration-200;
+  @apply absolute bottom-2 right-2 z-20;
 }
 
-.asset-card:hover .asset-card__actions {
-  @apply opacity-100;
+.asset-card__delete-btn {
+  transform: scale(0.88);
+  transform-origin: bottom right;
 }
 
 .asset-card__info {
@@ -285,6 +243,16 @@ function handleSelectToggle() {
 
 .asset-card__name {
   @apply text-sm font-medium text-text-primary truncate;
+}
+
+.asset-card__title-row {
+  @apply flex items-center justify-between gap-2;
+}
+
+.asset-card__type-badge {
+  @apply flex-shrink-0;
+  transform: scale(0.92);
+  transform-origin: right center;
 }
 
 .asset-card__meta {
