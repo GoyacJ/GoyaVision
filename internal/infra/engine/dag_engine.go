@@ -333,11 +333,15 @@ func (e *DAGWorkflowEngine) executeNode(
 	var op *operator.Operator
 	err := e.uow.Do(ctx, func(ctx context.Context, repos *port.Repositories) error {
 		var err error
-		op, err = repos.Operators.Get(ctx, *node.OperatorID)
+		op, err = repos.Operators.GetWithActiveVersion(ctx, *node.OperatorID)
 		return err
 	})
 	if err != nil {
 		return fmt.Errorf("failed to get operator: %w", err)
+	}
+
+	if op.ActiveVersion == nil {
+		return fmt.Errorf("operator %s has no active version", op.Code)
 	}
 
 	// Prepare input (merge task input + node config + previous outputs)
@@ -360,7 +364,7 @@ func (e *DAGWorkflowEngine) executeNode(
 
 	var lastErr error
 	for attempt := 0; attempt < retryCount; attempt++ {
-		output, lastErr = e.executor.Execute(nodeCtx, op, input)
+		output, lastErr = e.executor.Execute(nodeCtx, op.ActiveVersion, input)
 		if lastErr == nil {
 			break
 		}

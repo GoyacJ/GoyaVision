@@ -84,6 +84,9 @@ type CreateOperatorCommand struct {
 	Description string
 	Category    operator.Category
 	Type        operator.Type
+	Origin      operator.Origin
+	ExecMode    operator.ExecMode
+	ExecConfig  *operator.ExecConfig
 	Version     string
 	Endpoint    string
 	Method      string
@@ -99,12 +102,7 @@ type UpdateOperatorCommand struct {
 	ID          uuid.UUID
 	Name        *string
 	Description *string
-	Endpoint    *string
-	Method      *string
-	InputSchema map[string]interface{}
-	OutputSpec  map[string]interface{}
-	Config      map[string]interface{}
-	Status      *operator.Status
+	Category    *operator.Category
 	Tags        []string
 }
 
@@ -112,9 +110,46 @@ type DeleteOperatorCommand struct {
 	ID uuid.UUID
 }
 
-type EnableOperatorCommand struct {
+type PublishOperatorCommand struct {
+	ID uuid.UUID
+}
+
+type DeprecateOperatorCommand struct {
+	ID uuid.UUID
+}
+
+type TestOperatorCommand struct {
 	ID      uuid.UUID
-	Enabled bool
+	AssetID *uuid.UUID
+	Params  map[string]interface{}
+}
+
+type TestOperatorResult struct {
+	Success     bool                   `json:"success"`
+	Message     string                 `json:"message"`
+	Diagnostics map[string]interface{} `json:"diagnostics,omitempty"`
+}
+
+type InstallMCPOperatorCommand struct {
+	ServerID     string
+	ToolName     string
+	OperatorCode string
+	OperatorName string
+	Category     *operator.Category
+	Type         *operator.Type
+	TimeoutSec   int
+	Tags         []string
+}
+
+type SyncMCPTemplatesCommand struct {
+	ServerID string
+}
+
+type SyncMCPTemplatesResult struct {
+	ServerID string `json:"server_id"`
+	Total    int    `json:"total"`
+	Created  int    `json:"created"`
+	Updated  int    `json:"updated"`
 }
 
 // Workflow Commands

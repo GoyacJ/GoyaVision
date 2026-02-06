@@ -39,6 +39,9 @@ type Repositories struct {
 	Sources     media.SourceRepository
 	Assets      media.AssetRepository
 	Operators   operator.Repository
+	OperatorVersions     operator.VersionRepository
+	OperatorTemplates    operator.TemplateRepository
+	OperatorDependencies operator.DependencyRepository
 	Workflows   workflow.Repository
 	Tasks       workflow.TaskRepository
 	Artifacts   workflow.ArtifactRepository

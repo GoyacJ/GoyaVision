@@ -33,6 +33,20 @@ func (h *DeleteOperatorHandler) Handle(ctx context.Context, cmd dto.DeleteOperat
 			return apperr.InvalidInput("cannot delete builtin operator")
 		}
 
+		versions, err := repos.OperatorVersions.ListByOperator(ctx, cmd.ID)
+		if err != nil {
+			return apperr.Wrap(err, apperr.CodeDBError, "failed to list operator versions")
+		}
+		for _, v := range versions {
+			if err := repos.OperatorVersions.Delete(ctx, v.ID); err != nil {
+				return apperr.Wrap(err, apperr.CodeDBError, "failed to delete operator version")
+			}
+		}
+
+		if err := repos.OperatorDependencies.DeleteByOperator(ctx, cmd.ID); err != nil {
+			return apperr.Wrap(err, apperr.CodeDBError, "failed to delete operator dependencies")
+		}
+
 		if err := repos.Operators.Delete(ctx, cmd.ID); err != nil {
 			return apperr.Wrap(err, apperr.CodeDBError, "failed to delete operator")
 		}

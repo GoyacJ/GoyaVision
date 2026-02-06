@@ -13,6 +13,8 @@ type OperatorListQuery struct {
 	Category  *string `query:"category"`
 	Type      *string `query:"type"`
 	Status    *string `query:"status"`
+	Origin    *string `query:"origin"`
+	ExecMode  *string `query:"exec_mode"`
 	IsBuiltin *bool   `query:"is_builtin"`
 	Tags      *string `query:"tags"`
 	Keyword   *string `query:"keyword"`
@@ -27,8 +29,11 @@ type OperatorCreateReq struct {
 	Description string                 `json:"description,omitempty"`
 	Category    string                 `json:"category" validate:"required"`
 	Type        string                 `json:"type" validate:"required"`
+	Origin      string                 `json:"origin,omitempty"`
+	ExecMode    string                 `json:"exec_mode,omitempty"`
+	ExecConfig  map[string]interface{} `json:"exec_config,omitempty"`
 	Version     string                 `json:"version,omitempty"`
-	Endpoint    string                 `json:"endpoint" validate:"required"`
+	Endpoint    string                 `json:"endpoint,omitempty"`
 	Method      string                 `json:"method,omitempty"`
 	InputSchema map[string]interface{} `json:"input_schema,omitempty"`
 	OutputSpec  map[string]interface{} `json:"output_spec,omitempty"`
@@ -42,13 +47,64 @@ type OperatorCreateReq struct {
 type OperatorUpdateReq struct {
 	Name        *string                `json:"name,omitempty"`
 	Description *string                `json:"description,omitempty"`
-	Endpoint    *string                `json:"endpoint,omitempty"`
-	Method      *string                `json:"method,omitempty"`
-	InputSchema map[string]interface{} `json:"input_schema,omitempty"`
-	OutputSpec  map[string]interface{} `json:"output_spec,omitempty"`
-	Config      map[string]interface{} `json:"config,omitempty"`
-	Status      *string                `json:"status,omitempty"`
+	Category    *string                `json:"category,omitempty"`
 	Tags        []string               `json:"tags,omitempty"`
+}
+
+type TestOperatorReq struct {
+	AssetID *uuid.UUID             `json:"asset_id,omitempty"`
+	Params  map[string]interface{} `json:"params,omitempty"`
+}
+
+type TestOperatorResponse struct {
+	Success     bool                   `json:"success"`
+	Message     string                 `json:"message"`
+	Diagnostics map[string]interface{} `json:"diagnostics,omitempty"`
+}
+
+type MCPServerResponse struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Status      string `json:"status,omitempty"`
+}
+
+type MCPToolResponse struct {
+	Name         string                 `json:"name"`
+	Description  string                 `json:"description,omitempty"`
+	Version      string                 `json:"version,omitempty"`
+	InputSchema  map[string]interface{} `json:"input_schema,omitempty"`
+	OutputSchema map[string]interface{} `json:"output_schema,omitempty"`
+}
+
+type MCPInstallReq struct {
+	ServerID     string   `json:"server_id" validate:"required"`
+	ToolName     string   `json:"tool_name" validate:"required"`
+	OperatorCode string   `json:"operator_code" validate:"required"`
+	OperatorName string   `json:"operator_name" validate:"required"`
+	Category     *string  `json:"category,omitempty"`
+	Type         *string  `json:"type,omitempty"`
+	TimeoutSec   int      `json:"timeout_sec,omitempty"`
+	Tags         []string `json:"tags,omitempty"`
+}
+
+type SyncMCPTemplatesReq struct {
+	ServerID string `json:"server_id" validate:"required"`
+}
+
+type SyncMCPTemplatesResponse struct {
+	ServerID string `json:"server_id"`
+	Total    int    `json:"total"`
+	Created  int    `json:"created"`
+	Updated  int    `json:"updated"`
+}
+
+type OperatorVersionResponse struct {
+	ID         uuid.UUID              `json:"id"`
+	Version    string                 `json:"version"`
+	ExecMode   string                 `json:"exec_mode"`
+	ExecConfig map[string]interface{} `json:"exec_config,omitempty"`
+	Status     string                 `json:"status"`
 }
 
 // OperatorResponse 算子响应
@@ -59,6 +115,10 @@ type OperatorResponse struct {
 	Description string                 `json:"description,omitempty"`
 	Category    string                 `json:"category"`
 	Type        string                 `json:"type"`
+	Origin      string                 `json:"origin,omitempty"`
+	ActiveVersionID *uuid.UUID         `json:"active_version_id,omitempty"`
+	ExecMode    string                 `json:"exec_mode,omitempty"`
+	ActiveVersion *OperatorVersionResponse `json:"active_version,omitempty"`
 	Version     string                 `json:"version"`
 	Endpoint    string                 `json:"endpoint"`
 	Method      string                 `json:"method"`
@@ -104,6 +164,18 @@ func OperatorToResponse(o *operator.Operator) *OperatorResponse {
 		tags = []string{}
 	}
 
+	var activeVersion *OperatorVersionResponse
+	execMode := ""
+	if o.ActiveVersion != nil {
+		execMode = string(o.ActiveVersion.ExecMode)
+		activeVersion = &OperatorVersionResponse{
+			ID:      o.ActiveVersion.ID,
+			Version: o.ActiveVersion.Version,
+			ExecMode: string(o.ActiveVersion.ExecMode),
+			Status:  string(o.ActiveVersion.Status),
+		}
+	}
+
 	return &OperatorResponse{
 		ID:          o.ID,
 		Code:        o.Code,
@@ -111,6 +183,10 @@ func OperatorToResponse(o *operator.Operator) *OperatorResponse {
 		Description: o.Description,
 		Category:    string(o.Category),
 		Type:        string(o.Type),
+		Origin:      string(o.Origin),
+		ActiveVersionID: o.ActiveVersionID,
+		ExecMode:    execMode,
+		ActiveVersion: activeVersion,
 		Version:     o.Version,
 		Endpoint:    o.Endpoint,
 		Method:      o.Method,

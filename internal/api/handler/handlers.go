@@ -22,7 +22,11 @@ type Handlers struct {
 	CreateOperator       *command.CreateOperatorHandler
 	UpdateOperator       *command.UpdateOperatorHandler
 	DeleteOperator       *command.DeleteOperatorHandler
-	EnableOperator       *command.EnableOperatorHandler
+	PublishOperator      *command.PublishOperatorHandler
+	DeprecateOperator    *command.DeprecateOperatorHandler
+	TestOperator         *command.TestOperatorHandler
+	InstallMCPOperator   *command.InstallMCPOperatorHandler
+	SyncMCPTemplates     *command.SyncMCPTemplatesHandler
 	CreateWorkflow       *command.CreateWorkflowHandler
 	UpdateWorkflow       *command.UpdateWorkflowHandler
 	DeleteWorkflow       *command.DeleteWorkflowHandler
@@ -44,6 +48,9 @@ type Handlers struct {
 	GetOperator          *query.GetOperatorHandler
 	GetOperatorByCode    *query.GetOperatorByCodeHandler
 	ListOperators        *query.ListOperatorsHandler
+	ListMCPServers       *query.ListMCPServersHandler
+	ListMCPTools         *query.ListMCPToolsHandler
+	PreviewMCPTool       *query.PreviewMCPToolHandler
 	GetWorkflow          *query.GetWorkflowHandler
 	GetWorkflowWithNodes *query.GetWorkflowWithNodesHandler
 	GetWorkflowByCode    *query.GetWorkflowByCodeHandler
@@ -89,7 +96,11 @@ func NewHandlers(
 		CreateOperator:       command.NewCreateOperatorHandler(uow),
 		UpdateOperator:       command.NewUpdateOperatorHandler(uow),
 		DeleteOperator:       command.NewDeleteOperatorHandler(uow),
-		EnableOperator:       command.NewEnableOperatorHandler(uow),
+		PublishOperator:      command.NewPublishOperatorHandler(uow),
+		DeprecateOperator:    command.NewDeprecateOperatorHandler(uow),
+		TestOperator:         command.NewTestOperatorHandler(uow),
+		InstallMCPOperator:   command.NewInstallMCPOperatorHandler(uow, nil),
+		SyncMCPTemplates:     command.NewSyncMCPTemplatesHandler(uow, nil),
 		CreateWorkflow:       command.NewCreateWorkflowHandler(uow),
 		UpdateWorkflow:       command.NewUpdateWorkflowHandler(uow),
 		DeleteWorkflow:       command.NewDeleteWorkflowHandler(uow),
@@ -111,6 +122,9 @@ func NewHandlers(
 		GetOperator:          query.NewGetOperatorHandler(uow),
 		GetOperatorByCode:    query.NewGetOperatorByCodeHandler(uow),
 		ListOperators:        query.NewListOperatorsHandler(uow),
+		ListMCPServers:       query.NewListMCPServersHandler(nil),
+		ListMCPTools:         query.NewListMCPToolsHandler(nil),
+		PreviewMCPTool:       query.NewPreviewMCPToolHandler(nil),
 		GetWorkflow:          query.NewGetWorkflowHandler(uow),
 		GetWorkflowWithNodes: query.NewGetWorkflowWithNodesHandler(uow),
 		GetWorkflowByCode:    query.NewGetWorkflowByCodeHandler(uow),

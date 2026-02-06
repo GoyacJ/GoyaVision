@@ -24,6 +24,8 @@ func (h *ListOperatorsHandler) Handle(ctx context.Context, query dto.ListOperato
 		Category:  query.Category,
 		Type:      query.Type,
 		Status:    query.Status,
+		Origin:    query.Origin,
+		ExecMode:  query.ExecMode,
 		IsBuiltin: query.IsBuiltin,
 		Tags:      query.Tags,
 		Keyword:   query.Keyword,

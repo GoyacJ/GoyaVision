@@ -8,6 +8,28 @@
 ## [未发布]
 
 ### 新增
+- **算子模块重设计 v1.1（MCP 最小闭环）**
+  - 新增 MCP Port：`internal/port/mcp.go`（`MCPClient`、`MCPRegistry`、`MCPServer`、`MCPTool`）
+  - 新增 MCP 查询 DTO：`ListMCPServersQuery`、`ListMCPToolsQuery`、`PreviewMCPToolQuery`
+  - 新增 Query Handler：`ListMCPServersHandler`、`ListMCPToolsHandler`、`PreviewMCPToolHandler`
+  - 新增 Operator API 路由：
+    - `GET /api/v1/operators/mcp/servers`
+    - `GET /api/v1/operators/mcp/servers/:id/tools`
+    - `GET /api/v1/operators/mcp/servers/:id/tools/:tool/preview`
+  - 新增 API 响应 DTO：`MCPServerResponse`、`MCPToolResponse`
+- **算子模块重设计 v1.1（MCP 安装/同步闭环）**
+  - 新增 Command Handler：`InstallMCPOperatorHandler`、`SyncMCPTemplatesHandler`
+  - 新增命令 DTO：`InstallMCPOperatorCommand`、`SyncMCPTemplatesCommand`、`SyncMCPTemplatesResult`
+  - 新增 API 路由：
+    - `POST /api/v1/operators/mcp/install`
+    - `POST /api/v1/operators/mcp/sync-templates`
+  - 新增 API DTO：`MCPInstallReq`、`SyncMCPTemplatesReq`、`SyncMCPTemplatesResponse`
+- **算子模块重设计 Phase A（基础版本化）**
+  - 新增领域实体：`OperatorVersion`、`ExecConfig`、`OperatorTemplate`、`OperatorDependency`
+  - 新增持久化模型/Mapper/Repo：`operator_versions`、`operator_templates`、`operator_dependencies`
+  - 创建算子时自动生成首个版本并绑定 `active_version_id`
+  - 删除算子时增加版本与依赖的级联清理
+  - `GetOperator` 默认加载 `ActiveVersion`，`ListOperators` 支持 `origin` / `exec_mode` 过滤
 - **MediaMTX API 认证支持**：GoyaVision 与 MediaMTX 间通信支持 Basic Auth 认证
   - MediaMTX HTTP Client (`internal/adapter/mediamtx/client.go`) 新增 `username`/`password` 字段，`doRequest` 自动附加 `Authorization` 头
   - Gateway (`internal/infra/mediamtx/gateway.go`) 透传凭据，同时存储录制默认配置
@@ -48,6 +70,15 @@
   - 完善 DAG 工作流引擎细节（Kahn 算法、并行执行、错误处理）
 
 ### 变更
+- **算子生命周期 API 收口（enable/disable → publish/deprecate/test）**
+  - API 路由调整：`POST /api/v1/operators/:id/publish`、`POST /api/v1/operators/:id/deprecate`、`POST /api/v1/operators/:id/test`
+  - 新增应用命令处理器：`PublishOperatorHandler`、`DeprecateOperatorHandler`、`TestOperatorHandler`
+  - 新增命令/DTO：`PublishOperatorCommand`、`DeprecateOperatorCommand`、`TestOperatorCommand`、`TestOperatorResult`
+  - `operator` API DTO 新增 `TestOperatorReq` / `TestOperatorResponse`
+  - `docs/api.md` 同步更新生命周期端点与测试响应示例
+- **工作流执行链路对齐版本模型（进行中）**
+  - DAG 引擎执行节点时改为读取并执行 `Operator.ActiveVersion`
+  - HTTP 执行器改为从 `OperatorVersion.ExecConfig.HTTP` 读取执行配置
 - **资产页交互细节优化（查看编辑一体化增强）**：
   - 列表与卡片操作由“查看/编辑”合并为单一“详情”入口
   - 打开资产详情时，若具备 `asset:update` 权限则直接可编辑（无需二次点击“进入编辑”）

@@ -18,10 +18,10 @@ var _ port.WorkflowEngine = (*SimpleWorkflowEngine)(nil)
 
 // SimpleWorkflowEngine 简单工作流引擎（支持单算子执行）
 type SimpleWorkflowEngine struct {
-	repo     port.Repository
-	executor port.OperatorExecutor
-	tasks    map[uuid.UUID]*taskExecution
-	mu       sync.RWMutex
+	repo      port.Repository
+	registry  port.ExecutorRegistry
+	tasks     map[uuid.UUID]*taskExecution
+	mu        sync.RWMutex
 }
 
 type taskExecution struct {
@@ -33,9 +33,12 @@ type taskExecution struct {
 
 // NewSimpleWorkflowEngine 创建简单工作流引擎
 func NewSimpleWorkflowEngine(repo port.Repository, executor port.OperatorExecutor) *SimpleWorkflowEngine {
+	registry := NewExecutorRegistry()
+	registry.Register(executor.Mode(), executor)
+
 	return &SimpleWorkflowEngine{
 		repo:     repo,
-		executor: executor,
+		registry: registry,
 		tasks:    make(map[uuid.UUID]*taskExecution),
 	}
 }
@@ -101,6 +104,26 @@ func (e *SimpleWorkflowEngine) Execute(ctx context.Context, wf *workflow.Workflo
 			return fmt.Errorf("failed to get operator: %w", err)
 		}
 
+		version := op.ActiveVersion
+		if version == nil {
+			version = &operator.OperatorVersion{
+				Version:  op.Version,
+				ExecMode: operator.ExecModeHTTP,
+				ExecConfig: &operator.ExecConfig{HTTP: &operator.HTTPExecConfig{
+					Endpoint: op.Endpoint,
+					Method:   op.Method,
+				}},
+				InputSchema: op.InputSchema,
+				OutputSpec:  op.OutputSpec,
+				Config:      op.Config,
+			}
+		}
+
+		executor, err := e.registry.Get(version.ExecMode)
+		if err != nil {
+			return fmt.Errorf("failed to get executor for mode %s: %w", version.ExecMode, err)
+		}
+
 		inputParams := task.InputParams
 		if inputParams == nil {
 			inputParams = make(map[string]interface{})
@@ -115,7 +138,7 @@ func (e *SimpleWorkflowEngine) Execute(ctx context.Context, wf *workflow.Workflo
 			Params:  inputParams,
 		}
 
-		output, err := e.executor.Execute(execCtx, op, input)
+		output, err := executor.Execute(execCtx, version, input)
 		if err != nil {
 			return fmt.Errorf("failed to execute operator %s: %w", op.Code, err)
 		}

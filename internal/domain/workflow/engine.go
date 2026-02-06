@@ -15,5 +15,5 @@ type Engine interface {
 }
 
 type OperatorExecutor interface {
-	Execute(ctx context.Context, op *operator.Operator, input *operator.Input) (*operator.Output, error)
+	Execute(ctx context.Context, version *operator.OperatorVersion, input *operator.Input) (*operator.Output, error)
 }

@@ -23,7 +23,7 @@ func NewGetOperatorHandler(uow port.UnitOfWork) *GetOperatorHandler {
 func (h *GetOperatorHandler) Handle(ctx context.Context, query dto.GetOperatorQuery) (*operator.Operator, error) {
 	var result *operator.Operator
 	err := h.uow.Do(ctx, func(ctx context.Context, repos *port.Repositories) error {
-		op, err := repos.Operators.Get(ctx, query.ID)
+		op, err := repos.Operators.GetWithActiveVersion(ctx, query.ID)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return apperr.NotFound("operator", query.ID.String())

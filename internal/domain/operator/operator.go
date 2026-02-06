@@ -40,9 +40,27 @@ const (
 type Status string
 
 const (
-	StatusEnabled  Status = "enabled"
-	StatusDisabled Status = "disabled"
-	StatusDraft    Status = "draft"
+	StatusDraft      Status = "draft"
+	StatusTesting    Status = "testing"
+	StatusPublished  Status = "published"
+	StatusDeprecated Status = "deprecated"
+)
+
+type ExecMode string
+
+const (
+	ExecModeHTTP ExecMode = "http"
+	ExecModeCLI  ExecMode = "cli"
+	ExecModeMCP  ExecMode = "mcp"
+)
+
+type Origin string
+
+const (
+	OriginBuiltin     Origin = "builtin"
+	OriginCustom      Origin = "custom"
+	OriginMarketplace Origin = "marketplace"
+	OriginMCP         Origin = "mcp"
 )
 
 type Operator struct {
@@ -52,6 +70,13 @@ type Operator struct {
 	Description string
 	Category    Category
 	Type        Type
+	Origin      Origin
+
+	// 版本化字段（Phase A）
+	ActiveVersionID *uuid.UUID
+	ActiveVersion   *OperatorVersion
+
+	// --- 以下为兼容字段，后续阶段将逐步迁移到 OperatorVersion ---
 	Version     string
 	Endpoint    string
 	Method      string
@@ -66,15 +91,15 @@ type Operator struct {
 }
 
 func (o *Operator) IsEnabled() bool {
-	return o.Status == StatusEnabled
-}
-
-func (o *Operator) IsDisabled() bool {
-	return o.Status == StatusDisabled
+	return o.Status == StatusPublished
 }
 
 func (o *Operator) IsDraft() bool {
 	return o.Status == StatusDraft
+}
+
+func (o *Operator) IsPublished() bool {
+	return o.Status == StatusPublished
 }
 
 func (o *Operator) IsAnalysis() bool {
@@ -93,6 +118,10 @@ type Filter struct {
 	Category  *Category
 	Type      *Type
 	Status    *Status
+	Origin    *Origin
+	ExecMode  *ExecMode
+
+	// 兼容筛选字段（Phase A）
 	IsBuiltin *bool
 	Tags      []string
 	Keyword   string
