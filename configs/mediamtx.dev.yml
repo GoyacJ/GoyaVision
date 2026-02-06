@@ -12,6 +12,31 @@
 
 # 日志级别: debug 便于开发调试
 logLevel: debug
+
+# 认证方式: internal (内置用户认证)
+# v1.16 默认 authInternalUsers 仅允许 127.0.0.1 访问 API
+# Docker 容器间或远程访问需配置专用 API 用户
+authMethod: internal
+authInternalUsers:
+  # 匿名用户: 允许推流/拉流/回放 (任意 IP)
+  - user: any
+    pass:
+    ips: []
+    permissions:
+      - action: publish
+        path:
+      - action: read
+        path:
+      - action: playback
+        path:
+  # API 管理用户: GoyaVision 服务端使用 (任意 IP)
+  - user: goyavision
+    pass: goyavision-dev
+    ips: []
+    permissions:
+      - action: api
+      - action: metrics
+      - action: pprof
 # 日志输出: 标准输出
 logDestinations: [stdout]
 
@@ -167,12 +192,15 @@ pathDefaults:
   sourceOnDemand: no
   sourceRedirect: ""
 
+  # RTSP 拉流传输协议: tcp 更可靠、兼容性更好 (穿透 NAT/防火墙)
+  rtspTransport: tcp
+
   # 录制配置 (v1.16: 从全局移入 pathDefaults)
   # 默认不录制 (由 GoyaVision 按路径动态控制)
   record: no
   # %path = 流路径名 (如 live/camera1-abc123)
   # %Y-%m-%d_%H-%M-%S = 时间戳
-  recordPath: ./data/recordings/%path/%Y-%m-%d_%H-%M-%S
+  recordPath: ./data/recordings/%path/%Y-%m-%d_%H-%M-%S-%f
   # 录制格式: fmp4 (碎片化 MP4, 支持边录边播)
   recordFormat: fmp4
   # 碎片间隔 (内部分片)

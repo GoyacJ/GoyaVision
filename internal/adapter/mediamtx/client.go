@@ -14,13 +14,17 @@ import (
 // Client MediaMTX HTTP API 客户端
 type Client struct {
 	baseURL    string
+	username   string
+	password   string
 	httpClient *http.Client
 }
 
 // NewClient 创建 MediaMTX 客户端
-func NewClient(baseURL string) *Client {
+func NewClient(baseURL, username, password string) *Client {
 	return &Client{
-		baseURL: baseURL,
+		baseURL:  baseURL,
+		username: username,
+		password: password,
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
 		},
@@ -282,6 +286,10 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body interf
 
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
+	}
+
+	if c.username != "" {
+		req.SetBasicAuth(c.username, c.password)
 	}
 
 	resp, err := c.httpClient.Do(req)

@@ -39,6 +39,8 @@ mediamtx:
   record_path: "${GOYAVISION_MEDIAMTX_RECORD_PATH}"
   record_format: "${GOYAVISION_MEDIAMTX_RECORD_FORMAT}"
   segment_duration: "${GOYAVISION_MEDIAMTX_SEGMENT_DURATION}"
+  username: "${GOYAVISION_MEDIAMTX_USERNAME}"
+  password: "${GOYAVISION_MEDIAMTX_PASSWORD}"
 
 minio:
   endpoint: "${GOYAVISION_MINIO_ENDPOINT}"

@@ -21,6 +21,32 @@
 
 # 日志级别: warn (生产环境减少日志量)
 logLevel: warn
+
+# 认证方式: internal (内置用户认证)
+# ⚠️ 生产环境必须使用强密码或 Argon2 哈希
+# Argon2 哈希生成: echo -n 'yourpassword' | argon2 saltsalt -id -e
+authMethod: internal
+authInternalUsers:
+  # 匿名用户: 允许推流/拉流/回放 (任意 IP)
+  - user: any
+    pass:
+    ips: []
+    permissions:
+      - action: publish
+        path:
+      - action: read
+        path:
+      - action: playback
+        path:
+  # API 管理用户: GoyaVision 服务端使用 (任意 IP)
+  # ⚠️ 必须替换为强密码或 Argon2 哈希
+  - user: goyavision
+    pass: replace-with-secure-password
+    ips: []
+    permissions:
+      - action: api
+      - action: metrics
+      - action: pprof
 # 日志输出: 标准输出 (由 Docker/K8s 采集)
 logDestinations: [stdout]
 
@@ -187,11 +213,14 @@ pathDefaults:
   sourceOnDemand: no
   sourceRedirect: ""
 
+  # RTSP 拉流传输协议: tcp 更可靠、兼容性更好 (穿透 NAT/防火墙)
+  rtspTransport: tcp
+
   # 录制配置 (v1.16: 从全局移入 pathDefaults)
   # 默认不录制 (由 GoyaVision 按路径动态控制)
   record: no
   # 容器环境使用 /recordings (映射宿主机卷)
-  recordPath: /recordings/%path/%Y-%m-%d_%H-%M-%S
+  recordPath: /recordings/%path/%Y-%m-%d_%H-%M-%S-%f
   # 录制格式: fmp4 (碎片化 MP4, 支持边录边播, 断电不丢)
   recordFormat: fmp4
   # 碎片间隔

@@ -264,7 +264,11 @@ func main() {
     uow := persistence.NewUnitOfWork(db)
 
     // 初始化 MediaMTX Gateway
-    mediaGateway := mediamtx.NewGateway(cfg.MediaMTX.APIAddress)
+    mediaGateway := mediamtx.NewGateway(
+        cfg.MediaMTX.APIAddress,
+        cfg.MediaMTX.Username, cfg.MediaMTX.Password,
+        cfg.MediaMTX.RecordPath, cfg.MediaMTX.RecordFormat, cfg.MediaMTX.SegmentDuration,
+    )
 
     // 初始化 Application Services
     mediaSourceService := app.NewMediaSourceService(uow, mediaGateway, eventBus)

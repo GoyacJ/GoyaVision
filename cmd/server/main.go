@@ -51,13 +51,20 @@ func main() {
 
 	repo := persistence.NewRepository(db)
 	uow := infrapersistence.NewUnitOfWork(db)
-	mediaGateway := inframediamtx.NewGateway(cfg.MediaMTX.APIAddress)
+	mediaGateway := inframediamtx.NewGateway(
+		cfg.MediaMTX.APIAddress,
+		cfg.MediaMTX.Username,
+		cfg.MediaMTX.Password,
+		cfg.MediaMTX.RecordPath,
+		cfg.MediaMTX.RecordFormat,
+		cfg.MediaMTX.SegmentDuration,
+	)
 	tokenService, err := infraauth.NewJWTService(&cfg.JWT)
 	if err != nil {
 		log.Fatalf("create jwt service: %v", err)
 	}
 
-	mtxCli := mediamtx.NewClient(cfg.MediaMTX.APIAddress)
+	mtxCli := mediamtx.NewClient(cfg.MediaMTX.APIAddress, cfg.MediaMTX.Username, cfg.MediaMTX.Password)
 	if err := mtxCli.Ping(context.Background()); err != nil {
 		log.Printf("warning: mediamtx not available: %v", err)
 	} else {
