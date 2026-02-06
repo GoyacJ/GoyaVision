@@ -7,15 +7,15 @@ export interface AssetCardProps {
   selectable?: boolean
   /** 是否选中 */
   selected?: boolean
+  /** 是否允许编辑 */
+  canEdit?: boolean
 }
 
 export interface AssetCardEmits {
   /** 点击事件 */
   (e: 'click', asset: MediaAsset): void
-  /** 查看事件 */
-  (e: 'view', asset: MediaAsset): void
-  /** 编辑事件 */
-  (e: 'edit', asset: MediaAsset): void
+  /** 详情事件 */
+  (e: 'detail', asset: MediaAsset): void
   /** 删除事件 */
   (e: 'delete', asset: MediaAsset): void
   /** 选择状态变化 */

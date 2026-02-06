@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"goyavision/internal/api/dto"
+	authmiddleware "goyavision/internal/api/middleware"
 	appdto "goyavision/internal/app/dto"
 	"goyavision/internal/domain/media"
 
@@ -139,6 +140,13 @@ func (h *assetHandler) Get(c echo.Context) error {
 }
 
 func (h *assetHandler) Update(c echo.Context) error {
+	if !authmiddleware.HasPermission(c, "asset:update") {
+		return c.JSON(http.StatusForbidden, dto.ErrorResponse{
+			Error:   "Forbidden",
+			Message: "无编辑权限",
+		})
+	}
+
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
