@@ -2,8 +2,8 @@ import apiClient from './client'
 
 export interface MediaAsset {
   id: string
-  type: 'video' | 'image' | 'audio' | 'stream' // ✅ 添加 stream 类型
-  source_type: 'upload' | 'stream_capture' | 'operator_output' | 'live' | 'vod' | 'generated'
+  type: 'video' | 'image' | 'audio'
+  source_type: 'upload' | 'generated' | 'operator_output'
   source_id?: string
   parent_id?: string
   name: string
@@ -19,8 +19,8 @@ export interface MediaAsset {
 }
 
 export interface AssetListQuery {
-  type?: 'video' | 'image' | 'audio' | 'stream' // ✅ 添加 stream 类型
-  source_type?: 'upload' | 'stream_capture' | 'operator_output' | 'live' | 'vod' | 'generated'
+  type?: 'video' | 'image' | 'audio'
+  source_type?: 'upload' | 'generated' | 'operator_output'
   source_id?: string
   parent_id?: string
   status?: 'pending' | 'ready' | 'processing' | 'error'
@@ -31,10 +31,9 @@ export interface AssetListQuery {
 }
 
 export interface AssetCreateReq {
-  type: 'video' | 'image' | 'audio' | 'stream'
-  source_type: 'upload' | 'stream_capture' | 'operator_output' | 'live' | 'vod' | 'generated'
+  type: 'video' | 'image' | 'audio'
+  source_type: 'upload' | 'generated' | 'operator_output'
   source_id?: string
-  stream_url?: string
   parent_id?: string
   name: string
   path?: string

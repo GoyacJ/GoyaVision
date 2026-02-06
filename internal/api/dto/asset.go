@@ -24,12 +24,10 @@ type AssetListQuery struct {
 }
 
 // AssetCreateReq 创建资产请求
-// 流媒体资产：传 stream_url 时表示新建流并创建资产（后端会先创建 MediaSource 再创建 Asset）；传 source_id 时表示从已有媒体源创建资产，path 可由后端从 MediaSource 补全
 type AssetCreateReq struct {
 	Type       string                 `json:"type" validate:"required"`
 	SourceType string                 `json:"source_type" validate:"required"`
 	SourceID   *uuid.UUID             `json:"source_id,omitempty"`
-	StreamURL  string                 `json:"stream_url,omitempty"`
 	ParentID   *uuid.UUID             `json:"parent_id,omitempty"`
 	Name       string                 `json:"name" validate:"required"`
 	Path       string                 `json:"path"`
@@ -95,7 +93,8 @@ func AssetToResponse(a *media.Asset, minioEndpoint, minioBucket string, minioUse
 
 	// 生成完整的文件 URL
 	path := a.Path
-	if a.SourceType == media.AssetSourceUpload || a.SourceType == media.AssetSourceGenerated {
+	if a.SourceType == media.AssetSourceUpload || a.SourceType == media.AssetSourceGenerated ||
+		a.SourceType == media.AssetSourceOperatorOutput {
 		// 如果是上传或生成的文件，且 path 不是完整 URL，则生成 MinIO 完整 URL
 		if !strings.HasPrefix(path, "http://") && !strings.HasPrefix(path, "https://") {
 			protocol := "http"

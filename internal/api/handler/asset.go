@@ -2,7 +2,6 @@ package handler
 
 import (
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -13,26 +12,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
-
-func inferProtocol(rawURL string) string {
-	rawURL = strings.TrimSpace(rawURL)
-	if rawURL == "" {
-		return ""
-	}
-	u, err := url.Parse(rawURL)
-	if err != nil {
-		return ""
-	}
-	scheme := strings.ToLower(u.Scheme)
-	switch scheme {
-	case "rtsp", "rtmp", "rtmps", "hls", "https", "http", "webrtc", "srt":
-		return scheme
-	}
-	if scheme != "" {
-		return scheme
-	}
-	return ""
-}
 
 func RegisterAsset(g *echo.Group, h *Handlers) {
 	handler := &assetHandler{h: h}
@@ -134,30 +113,6 @@ func (h *assetHandler) Create(c echo.Context) error {
 		Metadata:   req.Metadata,
 		Status:     status,
 		Tags:       req.Tags,
-	}
-
-	if req.Type == string(media.AssetTypeStream) && req.SourceType == string(media.AssetSourceLive) {
-		if req.StreamURL != "" {
-			srcCmd := appdto.CreateSourceCommand{
-				Name:     req.Name,
-				Type:     media.SourceTypePull,
-				URL:      req.StreamURL,
-				Protocol: inferProtocol(req.StreamURL),
-				Enabled:  true,
-			}
-			source, err := h.h.CreateSource.Handle(c.Request().Context(), srcCmd)
-			if err != nil {
-				return err
-			}
-			cmd.SourceID = &source.ID
-			cmd.Path = source.PathName
-		} else if req.SourceID != nil && req.Path == "" {
-			source, err := h.h.GetSource.Handle(c.Request().Context(), appdto.GetSourceQuery{ID: *req.SourceID})
-			if err != nil {
-				return err
-			}
-			cmd.Path = source.PathName
-		}
 	}
 
 	asset, err := h.h.CreateAsset.Handle(c.Request().Context(), cmd)

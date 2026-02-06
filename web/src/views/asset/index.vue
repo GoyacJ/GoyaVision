@@ -229,14 +229,13 @@
           <el-tabs v-model="uploadType" class="mb-4">
             <el-tab-pane label="URL 地址" name="url" />
             <el-tab-pane label="文件上传" name="file" />
-            <el-tab-pane label="流媒体接入" name="stream" />
           </el-tabs>
 
           <el-form ref="uploadFormRef" :model="uploadForm" :rules="uploadRules" label-width="100px">
             <el-form-item label="资产名称" prop="name">
               <GvInput v-model="uploadForm.name" placeholder="请输入资产名称" />
             </el-form-item>
-            <el-form-item v-if="uploadType !== 'stream'" label="资产类型" prop="type">
+            <el-form-item label="资产类型" prop="type">
               <GvSelect
                 v-model="uploadForm.type"
                 :options="typeOptions"
@@ -248,46 +247,6 @@
             <template v-if="uploadType === 'url'">
               <el-form-item label="资源地址" prop="path">
                 <GvInput v-model="uploadForm.path" placeholder="请输入资源 URL" />
-              </el-form-item>
-            </template>
-
-            <!-- 流媒体接入模式 -->
-            <template v-else-if="uploadType === 'stream'">
-              <el-form-item label="创建方式">
-                <el-radio-group v-model="streamCreateMode">
-                  <el-radio value="url">输入流地址（新建媒体源并创建资产）</el-radio>
-                  <el-radio value="from_source">从已有媒体源创建资产</el-radio>
-                </el-radio-group>
-              </el-form-item>
-              <el-form-item v-if="streamCreateMode === 'url'" label="流地址" prop="path">
-                <GvInput
-                  v-model="uploadForm.path"
-                  placeholder="请输入流地址，如 rtsp://...、rtmp://...、https://.../live.m3u8"
-                  type="textarea"
-                  :rows="2"
-                />
-                <div class="text-text-tertiary text-xs mt-1">
-                  支持 RTSP、RTMP、HLS 等协议，将自动接入 MediaMTX 并创建媒体源与资产
-                </div>
-              </el-form-item>
-              <el-form-item v-else label="媒体源" prop="source_id">
-                <el-select
-                  v-model="uploadForm.source_id"
-                  placeholder="请选择已有媒体源"
-                  filterable
-                  class="w-full"
-                  :loading="sourcesLoading"
-                >
-                  <el-option
-                    v-for="s in sources"
-                    :key="s.id"
-                    :label="`${s.name} (${s.path_name})`"
-                    :value="s.id"
-                  />
-                </el-select>
-                <div class="text-text-tertiary text-xs mt-1">
-                  在媒体源管理页可先创建拉流/推流源，再在此处选源创建资产
-                </div>
               </el-form-item>
             </template>
 
@@ -465,19 +424,6 @@
                 </audio>
               </div>
 
-              <!-- 流媒体预览 -->
-              <div v-else-if="currentAsset.type === 'stream'" class="preview-container stream-preview">
-                <div class="stream-info">
-                  <el-icon :size="80" class="text-info-500 mb-4">
-                    <Connection />
-                  </el-icon>
-                  <p class="text-text-secondary mb-2">流媒体地址</p>
-                  <p class="text-sm text-text-primary font-mono bg-neutral-50 px-3 py-2 rounded break-all">
-                    {{ currentAsset.path }}
-                  </p>
-                </div>
-              </div>
-
               <!-- 未知类型 -->
               <div v-else class="preview-container">
                 <div class="text-center text-text-tertiary">
@@ -498,9 +444,8 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type UploadFile, type UploadFiles } from 'element-plus'
-import { Upload, VideoCamera, Picture, Headset, Connection, Refresh, FolderOpened, Grid, List } from '@element-plus/icons-vue'
+import { Upload, VideoCamera, Picture, Headset, Refresh, FolderOpened, Grid, List } from '@element-plus/icons-vue'
 import { assetApi, type MediaAsset, type AssetCreateReq, type AssetUpdateReq } from '@/api/asset'
-import { sourceApi } from '@/api/source'
 import { useTable, useAsyncData } from '@/composables'
 import GvContainer from '@/components/layout/GvContainer/index.vue'
 import GvCard from '@/components/base/GvCard/index.vue'
@@ -529,10 +474,7 @@ const currentAsset = ref<MediaAsset | null>(null)
 const uploadFormRef = ref<FormInstance>()
 const editFormRef = ref<FormInstance>()
 const uploadRef = ref()
-const uploadType = ref<'url' | 'file' | 'stream'>('url')
-const streamCreateMode = ref<'url' | 'from_source'>('url')
-const sources = ref<import('@/api/source').MediaSource[]>([])
-const sourcesLoading = ref(false)
+const uploadType = ref<'url' | 'file'>('url')
 const uploadFileList = ref<UploadFile[]>([])
 const selectedFile = ref<UploadFile | null>(null)
 const viewMode = ref<'grid' | 'list'>('grid')
@@ -605,22 +547,13 @@ const uploadRules: FormRules = {
     {
       required: true,
       message: '请选择资产类型',
-      trigger: 'change',
-      validator: (_rule: unknown, value: string, callback: (e?: Error) => void) => {
-        if (uploadType.value === 'stream') {
-          callback()
-        } else if (!value) {
-          callback(new Error('请选择资产类型'))
-        } else {
-          callback()
-        }
-      }
+      trigger: 'change'
     }
   ],
   path: [
     {
       required: true,
-      message: '请输入资源地址或流地址',
+      message: '请输入资源地址',
       trigger: 'blur',
       validator: (_rule: unknown, value: string, callback: (e?: Error) => void) => {
         if (uploadType.value === 'url') {
@@ -629,32 +562,10 @@ const uploadRules: FormRules = {
           } else {
             callback()
           }
-        } else if (uploadType.value === 'stream' && streamCreateMode.value === 'url') {
-          if (!value || !value.trim()) {
-            callback(new Error('请输入流地址'))
-          } else {
-            callback()
-          }
         } else {
           callback()
         }
       }
-    }
-  ],
-  source_id: [
-    {
-      validator: (_rule: unknown, _value: string, callback: (e?: Error) => void) => {
-        if (uploadType.value === 'stream' && streamCreateMode.value === 'from_source') {
-          if (!uploadForm.source_id) {
-            callback(new Error('请选择媒体源'))
-          } else {
-            callback()
-          }
-        } else {
-          callback()
-        }
-      },
-      trigger: 'change'
     }
   ]
 }
@@ -667,15 +578,13 @@ const mediaTypes = computed(() => [
   { label: '全部', value: null, icon: FolderOpened },
   { label: '视频', value: 'video', icon: VideoCamera },
   { label: '图片', value: 'image', icon: Picture },
-  { label: '音频', value: 'audio', icon: Headset },
-  { label: '流媒体', value: 'stream', icon: Connection }
+  { label: '音频', value: 'audio', icon: Headset }
 ])
 
 const typeOptions = [
   { label: '视频', value: 'video' },
   { label: '图片', value: 'image' },
-  { label: '音频', value: 'audio' },
-  { label: '流媒体', value: 'stream' }
+  { label: '音频', value: 'audio' }
 ]
 
 const statusOptions = [
@@ -702,35 +611,6 @@ const tableColumns = [
 const gridClass = computed(() => {
   return 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6'
 })
-
-watch(uploadType, (t) => {
-  if (t === 'stream') {
-    uploadForm.type = 'stream'
-    uploadForm.source_type = 'live'
-    if (streamCreateMode.value === 'from_source') {
-      loadSources()
-    }
-  }
-})
-
-watch([uploadType, streamCreateMode], () => {
-  if (uploadType.value === 'stream' && streamCreateMode.value === 'from_source') {
-    loadSources()
-  }
-})
-
-async function loadSources() {
-  sourcesLoading.value = true
-  try {
-    const res = await sourceApi.list({ limit: 200 })
-    sources.value = res.data?.items ?? []
-  } catch {
-    sources.value = []
-  } finally {
-    sourcesLoading.value = false
-  }
-}
-
 
 function handleTypeChange(type: string | null) {
   selectedType.value = type
@@ -789,28 +669,6 @@ async function handleUpload() {
           uploadForm.name,
           uploadForm.tags || []
         )
-      } else if (uploadType.value === 'stream') {
-        if (streamCreateMode.value === 'url') {
-          await assetApi.create({
-            type: 'stream',
-            source_type: 'live',
-            name: uploadForm.name,
-            stream_url: uploadForm.path!.trim(),
-            size: 0,
-            format: '',
-            tags: uploadForm.tags || []
-          })
-        } else {
-          await assetApi.create({
-            type: 'stream',
-            source_type: 'live',
-            name: uploadForm.name,
-            source_id: uploadForm.source_id!,
-            size: 0,
-            format: '',
-            tags: uploadForm.tags || []
-          })
-        }
       } else {
         const createData = {
           type: uploadForm.type,
@@ -838,7 +696,6 @@ async function handleUpload() {
 
 function resetUploadForm() {
   uploadType.value = 'url'
-  streamCreateMode.value = 'url'
   uploadForm.type = 'video'
   uploadForm.source_type = 'upload'
   uploadForm.name = ''
@@ -902,8 +759,7 @@ function getTypeIcon(type: string) {
   const iconMap: Record<string, any> = {
     video: VideoCamera,
     image: Picture,
-    audio: Headset,
-    stream: Connection
+    audio: Headset
   }
   return iconMap[type] || Picture
 }
@@ -912,8 +768,7 @@ function getTypeLabel(type: string) {
   const map: Record<string, string> = {
     video: '视频',
     image: '图片',
-    audio: '音频',
-    stream: '流媒体'
+    audio: '音频'
   }
   return map[type] || type
 }
@@ -922,8 +777,7 @@ function getTypeColor(type: string) {
   const map: Record<string, string> = {
     video: 'primary',
     image: 'success',
-    audio: 'warning',
-    stream: 'info'
+    audio: 'warning'
   }
   return map[type] || 'neutral'
 }
@@ -931,10 +785,7 @@ function getTypeColor(type: string) {
 function getSourceTypeLabel(type: string) {
   const map: Record<string, string> = {
     upload: '上传',
-    live: '直播',
-    vod: '点播',
     generated: '生成',
-    stream_capture: '流捕获',
     operator_output: '算子输出'
   }
   return map[type] || type
@@ -1104,16 +955,6 @@ function formatDate(dateStr: string): string {
 .audio-player {
   width: 100%;
   max-width: 400px;
-}
-
-/* 流媒体预览 */
-.stream-preview {
-  padding: 40px;
-}
-
-.stream-info {
-  text-align: center;
-  max-width: 500px;
 }
 
 /* 深色模式 */

@@ -264,12 +264,12 @@ GET /api/v1/sources/:id/preview
 #### 列出媒体资产
 
 ```http
-GET /api/v1/assets?type=video&source_type=live&source_id=uuid&tags=tag1,tag2&limit=20&offset=0
+GET /api/v1/assets?type=video&source_type=upload&tags=tag1,tag2&limit=20&offset=0
 ```
 
 **查询参数**：
 - `type`（可选）：资产类型（video、image、audio）
-- `source_type`（可选）：来源类型（live、vod、upload、generated）
+- `source_type`（可选）：来源类型（upload、generated、operator_output）
 - `source_id`（可选）：媒体源 ID
 - `parent_id`（可选）：父资产 ID
 - `tags`（可选）：标签列表（逗号分隔）
@@ -285,11 +285,11 @@ GET /api/v1/assets?type=video&source_type=live&source_id=uuid&tags=tag1,tag2&lim
     {
       "id": "uuid",
       "type": "video",
-      "source_type": "live",
-      "source_id": "uuid",
+      "source_type": "upload",
+      "source_id": null,
       "parent_id": null,
-      "name": "camera1_2025-02-01_10-00-00.mp4",
-      "path": "./data/recordings/camera1/2025-02-01_10-00-00.mp4",
+      "name": "uploaded_video.mp4",
+      "path": "http://minio:9000/goyavision/uploads/uploaded_video.mp4",
       "duration": 3600,
       "size": 104857600,
       "format": "mp4",
@@ -299,7 +299,7 @@ GET /api/v1/assets?type=video&source_type=live&source_id=uuid&tags=tag1,tag2&lim
         "codec": "h264"
       },
       "status": "ready",
-      "tags": ["camera1", "recording"],
+      "tags": ["demo"],
       "created_at": "2025-02-01T10:00:00Z",
       "updated_at": "2025-02-01T10:00:00Z"
     }
@@ -318,7 +318,7 @@ Content-Type: application/json
   "type": "video",
   "source_type": "upload",
   "name": "uploaded_video.mp4",
-  "path": "./data/uploads/uploaded_video.mp4",
+  "path": "uploads/uploaded_video.mp4",
   "duration": 120,
   "size": 10485760,
   "format": "mp4",
@@ -330,7 +330,12 @@ Content-Type: application/json
 }
 ```
 
-**流媒体接入**：当 `type=stream`、`source_type=live` 时有两种方式：（1）传 `stream_url` 表示新建流并创建资产（后端先创建 MediaSource 再创建 Asset）；（2）传 `source_id` 表示从已有媒体源创建资产，path 由后端从 MediaSource 补全。详见 `docs/stream-asset-mediamtx-design.md` 与 `docs/asset-stream-ingestion.md`。
+**字段说明**：
+- `type`（必填）：资产类型，可选值 `video`、`image`、`audio`
+- `source_type`（必填）：来源类型，可选值 `upload`（用户上传）、`generated`（系统生成）、`operator_output`（算子输出）
+- `path`（必填）：资源路径。对于 `upload`/`generated`/`operator_output` 类型，可传 MinIO 相对路径，响应中会返回完整 URL
+
+> **注意**：流媒体接入功能已迁移至媒体源（Sources）模块，资产模块不再支持 `type=stream` 和 `source_type=live/vod`。
 
 #### 获取媒体资产详情
 

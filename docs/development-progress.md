@@ -20,7 +20,7 @@
 |------|------|------|------|
 | **资产库** | | | |
 | 媒体源管理 | CRUD、状态查询 | ✅ 已完成 | 基于 MediaMTX，支持拉流/推流 |
-| 媒体资产管理 | CRUD、搜索过滤、标签管理 | ✅ 已完成 | 支持 video/image/audio/stream 四种类型，标签系统 |
+| 媒体资产管理 | CRUD、搜索过滤、标签管理 | ✅ 已完成 | 支持 video/image/audio 三种类型，来源类型 upload/generated/operator_output，标签系统；流媒体功能已迁移至媒体源模块 |
 | 录制管理 | 启停录制、文件索引 | ✅ 已完成 | 集成 MediaMTX 录制 API |
 | 点播服务 | 录制段查询、URL 生成 | ✅ 已完成 | 集成 MediaMTX Playback |
 | 存储配置 | 存储路径配置 | ✅ 已完成 | 支持本地存储 |
@@ -42,7 +42,7 @@
 | 审计日志 | 操作日志 | ⏸️ 待开始 | |
 | **前端** | | | |
 | 媒体源页面 | 流管理、预览 | ✅ 已完成 | 独立页面 /sources，CRUD、预览 URL（含 push 时 push_url）、与设计文档对齐 |
-| 媒体资产页面 | 左右布局、类型/标签筛选、网格展示 | ✅ 已完成 | 支持 URL、文件上传与流媒体接入；流媒体接入支持「输入流地址」（传 stream_url 新建媒体源+资产）与「从已有媒体源创建」（传 source_id）；类型与标签同款 GvTag 样式；标签筛选按 JSONB 查询 |
+| 媒体资产页面 | 左右布局、类型/标签筛选、网格展示 | ✅ 已完成 | 支持 URL 地址与文件上传两种方式添加资产；资产类型 video/image/audio；来源类型 upload/generated/operator_output；类型与标签同款 GvTag 样式；标签筛选按 JSONB 查询；流媒体接入功能已迁移至媒体源模块 |
 | 算子中心页面 | 算子市场 | ✅ 已完成 | 重构完成 |
 | 工作流页面 | 工作流列表 | ✅ 已完成 | 重构完成 |
 | 任务管理 | 任务列表、详情 | ✅ 已完成 | 重构完成 |
@@ -158,7 +158,7 @@
 - [x] **实体层（Domain）**
   - [x] MediaAsset 实体定义（media_asset.go）
     - 支持视频、图片、音频三种类型
-    - 支持四种来源类型（live、vod、upload、generated）
+    - 支持三种来源类型（upload、generated、operator_output）
     - 支持资产派生追踪（parent_id）
     - 支持标签系统（tags）
     - 支持元数据存储（metadata）
@@ -506,9 +506,14 @@
 
 **本次完成（流媒体资产与媒体源）**:
   - [x] 媒体源管理页：路由 /sources、source API、列表 CRUD、预览（含 push_url）、详情
-  - [x] 添加资产-流媒体：传 stream_url 新建流并创建资产；从已有媒体源创建（source_id）
   - [x] API 文档 Sources 与当前实现对齐，未实现端点标注为计划实现
   - [x] Domain 层 path_name 生成单元测试（media_source_test.go）
+  - [x] 媒体资产模块移除流媒体相关功能（2026-02-06）
+    - 资产类型仅保留 video/image/audio，移除 stream
+    - 来源类型仅保留 upload/generated/operator_output，移除 live/vod
+    - 新增 operator_output 后端常量（AssetSourceOperatorOutput）
+    - 后端：移除 inferProtocol()、stream_url 字段、流媒体创建分支
+    - 前端：移除流媒体接入标签页、流媒体预览、相关验证与映射
 
 **待实现**:
   - [ ] 其他新端点（录制、点播、status、enable/disable 等）前后端对接
@@ -614,6 +619,7 @@
 
 | 日期 | 版本 | 变更内容 |
 |------|------|----------|
+| 2026-02-06 | V1.0 | **媒体资产模块清理**：移除流媒体相关功能（type=stream、source_type=live/vod、stream_url），已迁移至媒体源模块；资产类型保留 video/image/audio，来源类型保留 upload/generated/operator_output；新增 AssetSourceOperatorOutput 后端常量；前端移除流媒体接入标签页、预览、验证逻辑；更新 API 文档。 |
 | 2026-02-06 | V1.0 | **前端路由修复**：修复登录后跳转到空白页面问题；登录时立即注册动态路由；优化路由守卫逻辑，确保路由注册完成后再导航；移除根路由默认重定向，改为在路由守卫中处理；添加路由注册调试日志。 |
 | 2026-02-06 | V1.0 | **数据迁移工具完善**：迁移脚本添加表创建步骤（使用 GORM AutoMigrate），支持空数据库初始化；完善迁移流程（streams → media_sources/media_assets，algorithms → operators）；更新菜单和权限数据；改进错误处理和日志输出；更新 README 文档。 |
 | 2026-02-05 | V1.0 | **配置体系升级（阶段 1）**：按环境加载配置（`GOYAVISION_ENV` → `config.<env>.yaml`），新增 `config.dev.yaml` / `config.prod.yaml` / `config.example.yaml` / `.env.example`；启动时优先加载 `configs/.env` 并支持 `GOYAVISION_*` 下划线键覆盖（点号映射）；配置加载增加必填校验与默认值；文档同步更新部署与架构说明。 |
