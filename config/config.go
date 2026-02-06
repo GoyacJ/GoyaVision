@@ -33,6 +33,8 @@ type MediaMTX struct {
 	RecordPath      string
 	RecordFormat    string
 	SegmentDuration string
+	Username        string
+	Password        string
 }
 
 type JWT struct {
@@ -145,6 +147,8 @@ func Load() (*Config, error) {
 			RecordPath:      v.GetString("mediamtx.record_path"),
 			RecordFormat:    v.GetString("mediamtx.record_format"),
 			SegmentDuration: v.GetString("mediamtx.segment_duration"),
+			Username:        v.GetString("mediamtx.username"),
+			Password:        v.GetString("mediamtx.password"),
 		},
 		MinIO: MinIO{
 			Endpoint:   v.GetString("minio.endpoint"),

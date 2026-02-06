@@ -9,13 +9,19 @@ import (
 
 // Gateway MediaMTX 网关实现（适配现有 Client）
 type Gateway struct {
-	client *mediamtx.Client
+	client          *mediamtx.Client
+	recordPath      string
+	recordFormat    string
+	segmentDuration string
 }
 
 // NewGateway 创建 MediaMTX 网关
-func NewGateway(baseURL string) port.MediaGateway {
+func NewGateway(baseURL, username, password, recordPath, recordFormat, segmentDuration string) port.MediaGateway {
 	return &Gateway{
-		client: mediamtx.NewClient(baseURL),
+		client:          mediamtx.NewClient(baseURL, username, password),
+		recordPath:      recordPath,
+		recordFormat:    recordFormat,
+		segmentDuration: segmentDuration,
 	}
 }
 
@@ -29,8 +35,14 @@ func (g *Gateway) PatchPath(ctx context.Context, pathName, source string) error 
 
 // AddPath 添加流路径
 func (g *Gateway) AddPath(ctx context.Context, pathName, source string) error {
+	record := false
 	cfg := &mediamtx.PathConfig{
-		Source: source,
+		Source:                source,
+		RTSPTransport:         "tcp",
+		Record:                &record,
+		RecordPath:            g.recordPath,
+		RecordFormat:          g.recordFormat,
+		RecordSegmentDuration: g.segmentDuration,
 	}
 	return g.client.AddPath(ctx, pathName, cfg)
 }

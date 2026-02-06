@@ -36,9 +36,11 @@ mediamtx:
   hls_address: "http://localhost:8888"
   webrtc_address: "http://localhost:8889"
   playback_address: "http://localhost:9996"
-  record_path: "./data/recordings/%path/%Y-%m-%d_%H-%M-%S"
+  record_path: "./data/recordings/%path/%Y-%m-%d_%H-%M-%S-%f"
   record_format: "fmp4"
   segment_duration: "1h"
+  username: "goyavision"
+  password: "goyavision-dev"
 
 minio:
   endpoint: "localhost:9000"
