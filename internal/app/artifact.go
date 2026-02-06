@@ -15,7 +15,7 @@ import (
 // CreateArtifactRequest 创建产物请求
 type CreateArtifactRequest struct {
 	TaskID  uuid.UUID              `json:"task_id"`
-	Type    workflow.ArtifactType    `json:"type"`
+	Type    workflow.ArtifactType  `json:"type"`
 	AssetID *uuid.UUID             `json:"asset_id,omitempty"`
 	Data    map[string]interface{} `json:"data,omitempty"`
 }

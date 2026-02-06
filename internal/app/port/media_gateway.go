@@ -10,7 +10,7 @@ import "context"
 //  3. 控制录制功能
 //
 // 实现：
-//  - infra/mediamtx/gateway.go (HTTP 客户端实现)
+//   - infra/mediamtx/gateway.go (HTTP 客户端实现)
 type MediaGateway interface {
 	// AddPath 添加流路径
 	AddPath(ctx context.Context, pathName, source string) error
@@ -42,10 +42,10 @@ type MediaGateway interface {
 
 // PathStatus 路径状态
 type PathStatus struct {
-	Name         string
-	Source       string
-	Ready        bool
-	NumReaders   int
+	Name          string
+	Source        string
+	Ready         bool
+	NumReaders    int
 	BytesReceived uint64
 }
 

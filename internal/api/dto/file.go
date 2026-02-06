@@ -23,15 +23,15 @@ type FileListQuery struct {
 
 // FileCreateReq 创建文件请求（用于手动创建文件记录）
 type FileCreateReq struct {
-	Name        string                 `json:"name" validate:"required"`
-	OriginalName string                `json:"original_name" validate:"required"`
-	Path        string                 `json:"path" validate:"required"`
-	Size        int64                  `json:"size"`
-	MimeType    string                 `json:"mime_type"`
-	Type        string                 `json:"type"`
-	Extension   string                 `json:"extension"`
-	Hash        string                 `json:"hash"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	Name         string                 `json:"name" validate:"required"`
+	OriginalName string                 `json:"original_name" validate:"required"`
+	Path         string                 `json:"path" validate:"required"`
+	Size         int64                  `json:"size"`
+	MimeType     string                 `json:"mime_type"`
+	Type         string                 `json:"type"`
+	Extension    string                 `json:"extension"`
+	Hash         string                 `json:"hash"`
+	Metadata     map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // FileUpdateReq 更新文件请求
@@ -43,21 +43,21 @@ type FileUpdateReq struct {
 
 // FileResponse 文件响应
 type FileResponse struct {
-	ID          uuid.UUID              `json:"id"`
-	Name        string                 `json:"name"`
-	OriginalName string                `json:"original_name"`
-	Path        string                 `json:"path"`
-	URL         string                 `json:"url"`
-	Size        int64                  `json:"size"`
-	MimeType    string                 `json:"mime_type"`
-	Type        string                 `json:"type"`
-	Extension   string                 `json:"extension"`
-	Status      string                 `json:"status"`
-	Hash        string                 `json:"hash"`
-	UploaderID  *uuid.UUID             `json:"uploader_id,omitempty"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
-	CreatedAt   time.Time              `json:"created_at"`
-	UpdatedAt   time.Time              `json:"updated_at"`
+	ID           uuid.UUID              `json:"id"`
+	Name         string                 `json:"name"`
+	OriginalName string                 `json:"original_name"`
+	Path         string                 `json:"path"`
+	URL          string                 `json:"url"`
+	Size         int64                  `json:"size"`
+	MimeType     string                 `json:"mime_type"`
+	Type         string                 `json:"type"`
+	Extension    string                 `json:"extension"`
+	Status       string                 `json:"status"`
+	Hash         string                 `json:"hash"`
+	UploaderID   *uuid.UUID             `json:"uploader_id,omitempty"`
+	Metadata     map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt    time.Time              `json:"created_at"`
+	UpdatedAt    time.Time              `json:"updated_at"`
 }
 
 // FileListResponse 文件列表响应
@@ -88,21 +88,21 @@ func FileToResponse(f *storage.File, minioEndpoint, minioBucket string, minioUse
 	}
 
 	return &FileResponse{
-		ID:          f.ID,
-		Name:        f.Name,
+		ID:           f.ID,
+		Name:         f.Name,
 		OriginalName: f.OriginalName,
-		Path:        f.Path,
-		URL:         url,
-		Size:        f.Size,
-		MimeType:    f.MimeType,
-		Type:        string(f.Type),
-		Extension:   f.Extension,
-		Status:      string(f.Status),
-		Hash:        f.Hash,
-		UploaderID:  f.UploaderID,
-		Metadata:    metadata,
-		CreatedAt:   f.CreatedAt,
-		UpdatedAt:   f.UpdatedAt,
+		Path:         f.Path,
+		URL:          url,
+		Size:         f.Size,
+		MimeType:     f.MimeType,
+		Type:         string(f.Type),
+		Extension:    f.Extension,
+		Status:       string(f.Status),
+		Hash:         f.Hash,
+		UploaderID:   f.UploaderID,
+		Metadata:     metadata,
+		CreatedAt:    f.CreatedAt,
+		UpdatedAt:    f.UpdatedAt,
 	}
 }
 

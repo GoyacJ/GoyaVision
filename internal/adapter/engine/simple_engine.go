@@ -25,9 +25,9 @@ type SimpleWorkflowEngine struct {
 }
 
 type taskExecution struct {
-	ctx        context.Context
-	cancel     context.CancelFunc
-	progress   int
+	ctx         context.Context
+	cancel      context.CancelFunc
+	progress    int
 	currentNode string
 }
 

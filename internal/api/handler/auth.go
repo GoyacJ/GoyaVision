@@ -4,10 +4,10 @@ import (
 	"net/http"
 
 	"golang.org/x/crypto/bcrypt"
-	appdto "goyavision/internal/app/dto"
 	"goyavision/internal/api/dto"
 	"goyavision/internal/api/middleware"
 	"goyavision/internal/app"
+	appdto "goyavision/internal/app/dto"
 
 	"github.com/labstack/echo/v4"
 )

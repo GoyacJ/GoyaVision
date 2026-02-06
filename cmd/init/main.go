@@ -473,14 +473,14 @@ func initAdminUser(ctx context.Context, db *gorm.DB) error {
 				return fmt.Errorf("更新用户失败: %w", err)
 			}
 
-		roleID := uuid.MustParse("00000000-0000-0000-0000-000000000100")
-		db.Exec("DELETE FROM user_roles WHERE user_model_id = ?", existingUser.ID)
-		if err := db.WithContext(ctx).Exec(
-			"INSERT INTO user_roles (user_model_id, role_model_id) VALUES (?, ?)",
-			existingUser.ID, roleID,
-		).Error; err != nil {
-			log.Printf("  ⚠️  分配角色失败: %v", err)
-		}
+			roleID := uuid.MustParse("00000000-0000-0000-0000-000000000100")
+			db.Exec("DELETE FROM user_roles WHERE user_model_id = ?", existingUser.ID)
+			if err := db.WithContext(ctx).Exec(
+				"INSERT INTO user_roles (user_model_id, role_model_id) VALUES (?, ?)",
+				existingUser.ID, roleID,
+			).Error; err != nil {
+				log.Printf("  ⚠️  分配角色失败: %v", err)
+			}
 			log.Println("  ✓ 已更新管理员用户")
 		} else {
 			log.Println("  ⊙ 管理员用户已存在，跳过创建")

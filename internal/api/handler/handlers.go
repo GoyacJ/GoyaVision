@@ -57,7 +57,7 @@ type Handlers struct {
 	MtxCli               *mediamtx.Client
 	MinIOClient          *storage.MinIOClient
 	WorkflowScheduler    *app.WorkflowScheduler
-	Repo                 port.Repository // For middleware and non-migrated handlers
+	Repo                 port.Repository      // For middleware and non-migrated handlers
 	TokenService         appport.TokenService // For auth handlers
 }
 

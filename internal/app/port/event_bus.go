@@ -10,13 +10,13 @@ import "context"
 //  3. 解耦业务逻辑
 //
 // 实现：
-//  - infra/eventbus/local.go (本地内存实现)
-//  - 未来可扩展：Redis Pub/Sub, Kafka, RabbitMQ
+//   - infra/eventbus/local.go (本地内存实现)
+//   - 未来可扩展：Redis Pub/Sub, Kafka, RabbitMQ
 //
 // 使用场景：
-//  - 媒体源创建后，触发资产索引
-//  - 任务完成后，发送通知
-//  - 工作流状态变更，记录审计日志
+//   - 媒体源创建后，触发资产索引
+//   - 任务完成后，发送通知
+//   - 工作流状态变更，记录审计日志
 type EventBus interface {
 	// Publish 发布事件
 	Publish(ctx context.Context, event Event) error

@@ -11,11 +11,11 @@ const (
 	CodeInvalidState  = 40004
 
 	// 401xx - Authentication
-	CodeUnauthorized   = 40101
-	CodeTokenExpired   = 40102
-	CodeTokenInvalid   = 40103
-	CodeLoginFailed    = 40104
-	CodePasswordWrong  = 40105
+	CodeUnauthorized  = 40101
+	CodeTokenExpired  = 40102
+	CodeTokenInvalid  = 40103
+	CodeLoginFailed   = 40104
+	CodePasswordWrong = 40105
 
 	// 403xx - Authorization
 	CodeForbidden        = 40301

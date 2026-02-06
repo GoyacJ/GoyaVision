@@ -19,10 +19,10 @@ type OperatorExecutor interface {
 type WorkflowEngine interface {
 	// Execute 执行工作流
 	Execute(ctx context.Context, workflow *workflow.Workflow, task *workflow.Task) error
-	
+
 	// Cancel 取消工作流执行
 	Cancel(ctx context.Context, taskID uuid.UUID) error
-	
+
 	// GetProgress 获取工作流执行进度
 	GetProgress(ctx context.Context, taskID uuid.UUID) (int, error)
 }

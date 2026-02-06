@@ -9,11 +9,11 @@ import (
 // Permission 权限实体（API 资源，纯域模型，无 ORM 依赖）
 type Permission struct {
 	ID          uuid.UUID
-	Code        string    // 权限编码（唯一标识）
-	Name        string    // 权限名称
-	Method      string    // HTTP 方法（GET, POST, PUT, DELETE, *）
-	Path        string    // API 路径
-	Description string    // 权限描述
+	Code        string // 权限编码（唯一标识）
+	Name        string // 权限名称
+	Method      string // HTTP 方法（GET, POST, PUT, DELETE, *）
+	Path        string // API 路径
+	Description string // 权限描述
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }

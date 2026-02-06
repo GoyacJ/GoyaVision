@@ -14,8 +14,8 @@ import (
 //  3. 文件元数据管理
 //
 // 实现：
-//  - infra/minio/client.go (MinIO 实现)
-//  - 未来可扩展：S3, OSS, COS 等
+//   - infra/minio/client.go (MinIO 实现)
+//   - 未来可扩展：S3, OSS, COS 等
 type ObjectStorage interface {
 	// Upload 上传文件
 	Upload(ctx context.Context, req *UploadRequest) (*UploadResult, error)

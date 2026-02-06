@@ -93,7 +93,7 @@ func (c *Client) Upload(ctx context.Context, req *port.UploadRequest) (*port.Upl
 	}
 
 	opts := minio.PutObjectOptions{
-		ContentType: req.ContentType,
+		ContentType:  req.ContentType,
 		UserMetadata: req.Metadata,
 	}
 

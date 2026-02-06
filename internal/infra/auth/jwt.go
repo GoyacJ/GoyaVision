@@ -14,10 +14,10 @@ import (
 
 // JWTService JWT 令牌服务实现
 type JWTService struct {
-	secret           []byte
-	issuer           string
-	accessTokenTTL   time.Duration
-	refreshTokenTTL  time.Duration
+	secret          []byte
+	issuer          string
+	accessTokenTTL  time.Duration
+	refreshTokenTTL time.Duration
 }
 
 // customClaims JWT 自定义声明

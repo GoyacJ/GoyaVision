@@ -50,20 +50,20 @@ type PermissionModel struct {
 func (PermissionModel) TableName() string { return "permissions" }
 
 type MenuModel struct {
-	ID         uuid.UUID  `gorm:"type:uuid;primaryKey"`
-	ParentID   *uuid.UUID `gorm:"type:uuid;index"`
-	Code       string     `gorm:"uniqueIndex;not null;size:64"`
-	Name       string     `gorm:"not null;size:64"`
-	Type       int        `gorm:"not null"`
-	Path       string     `gorm:"size:256"`
-	Icon       string     `gorm:"size:64"`
-	Component  string     `gorm:"size:256"`
-	Permission string     `gorm:"size:64"`
-	Sort       int        `gorm:"default:0"`
-	Visible    bool       `gorm:"default:true"`
-	Status     int        `gorm:"default:1"`
-	CreatedAt  time.Time  `gorm:"autoCreateTime"`
-	UpdatedAt  time.Time  `gorm:"autoUpdateTime"`
+	ID         uuid.UUID   `gorm:"type:uuid;primaryKey"`
+	ParentID   *uuid.UUID  `gorm:"type:uuid;index"`
+	Code       string      `gorm:"uniqueIndex;not null;size:64"`
+	Name       string      `gorm:"not null;size:64"`
+	Type       int         `gorm:"not null"`
+	Path       string      `gorm:"size:256"`
+	Icon       string      `gorm:"size:64"`
+	Component  string      `gorm:"size:256"`
+	Permission string      `gorm:"size:64"`
+	Sort       int         `gorm:"default:0"`
+	Visible    bool        `gorm:"default:true"`
+	Status     int         `gorm:"default:1"`
+	CreatedAt  time.Time   `gorm:"autoCreateTime"`
+	UpdatedAt  time.Time   `gorm:"autoUpdateTime"`
 	Children   []MenuModel `gorm:"-"`
 }
 

@@ -31,10 +31,10 @@ const (
 
 // JWTClaims 自定义 JWT Claims
 type JWTClaims struct {
-	UserID    uuid.UUID `json:"user_id"`
-	Username  string    `json:"username"`
-	TokenType string    `json:"token_type"`
-	LegacyType string   `json:"type"`
+	UserID     uuid.UUID `json:"user_id"`
+	Username   string    `json:"username"`
+	TokenType  string    `json:"token_type"`
+	LegacyType string    `json:"type"`
 	jwt.RegisteredClaims
 }
 

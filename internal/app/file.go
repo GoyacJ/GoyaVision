@@ -23,16 +23,16 @@ import (
 
 // CreateFileRequest 创建文件请求
 type CreateFileRequest struct {
-	Name        string
+	Name         string
 	OriginalName string
-	Path        string
-	Size        int64
-	MimeType    string
-	Type        storage.FileType
-	Extension   string
-	Hash        string
-	UploaderID  *uuid.UUID
-	Metadata    map[string]interface{}
+	Path         string
+	Size         int64
+	MimeType     string
+	Type         storage.FileType
+	Extension    string
+	Hash         string
+	UploaderID   *uuid.UUID
+	Metadata     map[string]interface{}
 }
 
 // UpdateFileRequest 更新文件请求
@@ -55,13 +55,13 @@ type ListFilesRequest struct {
 }
 
 type FileService struct {
-	repo       port.Repository
+	repo        port.Repository
 	minioClient *storageUtil.MinIOClient
 }
 
 func NewFileService(repo port.Repository, minioClient *storageUtil.MinIOClient) *FileService {
 	return &FileService{
-		repo:       repo,
+		repo:        repo,
 		minioClient: minioClient,
 	}
 }
@@ -108,16 +108,16 @@ func (s *FileService) UploadFile(ctx context.Context, reader io.Reader, filename
 
 	// 创建文件记录
 	file := &storage.File{
-		Name:        strings.TrimSuffix(filename, ext),
+		Name:         strings.TrimSuffix(filename, ext),
 		OriginalName: filename,
-		Path:        objectName,
-		Size:        size,
-		MimeType:    mimeType,
-		Type:        fileType,
-		Extension:   strings.TrimPrefix(ext, "."),
-		Status:      storage.FileStatusCompleted,
-		Hash:        fileHash,
-		UploaderID:  uploaderID,
+		Path:         objectName,
+		Size:         size,
+		MimeType:     mimeType,
+		Type:         fileType,
+		Extension:    strings.TrimPrefix(ext, "."),
+		Status:       storage.FileStatusCompleted,
+		Hash:         fileHash,
+		UploaderID:   uploaderID,
 	}
 
 	if err := s.repo.CreateFile(ctx, file); err != nil {
