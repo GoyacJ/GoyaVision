@@ -23,11 +23,7 @@ router.beforeEach(async (to, _from, next) => {
       } else {
         try {
           await userStore.getProfile()
-          
-          if (!userStore.routesLoaded) {
-            userStore.registerDynamicRoutes()
-          }
-          
+
           if (to.path === '/') {
             next({ path: '/assets', replace: true })
           } else {

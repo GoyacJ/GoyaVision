@@ -3,17 +3,22 @@ import { useUserStore } from '../store/user'
 
 export const permissionDirective: Directive = {
   mounted(el: HTMLElement, binding: DirectiveBinding) {
-    const userStore = useUserStore()
-    const { value } = binding
+    checkPermissionVisibility(el, binding)
+  },
+  updated(el: HTMLElement, binding: DirectiveBinding) {
+    checkPermissionVisibility(el, binding)
+  }
+}
 
-    if (value) {
-      const permissions = Array.isArray(value) ? value : [value]
-      const hasPermission = userStore.hasAnyPermission(permissions)
+function checkPermissionVisibility(el: HTMLElement, binding: DirectiveBinding) {
+  const userStore = useUserStore()
+  const { value } = binding
 
-      if (!hasPermission) {
-        el.parentNode?.removeChild(el)
-      }
-    }
+  if (value) {
+    const permissions = Array.isArray(value) ? value : [value]
+    const hasPermission = userStore.hasAnyPermission(permissions)
+
+    el.style.display = hasPermission ? '' : 'none'
   }
 }
 

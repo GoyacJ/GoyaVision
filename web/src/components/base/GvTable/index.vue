@@ -56,8 +56,8 @@
         </template>
       </el-table-column>
       
-      <!-- 操作列插槽 -->
-      <slot name="actions" />
+      <!-- 额外列插槽 -->
+      <slot name="extra-columns" />
     </el-table>
     
     <!-- 分页 -->
