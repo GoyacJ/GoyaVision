@@ -1,5 +1,13 @@
-# MediaMTX 配置文件
-# GoyaVision 项目推荐配置
+# MediaMTX 默认配置文件
+# GoyaVision - Intelligent Media Processing Platform
+#
+# 环境专用配置:
+#   - 开发环境: configs/mediamtx.dev.yml  (详细日志, 宽松安全, 低资源)
+#   - 生产环境: configs/mediamtx.prod.yml (精简日志, 严格安全, 高性能, 监控)
+#
+# Docker 挂载示例:
+#   开发: -v ./configs/mediamtx.dev.yml:/mediamtx.yml
+#   生产: -v ./configs/mediamtx.prod.yml:/mediamtx.yml
 
 ###############################################
 # 全局配置
