@@ -67,7 +67,25 @@
 
   /* 输入框基础样式 */
   input, textarea, select {
-    @apply transition-colors duration-fast;
+    outline: none;
+  }
+
+  /* Element Plus 输入框去除聚焦样式变化 */
+  .el-input__wrapper,
+  .el-textarea__inner,
+  .el-select__wrapper {
+    box-shadow: none !important;
+    transition: none !important;
+  }
+  .el-input__wrapper:hover,
+  .el-input__wrapper:focus-within,
+  .el-input__wrapper.is-focus,
+  .el-textarea__inner:hover,
+  .el-textarea__inner:focus,
+  .el-select__wrapper:hover,
+  .el-select__wrapper.is-focused,
+  .el-select__wrapper.is-focus {
+    box-shadow: none !important;
   }
 }
 
@@ -141,7 +159,7 @@
   /* 按钮基础样式 */
   .btn {
     @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded text-sm font-medium transition-all duration-fast;
-    @apply focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+    @apply focus:outline-none;
   }
 
   .btn-primary {
@@ -200,7 +218,7 @@
 
   /* Focus 可见性（无障碍） */
   .focus-visible {
-    @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+    @apply outline-none;
   }
 
   /* 禁用状态 */

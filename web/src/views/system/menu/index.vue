@@ -52,7 +52,7 @@
             <StatusBadge :status="row.status === 1 ? 'enabled' : 'disabled'" />
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="180" fixed="right">
+        <el-table-column label="操作" width="240" fixed="right">
           <template #default="{ row }">
             <GvSpace size="xs">
               <GvButton size="small" variant="tonal" @click="handleAdd(row.id)" v-permission="'menu:create'">

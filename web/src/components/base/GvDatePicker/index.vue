@@ -143,9 +143,7 @@ const handleBlur = (event: FocusEvent) => {
 /* 自定义 Element Plus DatePicker 样式 */
 .gv-date-picker__wrapper .el-input__wrapper {
   @apply bg-white border border-neutral-300 rounded-xl;
-  @apply transition-all duration-200;
-  @apply hover:border-primary-500;
-  box-shadow: none;
+  box-shadow: none !important;
   padding: 0 12px;
 }
 
@@ -162,31 +160,23 @@ const handleBlur = (event: FocusEvent) => {
 }
 
 .gv-date-picker__wrapper .el-input__wrapper.is-focus {
-  @apply border-primary-600 ring-2 ring-primary-500/20;
+  @apply border-neutral-300;
+  box-shadow: none !important;
 }
 
-.gv-date-picker__wrapper.gv-date-picker--success .el-input__wrapper {
+.gv-date-picker__wrapper.gv-date-picker--success .el-input__wrapper,
+.gv-date-picker__wrapper.gv-date-picker--success .el-input__wrapper.is-focus {
   @apply border-success-600;
 }
 
-.gv-date-picker__wrapper.gv-date-picker--success .el-input__wrapper.is-focus {
-  @apply border-success-600 ring-2 ring-success-500/20;
-}
-
-.gv-date-picker__wrapper.gv-date-picker--error .el-input__wrapper {
+.gv-date-picker__wrapper.gv-date-picker--error .el-input__wrapper,
+.gv-date-picker__wrapper.gv-date-picker--error .el-input__wrapper.is-focus {
   @apply border-error-600;
 }
 
-.gv-date-picker__wrapper.gv-date-picker--error .el-input__wrapper.is-focus {
-  @apply border-error-600 ring-2 ring-error-500/20;
-}
-
-.gv-date-picker__wrapper.gv-date-picker--warning .el-input__wrapper {
-  @apply border-warning-600;
-}
-
+.gv-date-picker__wrapper.gv-date-picker--warning .el-input__wrapper,
 .gv-date-picker__wrapper.gv-date-picker--warning .el-input__wrapper.is-focus {
-  @apply border-warning-600 ring-2 ring-warning-500/20;
+  @apply border-warning-600;
 }
 
 .gv-date-picker__wrapper .el-input__wrapper.is-disabled {

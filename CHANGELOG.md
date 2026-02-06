@@ -42,11 +42,19 @@
 
 ### 变更
 - **媒体资产来源类型调整**：新增 `operator_output`（算子输出）来源类型，补全后端常量 `AssetSourceOperatorOutput`；`operator_output` 类型纳入 MinIO URL 自动生成
+- **前端 UI 样式统一**：移除所有输入框（GvInput、GvSelect、GvDatePicker）和按钮（GvButton）的聚焦/悬停样式变化，保持静态边框
+  - 全局覆盖 Element Plus 输入框聚焦阴影（`box-shadow: none !important`）
+  - 搜索栏（媒体源、算子、工作流页面）隐藏多余「搜索」按钮
+  - 任务管理统计卡片重设计为紧凑单行统计栏
+  - 修复菜单管理操作列宽度不足、文件管理上传按钮文字换行问题
+- **useTable composable 增强**：自动监听 `extraParams` 变化并重新加载数据，修复资产页类型/标签筛选无效的问题
+- **动态路由类型修复**：重写 `buildRoutesFromMenus` 以正确匹配 vue-router v4.6 的 `RouteRecordRaw` union 类型
 
 ### 移除
 - **媒体资产模块流媒体功能清理**：移除资产类型 `stream`、来源类型 `live`/`vod`，流媒体接入已迁移至媒体源模块
   - 后端：移除 `AssetTypeStream`、`AssetSourceLive`、`AssetSourceVOD` 常量、`IsStream()` 方法、`inferProtocol()` 函数、`StreamURL` DTO 字段、流媒体创建分支
   - 前端：移除流媒体接入标签页、流媒体预览区域、相关验证规则与类型映射；`AssetCard` 组件同步清理
+- **清理重构遗留文件**：删除未使用的 `operator/index-refactored.vue`、`operator/index-old.vue`、`workflow/index-refactored.vue`、`workflow/index-old.vue`，消除构建时的循环依赖警告
 
 ### 修复
 - 修复任务与工作流 Handler 的返回值处理与重复赋值导致的 Go 编译错误

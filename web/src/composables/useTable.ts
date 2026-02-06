@@ -184,6 +184,21 @@ export function useTable<T>(
     }
   )
 
+  // 监听额外参数变化，自动重置到第一页并重新加载
+  if (extraParams && 'value' in extraParams) {
+    watch(
+      () => extraParams.value,
+      () => {
+        if (pagination.page === 1) {
+          loadTable()
+        } else {
+          pagination.page = 1
+        }
+      },
+      { deep: true }
+    )
+  }
+
   return {
     // 从 useAsyncData 继承
     data,
