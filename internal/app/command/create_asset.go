@@ -32,12 +32,12 @@ func (h *CreateAssetHandler) Handle(ctx context.Context, cmd dto.CreateAssetComm
 	}
 
 	if cmd.Type != media.AssetTypeVideo && cmd.Type != media.AssetTypeImage &&
-		cmd.Type != media.AssetTypeAudio && cmd.Type != media.AssetTypeStream {
+		cmd.Type != media.AssetTypeAudio {
 		return nil, apperr.InvalidInput("invalid asset type")
 	}
 
-	if cmd.SourceType != media.AssetSourceLive && cmd.SourceType != media.AssetSourceVOD &&
-		cmd.SourceType != media.AssetSourceUpload && cmd.SourceType != media.AssetSourceGenerated {
+	if cmd.SourceType != media.AssetSourceUpload && cmd.SourceType != media.AssetSourceGenerated &&
+		cmd.SourceType != media.AssetSourceOperatorOutput {
 		return nil, apperr.InvalidInput("invalid source type")
 	}
 

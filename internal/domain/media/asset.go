@@ -9,19 +9,17 @@ import (
 type AssetType string
 
 const (
-	AssetTypeVideo  AssetType = "video"
-	AssetTypeImage  AssetType = "image"
-	AssetTypeAudio  AssetType = "audio"
-	AssetTypeStream AssetType = "stream"
+	AssetTypeVideo AssetType = "video"
+	AssetTypeImage AssetType = "image"
+	AssetTypeAudio AssetType = "audio"
 )
 
 type AssetSourceType string
 
 const (
-	AssetSourceLive      AssetSourceType = "live"
-	AssetSourceVOD       AssetSourceType = "vod"
-	AssetSourceUpload    AssetSourceType = "upload"
-	AssetSourceGenerated AssetSourceType = "generated"
+	AssetSourceUpload         AssetSourceType = "upload"
+	AssetSourceGenerated      AssetSourceType = "generated"
+	AssetSourceOperatorOutput AssetSourceType = "operator_output"
 )
 
 type AssetStatus string
@@ -60,10 +58,6 @@ func (a *Asset) IsImage() bool {
 
 func (a *Asset) IsAudio() bool {
 	return a.Type == AssetTypeAudio
-}
-
-func (a *Asset) IsStream() bool {
-	return a.Type == AssetTypeStream
 }
 
 func (a *Asset) HasParent() bool {

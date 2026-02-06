@@ -137,7 +137,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { cn } from '@/utils/cn'
-import { VideoCamera, Picture, Headset, Connection, View, Edit, Delete } from '@element-plus/icons-vue'
+import { VideoCamera, Picture, Headset, View, Edit, Delete } from '@element-plus/icons-vue'
 import { GvCard, GvBadge, GvButton, GvSpace, GvTag, StatusBadge } from '@/components'
 import type { AssetCardProps, AssetCardEmits } from './types'
 
@@ -167,8 +167,7 @@ function getTypeIcon(type: string) {
   const iconMap: Record<string, any> = {
     video: VideoCamera,
     image: Picture,
-    audio: Headset,
-    stream: Connection
+    audio: Headset
   }
   return iconMap[type] || Picture
 }
@@ -177,8 +176,7 @@ function getTypeLabel(type: string) {
   const labelMap: Record<string, string> = {
     video: '视频',
     image: '图片',
-    audio: '音频',
-    stream: '流媒体'
+    audio: '音频'
   }
   return labelMap[type] || type
 }
@@ -187,8 +185,7 @@ function getTypeColor(type: string) {
   const colorMap: Record<string, string> = {
     video: 'primary',
     image: 'success',
-    audio: 'warning',
-    stream: 'info'
+    audio: 'warning'
   }
   return colorMap[type] || 'neutral'
 }
