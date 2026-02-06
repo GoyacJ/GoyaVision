@@ -355,6 +355,18 @@ Content-Type: application/json
 }
 ```
 
+**权限要求**：
+- 需要 `asset:update` 权限
+- 后端会基于 JWT + RBAC 强校验，前端权限控制仅用于交互层隐藏/禁用
+
+**无权限响应**：
+```json
+{
+  "error": "Forbidden",
+  "message": "无编辑权限"
+}
+```
+
 #### 删除媒体资产
 
 ```http

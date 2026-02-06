@@ -9,4 +9,5 @@ mkdir -p "$(dirname "$completion_log")"
 echo "$(date -Iseconds): Task $task_id completed" >> "$completion_log"
 
 context="TASK_COMPLETED: 任务已完成，请确认是否需要更新 docs/development-progress.md 与 CHANGELOG.md。"
+context="$context COMPLETION_OUTPUT: 默认不要提供或触发收尾命令（attempt_completion.command）。仅当用户明确要求时才提供命令。"
 jq -n --arg ctx "$context" '{"cancel": false, "contextModification": $ctx}'

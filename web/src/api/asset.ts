@@ -54,8 +54,6 @@ export interface AssetUpdateReq {
 export interface AssetListResponse {
   items: MediaAsset[]
   total: number
-  page: number
-  page_size: number
 }
 
 export const assetApi = {
