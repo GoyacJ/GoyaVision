@@ -8,6 +8,13 @@
 ## [未发布]
 
 ### 新增
+- **MediaMTX API 认证支持**：GoyaVision 与 MediaMTX 间通信支持 Basic Auth 认证
+  - MediaMTX HTTP Client (`internal/adapter/mediamtx/client.go`) 新增 `username`/`password` 字段，`doRequest` 自动附加 `Authorization` 头
+  - Gateway (`internal/infra/mediamtx/gateway.go`) 透传凭据，同时存储录制默认配置
+  - 配置结构 (`config/config.go`) `MediaMTX` struct 新增 `Username`/`Password` 字段
+  - MediaMTX 开发/生产配置新增 `authInternalUsers`（`goyavision` API 管理用户 + 匿名推拉流用户）
+  - `configs/config.dev.yaml`、`config.prod.yaml`、`.env.example`、`.env` 新增 `mediamtx.username`/`password` 配置项
+  - 解决 MediaMTX v1.16 默认 `authInternalUsers` 限制 API 仅 localhost 访问，Docker 容器间或远程调用返回 `authentication error` 的问题
 - **数据迁移工具完善**：迁移脚本添加表创建步骤，支持空数据库初始化
   - 使用 GORM AutoMigrate 自动创建所有 V1.0 表结构
   - 支持从旧架构迁移到 V1.0（streams → media_sources/media_assets，algorithms → operators）
@@ -73,6 +80,8 @@
 - **清理重构遗留文件**：删除未使用的 `operator/index-refactored.vue`、`operator/index-old.vue`、`workflow/index-refactored.vue`、`workflow/index-old.vue`，消除构建时的循环依赖警告
 
 ### 修复
+- **MediaMTX recordPath 校验失败**：所有 `recordPath` 配置添加 `%f`（微秒）占位符，满足最新版 MediaMTX 必需格式元素要求；`AddPath` 时携带完整的 `recordPath`/`recordFormat`/`recordSegmentDuration`，避免空值触发 MediaMTX 校验错误
+- **RTSP 拉流 UDP 被拒绝**：`AddPath` 默认设置 `rtspTransport: tcp`，`pathDefaults` 同步添加 `rtspTransport: tcp`；解决上游 RTSP 服务器（如 ZLMediaKit）不支持 UDP 传输返回 `406 Not Acceptable` 导致流无法就绪、HLS 预览 404 的问题
 - **资产更新权限边界修复**：后端 `PUT /api/v1/assets/:id` 增加 `asset:update` 强校验，未授权统一返回 `403` 与“无编辑权限”
 - 前端更新资产时补充 `403` 专门提示，避免仅依赖通用错误文案
 - 修复任务与工作流 Handler 的返回值处理与重复赋值导致的 Go 编译错误

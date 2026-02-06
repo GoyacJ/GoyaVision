@@ -19,7 +19,7 @@
 | 模块 | 功能 | 状态 | 说明 |
 |------|------|------|------|
 | **资产库** | | | |
-| 媒体源管理 | CRUD、状态查询 | ✅ 已完成 | 基于 MediaMTX，支持拉流/推流 |
+| 媒体源管理 | CRUD、状态查询 | ✅ 已完成 | 基于 MediaMTX，支持拉流/推流；支持 MediaMTX API Basic Auth 认证（非 localhost 访问）；拉流默认 TCP 传输 |
 | 媒体资产管理 | CRUD、搜索过滤、标签管理 | ✅ 已完成 | 支持 video/image/audio 三种类型，来源类型 upload/generated/operator_output，标签系统；流媒体功能已迁移至媒体源模块 |
 | 录制管理 | 启停录制、文件索引 | ✅ 已完成 | 集成 MediaMTX 录制 API |
 | 点播服务 | 录制段查询、URL 生成 | ✅ 已完成 | 集成 MediaMTX Playback |
@@ -563,6 +563,8 @@
 - ✅ 多协议预览（HLS/RTSP/RTMP/WebRTC）
 - ✅ 录制与点播
 - ✅ 录制文件索引
+- ✅ MediaMTX API 认证（Basic Auth，支持非 localhost 访问）
+- ✅ RTSP 拉流 TCP 传输（兼容 ZLMediaKit 等上游服务器）
 
 ### 认证授权
 - ✅ JWT 认证（双 Token 机制）
@@ -620,6 +622,7 @@
 
 | 日期 | 版本 | 变更内容 |
 |------|------|----------|
+| 2026-02-06 | V1.0 | **MediaMTX API 认证与拉流兼容性**：实现 Basic Auth 认证支持，解决非 localhost（Docker 容器间/远程服务器）访问 MediaMTX API 的 authentication error；MediaMTX 配置添加 authInternalUsers（goyavision API 用户 + 匿名推拉流用户）；修复 recordPath 缺少 `%f` 导致最新版 MediaMTX 校验失败；AddPath 携带完整路径配置（recordPath/recordFormat/segmentDuration）；默认使用 TCP 拉流传输，解决 ZLMediaKit 等上游服务器拒绝 UDP 的 406 Not Acceptable 错误。 |
 | 2026-02-06 | V1.0 | **资产页交互细节优化**：列表与卡片操作由“查看/编辑”合并为单一“详情”入口；打开详情即根据权限进入可编辑形态（有 `asset:update` 权限无需再点“进入编辑”）；资产详情抽屉改为纵向分区布局（工具栏→预览→表单/操作区），不再采用左右分栏；抽屉标题统一为“资产详情”，移除“重置修改”与分区保存按钮，改为单一“保存”（固定右下）；媒体资产主页面保持原有左右布局（左侧筛选+右侧列表/卡片），卡片支持点击即进详情，删除按钮固定在整张卡片右下角并调整为非红色；详情支持图片/视频放大预览；添加资产支持按文件/URL 自动识别类型并可手动调整。 |
 | 2026-02-06 | V1.0 | **资产页查看编辑一体化**：资产详情由“查看弹窗+编辑弹窗”合并为统一右侧详情抽屉（默认只读）；新增“进入编辑”切换编辑态；支持分区保存（基础信息/状态/标签）与统一保存；只读态新增复制链接与下载快捷动作；基于 `asset:update` 做前端可见性控制，后端 `PUT /api/v1/assets/:id` 增加权限强校验并在无权限时返回 `403` + “无编辑权限”。 |
 | 2026-02-06 | V1.0 | **媒体资产模块清理**：移除流媒体相关功能（type=stream、source_type=live/vod、stream_url），已迁移至媒体源模块；资产类型保留 video/image/audio，来源类型保留 upload/generated/operator_output；新增 AssetSourceOperatorOutput 后端常量；前端移除流媒体接入标签页、预览、验证逻辑；更新 API 文档。 |
