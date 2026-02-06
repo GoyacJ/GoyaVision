@@ -14,30 +14,36 @@ function resolveComponent(component?: string) {
 export function buildRoutesFromMenus(menus: MenuInfo[]): RouteRecordRaw[] {
   return menus
     .filter(menu => menu.visible)
-    .map((menu) => {
+    .map((menu): RouteRecordRaw => {
       const children = menu.children ? buildRoutesFromMenus(menu.children) : []
       const component = resolveComponent(menu.component)
-      const route: RouteRecordRaw = {
-        path: menu.path,
-        name: menu.code || menu.name,
-        component: component,
-        meta: {
-          title: menu.name,
-          icon: menu.icon,
-          permission: menu.permission
-        },
-        children: children.length > 0 ? children : undefined
+      const meta = {
+        title: menu.name,
+        icon: menu.icon,
+        permission: menu.permission
       }
 
-      if (!route.component && children.length > 0) {
-        route.redirect = children[0].path
+      if (!component && children.length > 0) {
+        return {
+          path: menu.path,
+          name: menu.code || menu.name,
+          redirect: children[0].path,
+          meta,
+          children
+        }
       }
 
-      if (!route.component && (!children || children.length === 0)) {
+      if (!component && children.length === 0) {
         console.warn(`[Router] Menu "${menu.name}" (${menu.path}) has no component and no children, skipping route registration`)
       }
 
-      return route
+      return {
+        path: menu.path,
+        name: menu.code || menu.name,
+        component,
+        meta,
+        children
+      }
     })
 }
 

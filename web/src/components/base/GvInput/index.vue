@@ -139,25 +139,24 @@ const wrapperClasses = computed(() => {
   const base = [
     'gv-input__wrapper',
     'relative flex items-center',
-    'bg-white border rounded-xl',
-    'transition-all duration-200'
+    'bg-white border rounded-xl'
   ]
-  
+
   // 尺寸
   const sizeClasses = {
     small: 'h-8',
     medium: 'h-10',
     large: 'h-12'
   }
-  
+
   // 状态
   const stateClasses = {
-    default: 'border-neutral-300 hover:border-primary-500 focus-within:border-primary-600 focus-within:ring-2 focus-within:ring-primary-500/20',
+    default: 'border-neutral-300',
     disabled: 'bg-neutral-100 border-neutral-200 cursor-not-allowed',
     readonly: 'bg-neutral-50 border-neutral-200',
-    success: 'border-success-600 focus-within:border-success-600 focus-within:ring-2 focus-within:ring-success-500/20',
-    error: 'border-error-600 focus-within:border-error-600 focus-within:ring-2 focus-within:ring-error-500/20',
-    warning: 'border-warning-600 focus-within:border-warning-600 focus-within:ring-2 focus-within:ring-warning-500/20'
+    success: 'border-success-600',
+    error: 'border-error-600',
+    warning: 'border-warning-600'
   }
   
   let stateClass = stateClasses.default

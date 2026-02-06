@@ -24,33 +24,39 @@
       </template>
     </PageHeader>
 
-    <!-- 统计卡片 -->
-    <GvGrid :cols="6" gap="lg" class="mb-6">
-      <GvCard class="text-center">
-        <div class="text-text-tertiary text-sm mb-2">总任务数</div>
-        <div class="text-3xl font-bold text-text-primary">{{ stats.total }}</div>
-      </GvCard>
-      <GvCard class="text-center border-l-4 border-neutral-400">
-        <div class="text-text-tertiary text-sm mb-2">待执行</div>
-        <div class="text-3xl font-bold text-neutral-600">{{ stats.pending }}</div>
-      </GvCard>
-      <GvCard class="text-center border-l-4 border-primary-500">
-        <div class="text-text-tertiary text-sm mb-2">执行中</div>
-        <div class="text-3xl font-bold text-primary-600">{{ stats.running }}</div>
-      </GvCard>
-      <GvCard class="text-center border-l-4 border-success-500">
-        <div class="text-text-tertiary text-sm mb-2">已成功</div>
-        <div class="text-3xl font-bold text-success-600">{{ stats.success }}</div>
-      </GvCard>
-      <GvCard class="text-center border-l-4 border-error-500">
-        <div class="text-text-tertiary text-sm mb-2">已失败</div>
-        <div class="text-3xl font-bold text-error-600">{{ stats.failed }}</div>
-      </GvCard>
-      <GvCard class="text-center border-l-4 border-warning-500">
-        <div class="text-text-tertiary text-sm mb-2">已取消</div>
-        <div class="text-3xl font-bold text-warning-600">{{ stats.cancelled }}</div>
-      </GvCard>
-    </GvGrid>
+    <!-- 统计栏 -->
+    <div class="flex items-center gap-6 mb-4 px-4 py-3 bg-white rounded-lg border border-neutral-200">
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-text-tertiary">总计</span>
+        <span class="text-lg font-semibold text-text-primary">{{ stats.total }}</span>
+      </div>
+      <div class="w-px h-5 bg-neutral-200" />
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-neutral-400" />
+        <span class="text-sm text-text-tertiary">待执行</span>
+        <span class="text-sm font-semibold text-neutral-600">{{ stats.pending }}</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-primary-500" />
+        <span class="text-sm text-text-tertiary">执行中</span>
+        <span class="text-sm font-semibold text-primary-600">{{ stats.running }}</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-success-500" />
+        <span class="text-sm text-text-tertiary">已成功</span>
+        <span class="text-sm font-semibold text-success-600">{{ stats.success }}</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-error-500" />
+        <span class="text-sm text-text-tertiary">已失败</span>
+        <span class="text-sm font-semibold text-error-600">{{ stats.failed }}</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-warning-500" />
+        <span class="text-sm text-text-tertiary">已取消</span>
+        <span class="text-sm font-semibold text-warning-600">{{ stats.cancelled }}</span>
+      </div>
+    </div>
 
     <!-- 筛选栏 -->
     <FilterBar
@@ -179,8 +185,6 @@ import { Refresh } from '@element-plus/icons-vue'
 import { taskApi, type Task, type TaskStats } from '@/api/task'
 import { useTable, useAsyncData } from '@/composables'
 import GvContainer from '@/components/layout/GvContainer/index.vue'
-import GvGrid from '@/components/layout/GvGrid/index.vue'
-import GvCard from '@/components/base/GvCard/index.vue'
 import GvTable from '@/components/base/GvTable/index.vue'
 import GvModal from '@/components/base/GvModal/index.vue'
 import GvButton from '@/components/base/GvButton/index.vue'

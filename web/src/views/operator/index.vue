@@ -12,6 +12,7 @@
             placeholder="搜索算子"
             class="w-80"
             immediate
+            :show-button="false"
             @search="() => { pagination.page = 1 }"
           />
           <GvButton @click="showCreateDialog = true">

@@ -11,6 +11,7 @@
             placeholder="搜索媒体源名称"
             class="w-80"
             immediate
+            :show-button="false"
             @search="refreshTable"
           />
           <GvButton @click="showCreateDialog = true">

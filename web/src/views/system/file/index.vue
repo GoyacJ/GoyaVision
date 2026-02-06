@@ -67,7 +67,7 @@
             :show-button="false"
             @search="loadFiles"
           />
-          <GvButton @click="showUploadDialog = true" v-permission="'file:create'">
+          <GvButton class="whitespace-nowrap" @click="showUploadDialog = true" v-permission="'file:create'">
             <template #icon>
               <el-icon><Upload /></el-icon>
             </template>

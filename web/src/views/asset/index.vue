@@ -614,14 +614,10 @@ const gridClass = computed(() => {
 
 function handleTypeChange(type: string | null) {
   selectedType.value = type
-  pagination.page = 1
-  // useTable 监听 pagination.page 变化会自动重新加载
 }
 
 function handleTagChange(tag: string) {
   selectedTag.value = selectedTag.value === tag ? null : tag
-  pagination.page = 1
-  // useTable 监听 pagination.page 变化会自动重新加载
 }
 
 // 直接使用 useTable 提供的方法
