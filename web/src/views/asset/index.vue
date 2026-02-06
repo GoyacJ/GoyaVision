@@ -559,7 +559,10 @@ const {
   changePageSize,
   refreshTable
 } = useTable(
-  (params) => assetApi.list(params),
+  async (params) => {
+    const res = await assetApi.list(params)
+    return { items: res.data?.items ?? [], total: res.data?.total ?? 0 }
+  },
   {
     immediate: true,
     initialPageSize: 12,

@@ -245,7 +245,10 @@ const {
   changePageSize,
   refreshTable
 } = useTable(
-  (params) => workflowApi.list(params),
+  async (params) => {
+    const res = await workflowApi.list(params)
+    return { items: res.data?.items ?? [], total: res.data?.total ?? 0 }
+  },
   {
     immediate: true,
     initialPageSize: 20,

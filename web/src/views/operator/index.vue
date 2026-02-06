@@ -256,7 +256,10 @@ const {
   changePageSize,
   refreshTable
 } = useTable(
-  (params) => operatorApi.list(params),
+  async (params) => {
+    const res = await operatorApi.list(params)
+    return { items: res.data?.items ?? [], total: res.data?.total ?? 0 }
+  },
   {
     immediate: true,
     initialPageSize: 20,
