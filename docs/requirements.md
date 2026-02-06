@@ -246,7 +246,7 @@
 - **预览**：支持多协议预览（HLS、RTSP、RTMP、WebRTC）
 - **下载导出**：支持资产下载
 
-**添加资产 - 流媒体接入**（设计，结合 MediaMTX，详见 `docs/stream-asset-mediamtx-design.md`、`docs/asset-stream-ingestion.md`）：
+**添加资产 - 流媒体接入**（设计，结合 MediaMTX，详见 `docs/stream-asset-mediamtx-design.md`）：
 
 - **原则**：本平台与 MediaMTX 深度集成，作为 MediaMTX 客户端；**创建流媒体资产时必须接入 MediaMTX**，不提供“仅登记流地址、不接入 MediaMTX”的模式。**建 MediaSource 表**，与 MediaMTX path 一一对应；流媒体资产通过 `source_id` 关联 MediaSource。
 - **方式一：新建流并创建资产**（主入口）
