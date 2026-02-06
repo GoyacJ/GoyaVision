@@ -6,6 +6,7 @@ import (
 
 	"goyavision/internal/app/dto"
 	"goyavision/internal/app/port"
+	"goyavision/internal/domain/operator"
 	"goyavision/pkg/apperr"
 
 	"gorm.io/gorm"
@@ -29,7 +30,7 @@ func (h *DeleteOperatorHandler) Handle(ctx context.Context, cmd dto.DeleteOperat
 			return apperr.Wrap(err, apperr.CodeDBError, "failed to get operator")
 		}
 
-		if op.IsBuiltin {
+		if op.Origin == operator.OriginBuiltin {
 			return apperr.InvalidInput("cannot delete builtin operator")
 		}
 

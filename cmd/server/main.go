@@ -13,14 +13,17 @@ import (
 	"goyavision"
 	"goyavision/config"
 	"goyavision/internal/adapter/engine"
+	mcpadapter "goyavision/internal/adapter/mcp"
 	"goyavision/internal/adapter/mediamtx"
 	"goyavision/internal/adapter/persistence"
+	"goyavision/internal/adapter/schema"
 	"goyavision/internal/api"
 	"goyavision/internal/app"
 	infraauth "goyavision/internal/infra/auth"
 	infraengine "goyavision/internal/infra/engine"
 	inframediamtx "goyavision/internal/infra/mediamtx"
 	infrapersistence "goyavision/internal/infra/persistence"
+	"goyavision/internal/port"
 	"goyavision/pkg/storage"
 
 	"github.com/labstack/echo/v4"
@@ -63,6 +66,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("create jwt service: %v", err)
 	}
+	schemaValidator := schema.NewJSONSchemaValidator()
 
 	mtxCli := mediamtx.NewClient(cfg.MediaMTX.APIAddress, cfg.MediaMTX.Username, cfg.MediaMTX.Password)
 	if err := mtxCli.Ping(context.Background()); err != nil {
@@ -83,12 +87,42 @@ func main() {
 	}
 	log.Printf("minio connected: %s/%s", cfg.MinIO.Endpoint, cfg.MinIO.BucketName)
 
+	mcpClient := mcpadapter.NewStaticClientWithoutDefaults()
+	for i := range cfg.MCP.Servers {
+		serverCfg := cfg.MCP.Servers[i]
+		tools := make([]port.MCPTool, 0, len(serverCfg.Tools))
+		for j := range serverCfg.Tools {
+			toolCfg := serverCfg.Tools[j]
+			tools = append(tools, port.MCPTool{
+				Name:         toolCfg.Name,
+				Description:  toolCfg.Description,
+				Version:      toolCfg.Version,
+				InputSchema:  toolCfg.InputSchema,
+				OutputSchema: toolCfg.OutputSchema,
+			})
+		}
+		mcpClient.RegisterServerWithConfig(port.MCPServer{
+			ID:          serverCfg.ID,
+			Name:        serverCfg.Name,
+			Description: serverCfg.Description,
+			Status:      serverCfg.Status,
+		}, tools, serverCfg.Endpoint, serverCfg.APIToken, serverCfg.TimeoutSec)
+	}
+
 	var workflowScheduler *app.WorkflowScheduler
 	if db != nil {
 		ctx := context.Background()
 
-		executor := engine.NewHTTPOperatorExecutor()
-		workflowEngine := infraengine.NewDAGWorkflowEngine(uow, executor)
+		httpExecutor := engine.NewHTTPOperatorExecutor()
+		cliExecutor := engine.NewCLIOperatorExecutor()
+		mcpExecutor := engine.NewMCPOperatorExecutor(mcpClient)
+		registry := engine.NewExecutorRegistry()
+		registry.Register(httpExecutor.Mode(), httpExecutor)
+		registry.Register(cliExecutor.Mode(), cliExecutor)
+		registry.Register(mcpExecutor.Mode(), mcpExecutor)
+		routingExecutor := engine.NewRoutingOperatorExecutor(registry)
+
+		workflowEngine := infraengine.NewDAGWorkflowEngine(uow, routingExecutor, schemaValidator)
 		workflowScheduler, err = app.NewWorkflowScheduler(repo, workflowEngine)
 		if err != nil {
 			log.Fatalf("create workflow scheduler: %v", err)
@@ -110,6 +144,9 @@ func main() {
 
 	handlers := api.NewHandlers(
 		uow,
+		schemaValidator,
+		mcpClient,
+		mcpClient,
 		mediaGateway,
 		tokenService,
 		cfg,

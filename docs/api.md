@@ -448,6 +448,11 @@ GET /api/v1/operators?category=analyze&status=enabled
 
 #### 创建算子
 
+> 兼容字段说明：`version` / `endpoint` / `method` / `input_schema` / `output_spec` / `config` / `is_builtin` 当前仍可传入以兼容旧调用；
+> 新接入建议优先使用 `origin`、`exec_mode`、`exec_config`，并通过“算子版本管理 API”维护版本级 schema 与执行配置。
+>
+> 参数约束补充：`exec_mode` 仅允许 `http` / `cli` / `mcp`；`version` 需满足 semver（如 `1.0.0`、`v1.2.3`）。
+
 ```http
 POST /api/v1/operators
 Content-Type: application/json
@@ -534,6 +539,8 @@ Content-Type: application/json
 }
 ```
 
+说明：该接口当前会执行真实连通性试运行（基于算子 ActiveVersion + ExecMode 路由到 HTTP/CLI/MCP 执行器），并返回执行耗时、输出统计等诊断信息；若执行器健康检查失败或调用失败将直接返回错误。
+
 **响应**：
 ```json
 {
@@ -546,6 +553,166 @@ Content-Type: application/json
   }
 }
 ```
+
+#### 列出算子版本
+
+```http
+GET /api/v1/operators/:id/versions?limit=20&offset=0
+```
+
+**响应**：
+```json
+{
+  "items": [
+    {
+      "id": "uuid",
+      "version": "1.1.0",
+      "exec_mode": "http",
+      "exec_config": {
+        "http": {
+          "endpoint": "http://ai-service:8080/detect",
+          "method": "POST"
+        }
+      },
+      "status": "draft"
+    }
+  ],
+  "total": 1
+}
+```
+
+#### 创建算子版本
+
+```http
+POST /api/v1/operators/:id/versions
+Content-Type: application/json
+
+{
+  "version": "1.1.0",
+  "exec_mode": "http",
+  "exec_config": {
+    "http": {
+      "endpoint": "http://ai-service:8080/detect-v2",
+      "method": "POST"
+    }
+  },
+  "input_schema": {},
+  "output_spec": {},
+  "config": {},
+  "changelog": "优化模型参数",
+  "status": "draft"
+}
+```
+
+参数约束补充：`version` 需满足 semver（如 `1.1.0`）；`exec_mode` 仅允许 `http` / `cli` / `mcp`。
+
+#### 获取指定版本详情
+
+```http
+GET /api/v1/operators/:id/versions/:version_id
+```
+
+#### 激活版本
+
+```http
+POST /api/v1/operators/:id/versions/activate
+Content-Type: application/json
+
+{
+  "version_id": "uuid"
+}
+```
+
+#### 回滚版本
+
+```http
+POST /api/v1/operators/:id/versions/rollback
+Content-Type: application/json
+
+{
+  "version_id": "uuid"
+}
+```
+
+#### 归档版本
+
+```http
+POST /api/v1/operators/:id/versions/archive
+Content-Type: application/json
+
+{
+  "version_id": "uuid"
+}
+```
+
+> 说明：`activate/rollback` 返回 `OperatorResponse`；`archive` 返回 `OperatorVersionResponse`。
+
+#### 校验 JSON Schema
+
+```http
+POST /api/v1/operators/validate-schema
+Content-Type: application/json
+
+{
+  "schema": {
+    "type": "object",
+    "required": ["asset_id"],
+    "properties": {
+      "asset_id": { "type": "string" }
+    }
+  }
+}
+```
+
+**响应**：
+```json
+{
+  "valid": true
+}
+```
+
+#### 校验上下游连接
+
+```http
+POST /api/v1/operators/validate-connection
+Content-Type: application/json
+
+{
+  "upstream_output_spec": {
+    "type": "object",
+    "properties": {
+      "asset_id": { "type": "string" }
+    }
+  },
+  "downstream_input_schema": {
+    "type": "object",
+    "required": ["asset_id"],
+    "properties": {
+      "asset_id": { "type": "string" }
+    }
+  }
+}
+```
+
+**响应**：
+```json
+{
+  "valid": true
+}
+```
+
+**失败示例（类型不兼容）**：
+```json
+{
+  "code": 40000,
+  "message": "connection invalid: field 'asset_id' type is incompatible"
+}
+```
+
+> 说明：连接校验会同时检查：
+> 1) 上下游 Schema 本身是合法 JSON Schema；
+> 2) 下游 `required` 字段必须由上游 `properties` 提供；
+> 3) 同名字段类型需兼容（如 `integer` 可兼容下游 `number`）。
 
 #### MCP Server 列表
 
@@ -642,6 +809,111 @@ Content-Type: application/json
 }
 ```
 
+#### 列出模板（模板市场）
+
+```http
+GET /api/v1/operators/templates?category=utility&exec_mode=mcp&keyword=ffmpeg&limit=20&offset=0
+```
+
+**查询参数**：
+- `category`（可选）：算子分类
+- `type`（可选）：算子类型
+- `exec_mode`（可选）：执行模式（`http` / `cli` / `mcp`）
+- `tags`（可选）：标签（逗号分隔）
+- `keyword`（可选）：关键词（名称/描述/编码）
+- `limit`、`offset`（可选）：分页参数
+
+**响应**：
+```json
+{
+  "items": [
+    {
+      "id": "uuid",
+      "code": "mcp_ffmpeg_frame_extract",
+      "name": "FFmpeg 抽帧模板",
+      "description": "从 MCP Tool 同步",
+      "category": "utility",
+      "type": "transcode",
+      "exec_mode": "mcp",
+      "exec_config": {
+        "mcp": {
+          "server_id": "default",
+          "tool_name": "ffmpeg_extract"
+        }
+      },
+      "downloads": 12,
+      "tags": ["mcp", "ffmpeg"],
+      "created_at": "2026-02-06T10:00:00Z",
+      "updated_at": "2026-02-06T10:00:00Z"
+    }
+  ],
+  "total": 1
+}
+```
+
+#### 获取模板详情
+
+```http
+GET /api/v1/operators/templates/:template_id
+```
+
+#### 从模板安装算子
+
+```http
+POST /api/v1/operators/templates/install
+Content-Type: application/json
+
+{
+  "template_id": "uuid",
+  "operator_code": "my_frame_extract",
+  "operator_name": "我的抽帧算子",
+  "tags": ["prod"]
+}
+```
+
+**响应**：返回标准 `OperatorResponse`。
+
+#### 列出算子依赖
+
+```http
+GET /api/v1/operators/:id/dependencies
+```
+
+#### 设置算子依赖
+
+```http
+PUT /api/v1/operators/:id/dependencies
+Content-Type: application/json
+
+{
+  "dependencies": [
+    {
+      "depends_on_id": "uuid",
+      "min_version": "1.0.0",
+      "is_optional": false
+    }
+  ]
+}
+```
+
+#### 检查依赖满足情况
+
+```http
+GET /api/v1/operators/:id/dependencies/check
+```
+
+**响应**：
+```json
+{
+  "satisfied": false,
+  "unmet": ["依赖算子 xxx 版本不足，当前 1.0.0，要求 >= 1.2.0"]
+}
+```
+
+> 发布门禁说明：`POST /api/v1/operators/:id/publish` 在现有依赖/MCP 门禁基础上，新增：
+> 1) ActiveVersion 输入/输出 JSON Schema 合法性校验；
+> 2) 依赖 `min_version` 版本下限校验（仅对必需依赖生效）。
+
 ---
 
 ### 工作流（Workflows）
@@ -732,6 +1004,8 @@ Content-Type: application/json
 }
 ```
 
+> 写路径门禁说明：创建工作流时，若边两端均为算子节点，则会强制执行上下游 Schema 连接兼容校验（基于算子 ActiveVersion 的 `output_spec` 与 `input_schema`）；校验失败将返回 `400` 并阻断创建。
+
 #### 获取工作流详情
 
 ```http
@@ -749,6 +1023,8 @@ Content-Type: application/json
   "status": "active"
 }
 ```
+
+> 写路径门禁说明：更新工作流时，若请求中包含节点重建（`nodes` 非空），将对提交的边执行同等 Schema 连接兼容校验；校验失败将返回 `400` 并阻断更新。
 
 #### 删除工作流
 

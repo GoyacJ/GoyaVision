@@ -41,4 +41,4 @@ description: 管理 GoyaVision 开发全流程（开始前查阅文档、完成�
 
 ### 4. 规范提交
 - Conventional Commits：`<type>(<scope>): <subject>`。
-- 提交前自检：测试、格式化、无调试代码。
+- 提交前自检：格式化、无调试代码。

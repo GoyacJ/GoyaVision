@@ -70,9 +70,6 @@ func (r *OperatorRepo) List(ctx context.Context, filter operator.Filter) ([]*ope
 	if filter.Origin != nil {
 		q = q.Where("origin = ?", string(*filter.Origin))
 	}
-	if filter.IsBuiltin != nil {
-		q = q.Where("is_builtin = ?", *filter.IsBuiltin)
-	}
 	if filter.ExecMode != nil {
 		q = q.Joins("LEFT JOIN operator_versions ov ON ov.id = operators.active_version_id").
 			Where("ov.exec_mode = ?", string(*filter.ExecMode))
@@ -92,7 +89,11 @@ func (r *OperatorRepo) List(ctx context.Context, filter operator.Filter) ([]*ope
 	}
 
 	var models []*model.OperatorModel
-	if err := q.Limit(filter.Limit).Offset(filter.Offset).Order("created_at DESC").Find(&models).Error; err != nil {
+	if err := q.Preload("ActiveVersion").
+		Limit(filter.Limit).
+		Offset(filter.Offset).
+		Order("created_at DESC").
+		Find(&models).Error; err != nil {
 		return nil, 0, err
 	}
 

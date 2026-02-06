@@ -21,16 +21,15 @@ func (h *ListOperatorsHandler) Handle(ctx context.Context, query dto.ListOperato
 	query.Pagination.Normalize()
 
 	filter := operator.Filter{
-		Category:  query.Category,
-		Type:      query.Type,
-		Status:    query.Status,
-		Origin:    query.Origin,
-		ExecMode:  query.ExecMode,
-		IsBuiltin: query.IsBuiltin,
-		Tags:      query.Tags,
-		Keyword:   query.Keyword,
-		Limit:     query.Pagination.Limit,
-		Offset:    query.Pagination.Offset,
+		Category: query.Category,
+		Type:     query.Type,
+		Status:   query.Status,
+		Origin:   query.Origin,
+		ExecMode: query.ExecMode,
+		Tags:     query.Tags,
+		Keyword:  query.Keyword,
+		Limit:    query.Pagination.Limit,
+		Offset:   query.Pagination.Offset,
 	}
 
 	var items []*operator.Operator

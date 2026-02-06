@@ -2,13 +2,15 @@ package command
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
+	adaptermcp "goyavision/internal/adapter/mcp"
 	"goyavision/internal/app/dto"
 	"goyavision/internal/app/port"
-	"goyavision/internal/domain/operator"
 	port2 "goyavision/internal/port"
 	"goyavision/pkg/apperr"
+
+	"gorm.io/gorm"
 )
 
 type SyncMCPTemplatesHandler struct {
@@ -37,16 +39,25 @@ func (h *SyncMCPTemplatesHandler) Handle(ctx context.Context, cmd dto.SyncMCPTem
 
 	err = h.uow.Do(ctx, func(ctx context.Context, repos *port.Repositories) error {
 		for i := range tools {
-			code := fmt.Sprintf("mcp_%s_%s", cmd.ServerID, tools[i].Name)
+			tplPayload := adaptermcp.ToolToTemplate(cmd.ServerID, tools[i])
+			code := tplPayload.Code
 
 			existing, getErr := repos.OperatorTemplates.GetByCode(ctx, code)
+			if getErr != nil && !errors.Is(getErr, gorm.ErrRecordNotFound) {
+				return apperr.Wrap(getErr, apperr.CodeDBError, "failed to query mcp template by code")
+			}
 			if getErr == nil && existing != nil {
-				existing.Name = tools[i].Name
-				existing.Description = tools[i].Description
-				existing.ExecMode = operator.ExecModeMCP
-				existing.ExecConfig = &operator.ExecConfig{MCP: &operator.MCPExecConfig{ServerID: cmd.ServerID, ToolName: tools[i].Name, ToolVersion: tools[i].Version}}
-				existing.InputSchema = tools[i].InputSchema
-				existing.OutputSpec = tools[i].OutputSchema
+				existing.Name = tplPayload.Name
+				existing.Description = tplPayload.Description
+				existing.Category = tplPayload.Category
+				existing.Type = tplPayload.Type
+				existing.ExecMode = tplPayload.ExecMode
+				existing.ExecConfig = tplPayload.ExecConfig
+				existing.InputSchema = tplPayload.InputSchema
+				existing.OutputSpec = tplPayload.OutputSpec
+				existing.Config = tplPayload.Config
+				existing.Author = tplPayload.Author
+				existing.Tags = tplPayload.Tags
 				if err := repos.OperatorTemplates.Update(ctx, existing); err != nil {
 					return apperr.Wrap(err, apperr.CodeDBError, "failed to update mcp template")
 				}
@@ -54,25 +65,7 @@ func (h *SyncMCPTemplatesHandler) Handle(ctx context.Context, cmd dto.SyncMCPTem
 				continue
 			}
 
-			tpl := &operator.OperatorTemplate{
-				Code:        code,
-				Name:        tools[i].Name,
-				Description: tools[i].Description,
-				Category:    operator.CategoryUtility,
-				Type:        operator.TypeTranscode,
-				ExecMode:    operator.ExecModeMCP,
-				ExecConfig: &operator.ExecConfig{MCP: &operator.MCPExecConfig{
-					ServerID:    cmd.ServerID,
-					ToolName:    tools[i].Name,
-					ToolVersion: tools[i].Version,
-				}},
-				InputSchema: tools[i].InputSchema,
-				OutputSpec:  tools[i].OutputSchema,
-				Config:      map[string]interface{}{},
-				Author:      "mcp",
-				Tags:        []string{"mcp", cmd.ServerID},
-			}
-			if err := repos.OperatorTemplates.Create(ctx, tpl); err != nil {
+			if err := repos.OperatorTemplates.Create(ctx, tplPayload); err != nil {
 				return apperr.Wrap(err, apperr.CodeDBError, "failed to create mcp template")
 			}
 			result.Created++

@@ -28,7 +28,6 @@ func (p *Pagination) Normalize() {
 }
 
 // Media Source Queries
-
 type GetSourceQuery struct {
 	ID uuid.UUID
 }
@@ -44,7 +43,6 @@ type GetSourceByPathQuery struct {
 }
 
 // Media Asset Queries
-
 type GetAssetQuery struct {
 	ID uuid.UUID
 }
@@ -69,17 +67,14 @@ type ListAssetChildrenQuery struct {
 	ParentID uuid.UUID
 }
 
-type GetAssetTagsQuery struct {
-}
+type GetAssetTagsQuery struct{}
 
 // Auth Queries
-
 type GetProfileQuery struct {
 	UserID uuid.UUID
 }
 
 // Operator Queries
-
 type GetOperatorQuery struct {
 	ID uuid.UUID
 }
@@ -94,7 +89,6 @@ type ListOperatorsQuery struct {
 	Status     *operator.Status
 	Origin     *operator.Origin
 	ExecMode   *operator.ExecMode
-	IsBuiltin  *bool
 	Tags       []string
 	Keyword    string
 	Pagination Pagination
@@ -111,8 +105,47 @@ type PreviewMCPToolQuery struct {
 	ToolName string
 }
 
-// Workflow Queries
+type ListOperatorVersionsQuery struct {
+	OperatorID uuid.UUID
+	Pagination Pagination
+}
 
+type GetOperatorVersionQuery struct {
+	OperatorID uuid.UUID
+	VersionID  uuid.UUID
+}
+
+type ListTemplatesQuery struct {
+	Category   *operator.Category
+	Type       *operator.Type
+	ExecMode   *operator.ExecMode
+	Keyword    string
+	Tags       []string
+	Pagination Pagination
+}
+
+type GetTemplateQuery struct {
+	ID uuid.UUID
+}
+
+type ListOperatorDependenciesQuery struct {
+	OperatorID uuid.UUID
+}
+
+type CheckDependenciesQuery struct {
+	OperatorID uuid.UUID
+}
+
+type ValidateSchemaQuery struct {
+	Schema map[string]interface{}
+}
+
+type ValidateConnectionQuery struct {
+	UpstreamOutputSpec    map[string]interface{}
+	DownstreamInputSchema map[string]interface{}
+}
+
+// Workflow Queries
 type GetWorkflowQuery struct {
 	ID uuid.UUID
 }
@@ -134,7 +167,6 @@ type ListWorkflowsQuery struct {
 }
 
 // Task Queries
-
 type GetTaskQuery struct {
 	ID uuid.UUID
 }
@@ -156,11 +188,9 @@ type GetTaskStatsQuery struct {
 	WorkflowID *uuid.UUID
 }
 
-type ListRunningTasksQuery struct {
-}
+type ListRunningTasksQuery struct{}
 
 // User Management Queries
-
 type GetUserQuery struct {
 	ID uuid.UUID
 }
@@ -194,8 +224,7 @@ type GetPermissionByCodeQuery struct {
 	Code string
 }
 
-type ListPermissionsQuery struct {
-}
+type ListPermissionsQuery struct{}
 
 type GetMenuQuery struct {
 	ID uuid.UUID
@@ -210,7 +239,6 @@ type ListMenusQuery struct {
 }
 
 // File Queries
-
 type GetFileQuery struct {
 	ID uuid.UUID
 }

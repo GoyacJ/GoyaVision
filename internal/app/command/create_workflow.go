@@ -11,11 +11,12 @@ import (
 )
 
 type CreateWorkflowHandler struct {
-	uow port.UnitOfWork
+	uow             port.UnitOfWork
+	schemaValidator port.SchemaValidator
 }
 
-func NewCreateWorkflowHandler(uow port.UnitOfWork) *CreateWorkflowHandler {
-	return &CreateWorkflowHandler{uow: uow}
+func NewCreateWorkflowHandler(uow port.UnitOfWork, schemaValidator port.SchemaValidator) *CreateWorkflowHandler {
+	return &CreateWorkflowHandler{uow: uow, schemaValidator: schemaValidator}
 }
 
 func (h *CreateWorkflowHandler) Handle(ctx context.Context, cmd dto.CreateWorkflowCommand) (*workflow.Workflow, error) {
@@ -53,12 +54,22 @@ func (h *CreateWorkflowHandler) Handle(ctx context.Context, cmd dto.CreateWorkfl
 			return apperr.Conflict(fmt.Sprintf("workflow with code %s already exists", cmd.Code))
 		}
 
+		if err := validateWorkflowConnections(ctx, repos, h.schemaValidator, cmd.Nodes, cmd.Edges); err != nil {
+			return err
+		}
+
+		triggerConf, err := buildTriggerConfig(cmd.TriggerConf)
+		if err != nil {
+			return apperr.InvalidInput(err.Error())
+		}
+
 		wf := &workflow.Workflow{
 			Code:        cmd.Code,
 			Name:        cmd.Name,
 			Description: cmd.Description,
 			Version:     version,
 			TriggerType: cmd.TriggerType,
+			TriggerConf: triggerConf,
 			Status:      status,
 			Tags:        cmd.Tags,
 		}

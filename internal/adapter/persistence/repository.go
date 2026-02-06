@@ -457,7 +457,7 @@ func (r *repository) ListEnabledOperators(ctx context.Context) ([]*operator.Oper
 	if err := r.checkDB(); err != nil {
 		return nil, err
 	}
-	return r.operators.ListEnabled(ctx)
+	return r.operators.ListPublished(ctx)
 }
 
 func (r *repository) ListOperatorsByCategory(ctx context.Context, category operator.Category) ([]*operator.Operator, error) {

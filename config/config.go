@@ -21,6 +21,30 @@ type Config struct {
 	JWT      JWT
 	MediaMTX MediaMTX
 	MinIO    MinIO
+	MCP      MCP
+}
+
+type MCP struct {
+	Servers []MCPServer `mapstructure:"servers"`
+}
+
+type MCPServer struct {
+	ID          string    `mapstructure:"id"`
+	Name        string    `mapstructure:"name"`
+	Description string    `mapstructure:"description"`
+	Status      string    `mapstructure:"status"`
+	Endpoint    string    `mapstructure:"endpoint"`
+	APIToken    string    `mapstructure:"api_token"`
+	TimeoutSec  int       `mapstructure:"timeout_sec"`
+	Tools       []MCPTool `mapstructure:"tools"`
+}
+
+type MCPTool struct {
+	Name         string                 `mapstructure:"name"`
+	Description  string                 `mapstructure:"description"`
+	Version      string                 `mapstructure:"version"`
+	InputSchema  map[string]interface{} `mapstructure:"input_schema"`
+	OutputSchema map[string]interface{} `mapstructure:"output_schema"`
 }
 
 type MediaMTX struct {
@@ -191,6 +215,8 @@ func Load() (*Config, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
+
+	_ = v.UnmarshalKey("mcp", &cfg.MCP)
 	return cfg, nil
 }
 

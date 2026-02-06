@@ -72,19 +72,10 @@ type Operator struct {
 	Type        Type
 	Origin      Origin
 
-	// 版本化字段（Phase A）
+	// 版本化字段
 	ActiveVersionID *uuid.UUID
 	ActiveVersion   *OperatorVersion
-
-	// --- 以下为兼容字段，后续阶段将逐步迁移到 OperatorVersion ---
-	Version     string
-	Endpoint    string
-	Method      string
-	InputSchema map[string]interface{}
-	OutputSpec  map[string]interface{}
-	Config      map[string]interface{}
 	Status      Status
-	IsBuiltin   bool
 	Tags        []string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
@@ -120,9 +111,6 @@ type Filter struct {
 	Status    *Status
 	Origin    *Origin
 	ExecMode  *ExecMode
-
-	// 兼容筛选字段（Phase A）
-	IsBuiltin *bool
 	Tags      []string
 	Keyword   string
 	Limit     int
