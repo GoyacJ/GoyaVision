@@ -92,10 +92,23 @@ type ListOperatorsQuery struct {
 	Category   *operator.Category
 	Type       *operator.Type
 	Status     *operator.Status
+	Origin     *operator.Origin
+	ExecMode   *operator.ExecMode
 	IsBuiltin  *bool
 	Tags       []string
 	Keyword    string
 	Pagination Pagination
+}
+
+type ListMCPServersQuery struct{}
+
+type ListMCPToolsQuery struct {
+	ServerID string
+}
+
+type PreviewMCPToolQuery struct {
+	ServerID string
+	ToolName string
 }
 
 // Workflow Queries

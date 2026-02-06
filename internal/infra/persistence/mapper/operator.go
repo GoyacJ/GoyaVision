@@ -17,6 +17,8 @@ func OperatorToModel(o *operator.Operator) *model.OperatorModel {
 		Description: o.Description,
 		Category:    string(o.Category),
 		Type:        string(o.Type),
+		Origin:      string(o.Origin),
+		ActiveVersionID: o.ActiveVersionID,
 		Version:     o.Version,
 		Endpoint:    o.Endpoint,
 		Method:      o.Method,
@@ -52,6 +54,8 @@ func OperatorToDomain(m *model.OperatorModel) *operator.Operator {
 		Description: m.Description,
 		Category:    operator.Category(m.Category),
 		Type:        operator.Type(m.Type),
+		Origin:      operator.Origin(m.Origin),
+		ActiveVersionID: m.ActiveVersionID,
 		Version:     m.Version,
 		Endpoint:    m.Endpoint,
 		Method:      m.Method,
@@ -71,6 +75,16 @@ func OperatorToDomain(m *model.OperatorModel) *operator.Operator {
 	}
 	if m.Tags != nil {
 		_ = json.Unmarshal(m.Tags, &o.Tags)
+	}
+	if o.Origin == "" {
+		if o.IsBuiltin {
+			o.Origin = operator.OriginBuiltin
+		} else {
+			o.Origin = operator.OriginCustom
+		}
+	}
+	if m.ActiveVersion != nil {
+		o.ActiveVersion = OperatorVersionToDomain(m.ActiveVersion)
 	}
 	return o
 }

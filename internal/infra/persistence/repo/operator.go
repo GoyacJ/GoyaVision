@@ -36,6 +36,17 @@ func (r *OperatorRepo) Get(ctx context.Context, id uuid.UUID) (*operator.Operato
 	return mapper.OperatorToDomain(&m), nil
 }
 
+func (r *OperatorRepo) GetWithActiveVersion(ctx context.Context, id uuid.UUID) (*operator.Operator, error) {
+	var m model.OperatorModel
+	if err := r.db.WithContext(ctx).
+		Preload("ActiveVersion").
+		Where("id = ?", id).
+		First(&m).Error; err != nil {
+		return nil, err
+	}
+	return mapper.OperatorToDomain(&m), nil
+}
+
 func (r *OperatorRepo) GetByCode(ctx context.Context, code string) (*operator.Operator, error) {
 	var m model.OperatorModel
 	if err := r.db.WithContext(ctx).Where("code = ?", code).First(&m).Error; err != nil {
@@ -56,8 +67,15 @@ func (r *OperatorRepo) List(ctx context.Context, filter operator.Filter) ([]*ope
 	if filter.Status != nil {
 		q = q.Where("status = ?", string(*filter.Status))
 	}
+	if filter.Origin != nil {
+		q = q.Where("origin = ?", string(*filter.Origin))
+	}
 	if filter.IsBuiltin != nil {
 		q = q.Where("is_builtin = ?", *filter.IsBuiltin)
+	}
+	if filter.ExecMode != nil {
+		q = q.Joins("LEFT JOIN operator_versions ov ON ov.id = operators.active_version_id").
+			Where("ov.exec_mode = ?", string(*filter.ExecMode))
 	}
 	if len(filter.Tags) > 0 {
 		tagsJSON, _ := json.Marshal(filter.Tags)
@@ -94,9 +112,9 @@ func (r *OperatorRepo) Delete(ctx context.Context, id uuid.UUID) error {
 	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&model.OperatorModel{}).Error
 }
 
-func (r *OperatorRepo) ListEnabled(ctx context.Context) ([]*operator.Operator, error) {
+func (r *OperatorRepo) ListPublished(ctx context.Context) ([]*operator.Operator, error) {
 	var models []*model.OperatorModel
-	if err := r.db.WithContext(ctx).Where("status = ?", "enabled").Order("created_at DESC").Find(&models).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("status = ?", string(operator.StatusPublished)).Order("created_at DESC").Find(&models).Error; err != nil {
 		return nil, err
 	}
 	result := make([]*operator.Operator, len(models))

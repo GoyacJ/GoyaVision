@@ -12,18 +12,18 @@ import (
 	"gorm.io/gorm"
 )
 
-type EnableOperatorHandler struct {
+type PublishOperatorHandler struct {
 	uow port.UnitOfWork
 }
 
-func NewEnableOperatorHandler(uow port.UnitOfWork) *EnableOperatorHandler {
-	return &EnableOperatorHandler{uow: uow}
+func NewPublishOperatorHandler(uow port.UnitOfWork) *PublishOperatorHandler {
+	return &PublishOperatorHandler{uow: uow}
 }
 
-func (h *EnableOperatorHandler) Handle(ctx context.Context, cmd dto.EnableOperatorCommand) (*operator.Operator, error) {
+func (h *PublishOperatorHandler) Handle(ctx context.Context, cmd dto.PublishOperatorCommand) (*operator.Operator, error) {
 	var result *operator.Operator
 	err := h.uow.Do(ctx, func(ctx context.Context, repos *port.Repositories) error {
-		op, err := repos.Operators.Get(ctx, cmd.ID)
+		op, err := repos.Operators.GetWithActiveVersion(ctx, cmd.ID)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return apperr.NotFound("operator", cmd.ID.String())
@@ -31,14 +31,13 @@ func (h *EnableOperatorHandler) Handle(ctx context.Context, cmd dto.EnableOperat
 			return apperr.Wrap(err, apperr.CodeDBError, "failed to get operator")
 		}
 
-		if cmd.Enabled {
-			op.Status = operator.StatusEnabled
-		} else {
-			op.Status = operator.StatusDisabled
+		if op.ActiveVersion == nil && op.ActiveVersionID == nil {
+			return apperr.InvalidInput("publish requires active version")
 		}
 
+		op.Status = operator.StatusPublished
 		if err := repos.Operators.Update(ctx, op); err != nil {
-			return apperr.Wrap(err, apperr.CodeDBError, "failed to update operator status")
+			return apperr.Wrap(err, apperr.CodeDBError, "failed to publish operator")
 		}
 
 		result = op

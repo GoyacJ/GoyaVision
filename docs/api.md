@@ -508,16 +508,16 @@ Content-Type: application/json
 DELETE /api/v1/operators/:id
 ```
 
-#### 启用算子
+#### 发布算子
 
 ```http
-POST /api/v1/operators/:id/enable
+POST /api/v1/operators/:id/publish
 ```
 
-#### 禁用算子
+#### 弃用算子
 
 ```http
-POST /api/v1/operators/:id/disable
+POST /api/v1/operators/:id/deprecate
 ```
 
 #### 测试算子
@@ -537,14 +537,108 @@ Content-Type: application/json
 **响应**：
 ```json
 {
-  "output_assets": [...],
-  "results": [...],
-  "timeline": [...],
+  "success": true,
+  "message": "ok",
   "diagnostics": {
-    "latency_ms": 150,
-    "model_version": "v1.0",
-    "device": "gpu"
+    "operator_id": "uuid",
+    "status": "published",
+    "checked": true
   }
+}
+```
+
+#### MCP Server 列表
+
+```http
+GET /api/v1/operators/mcp/servers
+```
+
+**响应**：
+```json
+[
+  {
+    "id": "default",
+    "name": "默认 MCP",
+    "description": "MCP server",
+    "status": "online"
+  }
+]
+```
+
+#### MCP Tool 列表
+
+```http
+GET /api/v1/operators/mcp/servers/:id/tools
+```
+
+**响应**：
+```json
+[
+  {
+    "name": "tool_name",
+    "description": "工具描述",
+    "version": "1.0.0",
+    "input_schema": {},
+    "output_schema": {}
+  }
+]
+```
+
+#### MCP Tool 预览
+
+```http
+GET /api/v1/operators/mcp/servers/:id/tools/:tool/preview
+```
+
+**响应**：
+```json
+{
+  "name": "tool_name",
+  "description": "工具描述",
+  "version": "1.0.0",
+  "input_schema": {},
+  "output_schema": {}
+}
+```
+
+#### 从 MCP Tool 安装算子
+
+```http
+POST /api/v1/operators/mcp/install
+Content-Type: application/json
+
+{
+  "server_id": "default",
+  "tool_name": "tool_name",
+  "operator_code": "mcp_tool_name",
+  "operator_name": "MCP Tool Name",
+  "category": "utility",
+  "type": "transcode",
+  "timeout_sec": 30,
+  "tags": ["mcp"]
+}
+```
+
+**响应**：返回标准 `OperatorResponse`。
+
+#### 同步 MCP 模板
+
+```http
+POST /api/v1/operators/mcp/sync-templates
+Content-Type: application/json
+
+{
+  "server_id": "default"
+}
+```
+
+**响应**：
+```json
+{
+  "server_id": "default",
+  "total": 10,
+  "created": 8,
+  "updated": 2
 }
 ```
 

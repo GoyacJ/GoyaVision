@@ -18,26 +18,123 @@ import (
 // Mock implementations
 type MockUnitOfWork struct {
 	mock.Mock
+	repos *port.Repositories
 }
 
 func (m *MockUnitOfWork) Do(ctx context.Context, fn func(ctx context.Context, repos *port.Repositories) error) error {
 	args := m.Called(ctx, fn)
-	if fn != nil {
-		fn(ctx, &port.Repositories{})
+	if args.Error(0) != nil {
+		return args.Error(0)
 	}
-	return args.Error(0)
+	if fn != nil {
+		return fn(ctx, m.repos)
+	}
+	return nil
 }
 
 type MockOperatorExecutor struct {
 	mock.Mock
 }
 
-func (m *MockOperatorExecutor) Execute(ctx context.Context, op *operator.Operator, input *operator.Input) (*operator.Output, error) {
-	args := m.Called(ctx, op, input)
+func (m *MockOperatorExecutor) Execute(ctx context.Context, version *operator.OperatorVersion, input *operator.Input) (*operator.Output, error) {
+	args := m.Called(ctx, version, input)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*operator.Output), args.Error(1)
+}
+
+type stubOperatorRepo struct {
+	op *operator.Operator
+}
+
+func (s *stubOperatorRepo) Create(ctx context.Context, o *operator.Operator) error { return nil }
+func (s *stubOperatorRepo) Get(ctx context.Context, id uuid.UUID) (*operator.Operator, error) {
+	if s.op == nil {
+		return nil, errors.New("operator not found")
+	}
+	return s.op, nil
+}
+func (s *stubOperatorRepo) GetWithActiveVersion(ctx context.Context, id uuid.UUID) (*operator.Operator, error) {
+	if s.op == nil {
+		return nil, errors.New("operator not found")
+	}
+	return s.op, nil
+}
+func (s *stubOperatorRepo) GetByCode(ctx context.Context, code string) (*operator.Operator, error) {
+	if s.op == nil {
+		return nil, errors.New("operator not found")
+	}
+	return s.op, nil
+}
+func (s *stubOperatorRepo) List(ctx context.Context, filter operator.Filter) ([]*operator.Operator, int64, error) {
+	return []*operator.Operator{}, 0, nil
+}
+func (s *stubOperatorRepo) Update(ctx context.Context, o *operator.Operator) error { return nil }
+func (s *stubOperatorRepo) Delete(ctx context.Context, id uuid.UUID) error         { return nil }
+func (s *stubOperatorRepo) ListEnabled(ctx context.Context) ([]*operator.Operator, error) {
+	return []*operator.Operator{}, nil
+}
+func (s *stubOperatorRepo) ListPublished(ctx context.Context) ([]*operator.Operator, error) {
+	return []*operator.Operator{}, nil
+}
+func (s *stubOperatorRepo) ListByCategory(ctx context.Context, category operator.Category) ([]*operator.Operator, error) {
+	return []*operator.Operator{}, nil
+}
+
+type stubTaskRepo struct{}
+
+func (s *stubTaskRepo) Create(ctx context.Context, t *workflow.Task) error                     { return nil }
+func (s *stubTaskRepo) Get(ctx context.Context, id uuid.UUID) (*workflow.Task, error)          { return &workflow.Task{ID: id, Progress: 0}, nil }
+func (s *stubTaskRepo) GetWithRelations(ctx context.Context, id uuid.UUID) (*workflow.Task, error) {
+	return &workflow.Task{ID: id}, nil
+}
+func (s *stubTaskRepo) List(ctx context.Context, filter workflow.TaskFilter) ([]*workflow.Task, int64, error) {
+	return []*workflow.Task{}, 0, nil
+}
+func (s *stubTaskRepo) Update(ctx context.Context, t *workflow.Task) error { return nil }
+func (s *stubTaskRepo) Delete(ctx context.Context, id uuid.UUID) error     { return nil }
+func (s *stubTaskRepo) GetStats(ctx context.Context, workflowID *uuid.UUID) (*workflow.TaskStats, error) {
+	return &workflow.TaskStats{}, nil
+}
+func (s *stubTaskRepo) ListRunning(ctx context.Context) ([]*workflow.Task, error) {
+	return []*workflow.Task{}, nil
+}
+
+type stubArtifactRepo struct{}
+
+func (s *stubArtifactRepo) Create(ctx context.Context, a *workflow.Artifact) error { return nil }
+func (s *stubArtifactRepo) Get(ctx context.Context, id uuid.UUID) (*workflow.Artifact, error) {
+	return &workflow.Artifact{ID: id}, nil
+}
+func (s *stubArtifactRepo) List(ctx context.Context, filter workflow.ArtifactFilter) ([]*workflow.Artifact, int64, error) {
+	return []*workflow.Artifact{}, 0, nil
+}
+func (s *stubArtifactRepo) Delete(ctx context.Context, id uuid.UUID) error { return nil }
+func (s *stubArtifactRepo) ListByTask(ctx context.Context, taskID uuid.UUID) ([]*workflow.Artifact, error) {
+	return []*workflow.Artifact{}, nil
+}
+func (s *stubArtifactRepo) ListByType(ctx context.Context, taskID uuid.UUID, artifactType workflow.ArtifactType) ([]*workflow.Artifact, error) {
+	return []*workflow.Artifact{}, nil
+}
+
+func newTestRepos() *port.Repositories {
+	ov := &operator.OperatorVersion{
+		ID:       uuid.New(),
+		Version:  "1.0.0",
+		ExecMode: operator.ExecModeHTTP,
+		ExecConfig: &operator.ExecConfig{HTTP: &operator.HTTPExecConfig{
+			Endpoint: "http://example.com/op",
+			Method:   "POST",
+		}},
+	}
+	op := &operator.Operator{ID: uuid.New(), Code: "test-op", ActiveVersion: ov, ActiveVersionID: &ov.ID}
+
+	return &port.Repositories{
+		Operators: &stubOperatorRepo{op: op},
+		Tasks:     &stubTaskRepo{},
+		Artifacts: &stubArtifactRepo{},
+	}
 }
 
 // Test topological sort
@@ -361,6 +458,7 @@ func TestPrepareNodeInput(t *testing.T) {
 // Test execute with mock dependencies
 func TestExecute_Success(t *testing.T) {
 	mockUOW := new(MockUnitOfWork)
+	mockUOW.repos = newTestRepos()
 	mockExecutor := new(MockOperatorExecutor)
 
 	engine := NewDAGWorkflowEngine(mockUOW, mockExecutor)
@@ -405,6 +503,7 @@ func TestExecute_Success(t *testing.T) {
 // Test execute with parallel nodes
 func TestExecute_ParallelNodes(t *testing.T) {
 	mockUOW := new(MockUnitOfWork)
+	mockUOW.repos = newTestRepos()
 	mockExecutor := new(MockOperatorExecutor)
 
 	engine := NewDAGWorkflowEngine(mockUOW, mockExecutor)
@@ -449,6 +548,7 @@ func TestExecute_ParallelNodes(t *testing.T) {
 // Test execute with cycle detection
 func TestExecute_CycleDetection(t *testing.T) {
 	mockUOW := new(MockUnitOfWork)
+	mockUOW.repos = newTestRepos()
 	mockExecutor := new(MockOperatorExecutor)
 
 	engine := NewDAGWorkflowEngine(mockUOW, mockExecutor)
@@ -483,6 +583,7 @@ func TestExecute_CycleDetection(t *testing.T) {
 // Test cancel
 func TestCancel(t *testing.T) {
 	mockUOW := new(MockUnitOfWork)
+	mockUOW.repos = newTestRepos()
 	mockExecutor := new(MockOperatorExecutor)
 
 	engine := NewDAGWorkflowEngine(mockUOW, mockExecutor)
@@ -518,6 +619,7 @@ func TestCancel(t *testing.T) {
 // Test get progress
 func TestGetProgress(t *testing.T) {
 	mockUOW := new(MockUnitOfWork)
+	mockUOW.repos = newTestRepos()
 	mockExecutor := new(MockOperatorExecutor)
 
 	engine := NewDAGWorkflowEngine(mockUOW, mockExecutor)
@@ -545,6 +647,7 @@ func TestGetProgress(t *testing.T) {
 // Test node execution with retry
 func TestExecuteNode_WithRetry(t *testing.T) {
 	mockUOW := new(MockUnitOfWork)
+	mockUOW.repos = newTestRepos()
 	mockExecutor := new(MockOperatorExecutor)
 
 	engine := NewDAGWorkflowEngine(mockUOW, mockExecutor)
@@ -585,6 +688,7 @@ func TestExecuteNode_WithRetry(t *testing.T) {
 // Test node execution with timeout
 func TestExecuteNode_WithTimeout(t *testing.T) {
 	mockUOW := new(MockUnitOfWork)
+	mockUOW.repos = newTestRepos()
 	mockExecutor := new(MockOperatorExecutor)
 
 	engine := NewDAGWorkflowEngine(mockUOW, mockExecutor)
