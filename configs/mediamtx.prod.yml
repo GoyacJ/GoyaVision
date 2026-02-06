@@ -1,0 +1,234 @@
+###############################################
+# MediaMTX 生产环境配置 (v1.16+)
+# GoyaVision - Intelligent Media Processing Platform
+#
+# 适用场景: 生产部署、预发布环境
+# 特点: 严格安全策略、结构化日志、TLS 加密、
+#       高性能参数、资源限制、监控指标
+#
+# ⚠️ 部署前必须修改:
+#   1. TLS 证书路径 (所有 *ServerKey/*ServerCert)
+#   2. hlsAllowOrigins / webrtcAllowOrigins (限制为实际域名)
+#   3. apiAllowOrigins (限制为 GoyaVision 服务地址)
+#   4. webrtcICEServers2 (配置 TURN 服务器)
+#   5. pathDefaults.recordPath (确认存储路径和磁盘容量)
+#   6. pathDefaults.recordDeleteAfter (根据存储容量设置自动清理)
+###############################################
+
+###############################################
+# 全局配置
+###############################################
+
+# 日志级别: warn (生产环境减少日志量)
+logLevel: warn
+# 日志输出: 标准输出 (由 Docker/K8s 采集)
+logDestinations: [stdout]
+
+# 超时设置 (生产环境严格控制)
+readTimeout: 10s
+writeTimeout: 10s
+writeQueueSize: 1024
+
+# UDP 配置
+udpMaxPayloadSize: 1472
+
+# Prometheus 监控指标 (生产环境建议启用)
+metrics: yes
+metricsAddress: :9998
+
+# 性能分析 (生产环境禁用)
+pprof: no
+pprofAddress: ""
+
+###############################################
+# API 配置
+# GoyaVision 通过此 API 管理路径、录制、会话
+###############################################
+
+api: yes
+apiAddress: :9997
+# ⚠️ 生产环境强烈建议启用 TLS
+# 若 GoyaVision 与 MediaMTX 在同一内网且通过 Docker 网络通信,
+# 可保持 no; 若跨网络访问则必须启用
+apiEncryption: no
+apiServerKey: /etc/mediamtx/tls/api.key
+apiServerCert: /etc/mediamtx/tls/api.crt
+# ⚠️ 限制为 GoyaVision 服务地址 (v1.16: 复数形式)
+apiAllowOrigins: ['*']
+apiTrustedProxies: []
+
+###############################################
+# RTSP 配置
+# 用途: 拉流/推流源接入
+###############################################
+
+rtsp: yes
+rtspAddress: :8554
+# 生产环境建议仅使用 TCP (穿透性好, 更稳定) (v1.16: rtspTransports)
+rtspTransports: [udp, tcp]
+# ⚠️ 公网暴露时必须启用加密 (v1.16: rtspEncryption)
+# "no" = 不加密, "optional" = 可选, "strict" = 强制
+rtspEncryption: "no"
+rtspServerKey: /etc/mediamtx/tls/rtsp.key
+rtspServerCert: /etc/mediamtx/tls/rtsp.crt
+rtspsAddress: :8322
+# RTP/RTCP 端口范围
+rtpAddress: :8000
+rtcpAddress: :8001
+multicastIPRange: 224.1.0.0/16
+multicastRTPPort: 8002
+multicastRTCPPort: 8003
+
+###############################################
+# RTMP 配置
+# 用途: 流媒体推送接入
+###############################################
+
+rtmp: yes
+rtmpAddress: :1935
+# ⚠️ 公网暴露时必须启用加密
+# "no" = 不加密, "optional" = 可选, "strict" = 强制
+rtmpEncryption: "no"
+rtmpServerKey: /etc/mediamtx/tls/rtmp.key
+rtmpServerCert: /etc/mediamtx/tls/rtmp.crt
+rtmpsAddress: :1936
+
+###############################################
+# HLS 配置
+# 用途: 浏览器端实时播放
+###############################################
+
+hls: yes
+hlsAddress: :8888
+# ⚠️ 生产环境建议启用 (通过反向代理或直接 TLS)
+hlsEncryption: no
+hlsServerKey: /etc/mediamtx/tls/hls.key
+hlsServerCert: /etc/mediamtx/tls/hls.crt
+# ⚠️ 限制为前端实际域名 (v1.16: 复数形式)
+# 示例: ["https://goyavision.example.com"]
+hlsAllowOrigins: ['*']
+# 信任的反向代理地址 (用于获取真实客户端 IP)
+hlsTrustedProxies: []
+# HLS 变体: lowLatency 低延迟模式 (适合实时监控场景)
+hlsVariant: lowLatency
+# 分段配置 (平衡延迟与兼容性)
+hlsSegmentCount: 7
+hlsSegmentDuration: 1s
+hlsPartDuration: 200ms
+hlsSegmentMaxSize: 50M
+# 不总是重新复用 (节省 CPU)
+hlsAlwaysRemux: no
+# HLS 临时文件目录
+# 生产环境设置磁盘目录减少内存占用 (大量并发流时)
+# 空 = 内存, 设置路径 = 磁盘
+hlsDirectory: ''
+
+###############################################
+# WebRTC 配置
+# 用途: 浏览器端超低延迟播放
+###############################################
+
+webrtc: yes
+webrtcAddress: :8889
+# ⚠️ 生产环境建议启用 (WebRTC 标准要求 HTTPS)
+webrtcEncryption: no
+webrtcServerKey: /etc/mediamtx/tls/webrtc.key
+webrtcServerCert: /etc/mediamtx/tls/webrtc.crt
+# ⚠️ 限制为前端实际域名 (v1.16: 复数形式)
+webrtcAllowOrigins: ['*']
+# 信任的反向代理地址
+webrtcTrustedProxies: []
+# 本地 UDP/TCP 地址 (ICE 候选)
+webrtcLocalUDPAddress: :8189
+webrtcLocalTCPAddress: :8189
+# 自动获取本机 IP
+webrtcIPsFromInterfaces: yes
+webrtcIPsFromInterfacesList: []
+# ⚠️ 生产环境若服务器在 NAT/Docker 后面, 必须配置公网 IP
+# 示例: ["1.2.3.4"]
+webrtcAdditionalHosts: []
+# ⚠️ 生产环境必须配置 TURN 服务器 (NAT 穿透)
+# 示例:
+# webrtcICEServers2:
+#   - url: turn:turn.example.com:3478
+#     username: goyavision
+#     password: your-turn-password
+webrtcICEServers2: []
+# 握手超时
+webrtcHandshakeTimeout: 10s
+webrtcTrackGatherTimeout: 2s
+
+###############################################
+# SRT 配置
+# 用途: 安全可靠传输 (高延迟/不稳定网络)
+# 生产环境若不需要可关闭以减少攻击面
+###############################################
+
+srt: no
+srtAddress: :8890
+
+###############################################
+# Playback 服务器
+# 用途: 录制文件点播回放
+###############################################
+
+playback: yes
+playbackAddress: :9996
+
+###############################################
+# 路径默认配置
+# v1.16: 录制参数从全局移入 pathDefaults
+###############################################
+
+pathDefaults:
+  source: publisher
+  # 按需拉流: 生产环境建议开启以节省带宽
+  # 仅当有观看者时才从源拉流
+  sourceOnDemand: no
+  sourceRedirect: ""
+
+  # 录制配置 (v1.16: 从全局移入 pathDefaults)
+  # 默认不录制 (由 GoyaVision 按路径动态控制)
+  record: no
+  # 容器环境使用 /recordings (映射宿主机卷)
+  recordPath: /recordings/%path/%Y-%m-%d_%H-%M-%S
+  # 录制格式: fmp4 (碎片化 MP4, 支持边录边播, 断电不丢)
+  recordFormat: fmp4
+  # 碎片间隔
+  recordPartDuration: 100ms
+  # 分段时长: 生产环境 1 小时
+  recordSegmentDuration: 1h
+  # ⚠️ 录制文件自动清理 (根据存储容量设置)
+  # 0s = 永不删除, 建议设置如 720h (30天), 2160h (90天)
+  recordDeleteAfter: 0s
+
+  # 事件钩子
+  # 生产环境可配置钩子实现:
+  # - 流上线/下线通知
+  # - 录制完成回调
+  # - 认证鉴权
+  runOnInit: ""
+  runOnInitRestart: no
+  runOnDemand: ""
+  runOnDemandRestart: no
+  runOnReady: ""
+  runOnReadyRestart: no
+  runOnNotReady: ""
+  runOnRead: ""
+  runOnReadRestart: no
+  runOnUnread: ""
+  runOnRecordSegmentCreate: ""
+  # ⚠️ 录制分段完成回调 (可对接 GoyaVision 资产入库)
+  # 示例: 通知 GoyaVision 新录制文件已生成
+  # runOnRecordSegmentComplete: >
+  #   curl -X POST http://goyavision:8080/api/v1/hooks/recording-complete
+  #   -H "Content-Type: application/json"
+  #   -d '{"path":"$MTX_PATH","segment_path":"$MTX_SEGMENT_PATH"}'
+  runOnRecordSegmentComplete: ""
+
+###############################################
+# 静态路径配置
+# GoyaVision 通过 API 动态管理路径, 此处留空
+###############################################
+
+paths:
