@@ -40,6 +40,14 @@
   - 完善配置章节（环境变量优先级、JWT 配置参数）
   - 完善 DAG 工作流引擎细节（Kahn 算法、并行执行、错误处理）
 
+### 变更
+- **媒体资产来源类型调整**：新增 `operator_output`（算子输出）来源类型，补全后端常量 `AssetSourceOperatorOutput`；`operator_output` 类型纳入 MinIO URL 自动生成
+
+### 移除
+- **媒体资产模块流媒体功能清理**：移除资产类型 `stream`、来源类型 `live`/`vod`，流媒体接入已迁移至媒体源模块
+  - 后端：移除 `AssetTypeStream`、`AssetSourceLive`、`AssetSourceVOD` 常量、`IsStream()` 方法、`inferProtocol()` 函数、`StreamURL` DTO 字段、流媒体创建分支
+  - 前端：移除流媒体接入标签页、流媒体预览区域、相关验证规则与类型映射；`AssetCard` 组件同步清理
+
 ### 修复
 - 修复任务与工作流 Handler 的返回值处理与重复赋值导致的 Go 编译错误
 - 修复 API router/errors 中的类型引用与错误响应构建导致的 Go 编译错误
