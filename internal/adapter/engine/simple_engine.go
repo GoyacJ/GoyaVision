@@ -106,17 +106,7 @@ func (e *SimpleWorkflowEngine) Execute(ctx context.Context, wf *workflow.Workflo
 
 		version := op.ActiveVersion
 		if version == nil {
-			version = &operator.OperatorVersion{
-				Version:  op.Version,
-				ExecMode: operator.ExecModeHTTP,
-				ExecConfig: &operator.ExecConfig{HTTP: &operator.HTTPExecConfig{
-					Endpoint: op.Endpoint,
-					Method:   op.Method,
-				}},
-				InputSchema: op.InputSchema,
-				OutputSpec:  op.OutputSpec,
-				Config:      op.Config,
-			}
+			return fmt.Errorf("operator %s has no active version", op.Code)
 		}
 
 		executor, err := e.registry.Get(version.ExecMode)

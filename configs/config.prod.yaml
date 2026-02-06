@@ -48,3 +48,27 @@ minio:
   secret_key: "${GOYAVISION_MINIO_SECRET_KEY}"
   bucket_name: "${GOYAVISION_MINIO_BUCKET_NAME}"
   use_ssl: ${GOYAVISION_MINIO_USE_SSL}
+
+mcp:
+  servers:
+    - id: "default"
+      name: "Default MCP Server"
+      description: "Static MCP bootstrap server"
+      status: "online"
+      endpoint: ""
+      api_token: ""
+      timeout_sec: 30
+      tools:
+        - name: "echo"
+          description: "Echo tool for connectivity checks"
+          version: "1.0.0"
+          input_schema:
+            type: object
+            properties:
+              message:
+                type: string
+          output_schema:
+            type: object
+            properties:
+              diagnostics:
+                type: object

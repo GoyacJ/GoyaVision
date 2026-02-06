@@ -8,6 +8,50 @@
 ## [未发布]
 
 ### 新增
+- **算子模块重设计 Phase E/F（模板市场 + 依赖治理最小闭环）**
+  - 新增模板市场 Query/Command：`ListTemplatesHandler`、`GetTemplateHandler`、`InstallTemplateHandler`
+  - 新增依赖治理 Query/Command：`ListOperatorDependenciesHandler`、`CheckDependenciesHandler`、`SetOperatorDependenciesHandler`
+  - 新增 Operator API 路由：
+    - `GET /api/v1/operators/templates`
+    - `GET /api/v1/operators/templates/:template_id`
+    - `POST /api/v1/operators/templates/install`
+    - `GET /api/v1/operators/:id/dependencies`
+    - `PUT /api/v1/operators/:id/dependencies`
+    - `GET /api/v1/operators/:id/dependencies/check`
+  - 新增 API DTO：`TemplateListQuery`、`OperatorTemplateResponse`、`InstallTemplateReq`、`SetDependenciesReq`、`OperatorDependencyResponse`、`DependencyCheckResponse`
+- **算子模块重设计 Phase B.3（MCP 执行器）**
+  - 新增 MCP 执行器：`internal/adapter/engine/mcp_executor.go`（`MCPOperatorExecutor`）
+  - 支持基于 `OperatorVersion.ExecConfig.MCP` 调用 MCP Tool
+  - 结果映射策略：优先反序列化到标准 `operator.Output`，非标准结构回落到 `diagnostics`
+  - 新增 MCP 适配层最小实现：`internal/adapter/mcp/client.go`（`StaticClient`），并在注入链路统一挂载到 Query/Command/Executor
+- **算子模块重设计 Phase B（CLI 执行器接入）**
+  - 新增 CLI 执行器：`internal/adapter/engine/cli_executor.go`（`CLIOperatorExecutor`）
+  - 新增执行器路由器：`internal/adapter/engine/routing_executor.go`（`RoutingOperatorExecutor`）
+  - 支持基于 `OperatorVersion.ExecConfig.CLI` 的命令执行：`command/args/work_dir/env/timeout_sec`
+  - CLI 执行约定：stdin 传入算子输入 JSON，stdout 输出算子结果 JSON
+- **算子模块重设计 Phase D（Schema 门禁最小落地）**
+  - 新增 Schema 校验 Port：`internal/app/port/schema_validator.go`（`SchemaValidator`）
+  - 新增 Schema 适配器：`internal/adapter/schema/json_schema_validator.go`（`JSONSchemaValidator`）
+  - 新增 Query Handler：`ValidateSchemaHandler`、`ValidateConnectionHandler`
+  - 新增 Query DTO：`ValidateSchemaQuery`、`ValidateConnectionQuery`
+  - 新增 API 路由：
+    - `POST /api/v1/operators/validate-schema`
+    - `POST /api/v1/operators/validate-connection`
+  - 新增 API DTO：`ValidateSchemaReq`、`ValidateConnectionReq`、`ValidateResultResponse`
+- **算子模块重设计 Phase C（版本管理闭环）**
+  - 新增 Command Handler：`CreateOperatorVersionHandler`、`ActivateVersionHandler`、`RollbackVersionHandler`、`ArchiveVersionHandler`
+  - 新增 Query Handler：`ListOperatorVersionsHandler`、`GetOperatorVersionHandler`
+  - 新增命令/查询 DTO：
+    - `CreateOperatorVersionCommand`、`ActivateVersionCommand`、`RollbackVersionCommand`、`ArchiveVersionCommand`
+    - `ListOperatorVersionsQuery`、`GetOperatorVersionQuery`
+  - 新增 Operator API 路由：
+    - `GET /api/v1/operators/:id/versions`
+    - `POST /api/v1/operators/:id/versions`
+    - `GET /api/v1/operators/:id/versions/:version_id`
+    - `POST /api/v1/operators/:id/versions/activate`
+    - `POST /api/v1/operators/:id/versions/rollback`
+    - `POST /api/v1/operators/:id/versions/archive`
+  - 新增 API DTO：`OperatorVersionCreateReq`、`OperatorVersionActionReq`、`OperatorVersionListResponse`
 - **算子模块重设计 v1.1（MCP 最小闭环）**
   - 新增 MCP Port：`internal/port/mcp.go`（`MCPClient`、`MCPRegistry`、`MCPServer`、`MCPTool`）
   - 新增 MCP 查询 DTO：`ListMCPServersQuery`、`ListMCPToolsQuery`、`PreviewMCPToolQuery`
@@ -70,6 +114,161 @@
   - 完善 DAG 工作流引擎细节（Kahn 算法、并行执行、错误处理）
 
 ### 变更
+- **算子重设计文档口径校准（第十九轮）**
+  - 文档澄清：`install_template` / `install_mcp_operator` 虽仍调用 `syncOperatorCompatFieldsFromVersion`，但该函数当前为 **no-op**（空实现）
+  - 当前实际策略：兼容字段写路径已收口，不再做旧字段同步；`ActiveVersion` 为唯一事实来源
+  - 影响说明：相关能力以版本模型读取/执行/校验为准，避免继续传播“安装后会回填兼容字段”的过时表述
+- **算子重设计收口推进（第十八轮）**
+  - 后端：`internal/adapter/mcp/client.go` 完成 MCP 真协议适配，远程调用从约定式 REST（`/health`、`/tools`、`/tools/:tool/call`）切换为 JSON-RPC 流程：`initialize` → `notifications/initialized` → `tools/list` / `tools/call`
+  - 后端：新增 MCP 会话初始化状态管理（按 server 维度懒初始化 + 并发锁），避免重复初始化与并发竞态
+  - 后端：`HealthCheck`、`ListTools`、`CallTool` 统一基于协议握手后调用，MCP 错误透传为标准服务错误，提升真实联通故障可观测性
+  - 兼容性：保留现有 `MCPClient/MCPRegistry` Port 与注入链路，不破坏上层 Command/Query/Executor 调用方式
+- **算子重设计收口推进（第十七轮）**
+  - 后端：`internal/app/command/update_operator.go`、`delete_operator.go` 内置算子保护逻辑统一为仅依据 `origin==builtin`，移除对已下沉 `is_builtin` 字段的运行时依赖
+  - 后端：`internal/app/query/list_operators.go` 与 `internal/infra/persistence/repo/operator.go` 移除 `is_builtin` 查询过滤分支，列表筛选统一收敛到新模型字段（`origin/exec_mode`）
+  - API：`internal/api/handler/operator.go` 创建算子时停止接收并写入 `version/endpoint/method/input_schema/output_spec/config/is_builtin` 兼容字段
+  - API DTO：`internal/api/dto/operator.go` 的兼容返回字段改为从 `active_version` 派生（`version/endpoint/method/input_schema/output_spec/config`），避免读取已移除 Domain 旧字段
+  - 数据迁移：`migrations/20260207_operator_compat_backfill.sql` 在兼容回填后新增 `ALTER TABLE ... DROP COLUMN`，正式删除 `operators` 旧执行兼容列（`version/endpoint/method/input_schema/output_spec/config/is_builtin`）
+- **算子重设计收口推进（第十六轮）**
+  - 后端：`internal/infra/engine/dag_engine.go` 增加运行期 Schema 门禁，节点执行前对 `ActiveVersion.input_schema` 执行 `ValidateInput`，执行后对 `ActiveVersion.output_spec` 执行 `ValidateOutput`，校验失败直接阻断执行
+  - 后端：`cmd/server/main.go` 在 `NewDAGWorkflowEngine` 注入 `schemaValidator`，确保运行期 Schema 校验在默认启动链路生效
+  - 前端：`web/src/views/operator/components/ExecConfigForm.vue` 补齐结构化字段编辑能力：
+    - HTTP：`headers`、`auth_type`、`auth_config`
+    - CLI：`work_dir`、`env`
+    - MCP：`tool_version`、`input_mapping`、`output_mapping`
+  - 前端：修复执行配置模板重置逻辑与 JSON 映射同步，降低仅手工编辑 JSON 带来的配置错误率
+- **算子重设计收口推进（第十五轮）**
+  - 兼容层收口：`internal/app/command/operator_version_helpers.go` 停止在写路径同步 `operators.version/endpoint/method/input_schema/output_spec/config` 等旧执行字段，后续统一以 `ActiveVersion` 作为执行与校验事实来源
+  - 执行链路收口：`internal/adapter/engine/simple_engine.go` 在无激活版本时直接报错，不再回退旧兼容字段拼装临时版本
+  - Schema 门禁收口：`internal/app/command/workflow_connection_validation.go` 的连接校验改为仅使用 `ActiveVersion` 的输入/输出 Schema，避免兼容字段漂移导致误判
+  - 依赖治理增强：`internal/infra/persistence/repo/operator_dependency.go` 的 `min_version` 比对由旧 `operators.version` 改为依赖算子的激活版本号，并补充“缺失激活版本/激活版本缺失”诊断分支
+  - MCP 真接入收口：`internal/adapter/mcp/client.go` 在配置远端 `endpoint` 时不再回退本地静态 tools/call，远程调用失败将直接返回错误，确保真实连通性问题可被显式暴露
+- **算子重设计收口推进（第十四轮）**
+  - 后端：`internal/adapter/mcp/client.go` 在保留静态回退的基础上，增加基于 `mcp.servers[].endpoint` 的远程 MCP 调用能力（`/health`、`/tools`、`/tools/:tool/call`），并支持 `api_token` 与 `timeout_sec`
+  - 后端：`cmd/server/main.go` 改为通过 `RegisterServerWithConfig` 注入 MCP 服务远程元信息，统一配置化接入
+  - 后端：`internal/app/command/operator_version_helpers.go` 在非 HTTP 版本下主动清空兼容字段 `endpoint/method`，减少旧字段语义污染
+  - 数据治理：新增 `migrations/20260207_operator_compat_backfill.sql`，用于按 `active_version` 回填 `operators` 兼容字段并收敛非 HTTP 场景旧执行字段
+  - 前端：`web/src/views/operator/components/ExecConfigForm.vue` 升级为 `HTTP/CLI/MCP` 结构化表单 + JSON 预览双轨编辑，提升 `exec_config` 编辑可用性
+- **算子重设计收口推进（第十三轮）**
+  - 后端：新增 MCP 配置模型（`config/config.go`）：`mcp.servers[]`（`endpoint/api_token/timeout_sec/tools`）
+  - 配置：`configs/config.dev.yaml`、`config.prod.yaml`、`config.example.yaml` 增加 MCP Server/Tool 示例
+  - 后端：`cmd/server/main.go` 改为从配置初始化并注册 MCP Server/Tool（不再直接依赖 `DefaultClient()`）
+  - 后端：`internal/api/router.go`、`internal/api/handler/handlers.go` 改为显式注入 `MCPClient`，统一 MCP 查询/发布校验/安装同步与执行器使用同一实例
+- **算子重设计收口推进（第十二轮）**
+  - 前端：`web/src/views/operator-marketplace/index.vue` 新增 MCP Server 选择器与工具列表加载入口，支持按选中 Server 浏览 Tool
+  - 前端：模板市场新增“安装 MCP 工具为算子”弹窗与调用链路（`/operators/mcp/install`）
+  - 前端：MCP 模板同步改为优先使用当前选中 Server，减少默认首项误操作
+  - 前端：`web/src/views/operator/components/VersionForm.vue` 新增版本号 semver 前端校验（`x.y.z`/`vx.y.z`）
+- **算子重设计收口推进（第十一轮）**
+  - 前端：`web/src/views/operator/index.vue` 补齐列表“来源/执行模式”展示插槽，避免字段存在但表格显示为空
+  - 前端：版本/依赖弹窗新增“检查依赖满足性”入口（调用 `/operators/:id/dependencies/check`）并展示未满足清单
+  - 前端：`/operators/:id/test` 成功后新增诊断信息弹窗展示（`diagnostics`）
+  - 后端：`internal/app/command/create_operator.go` 调整为先建算子基础信息、再建首个版本并通过 `syncOperatorCompatFieldsFromVersion` 回填兼容字段，减少旧执行字段在写路径的直接维护
+- **算子重设计收口推进（第十轮）**
+  - 后端：`internal/app/command/sync_mcp_templates.go` 改为复用 `internal/adapter/mcp/template_sync.go` 的 `ToolToTemplate` 进行 MCP Tool→Template 映射
+  - 后端：同步更新模板时补齐字段覆盖（`category/type/exec_mode/exec_config/input_schema/output_spec/config/author/tags`），减少不同同步路径间的模板数据漂移
+- **算子重设计收口推进（第九轮）**
+  - 后端：新增 `internal/app/command/operator_constraints.go`，统一 `exec_mode` 与 `version` 约束校验
+  - 后端：`create_operator`、`create_operator_version` 增加输入校验：`exec_mode` 必须为 `http|cli|mcp`，`version` 必须符合 semver
+  - 后端：`install_template`、`install_mcp_operator` 在绑定 `ActiveVersion` 后同步调用 `syncOperatorCompatFieldsFromVersion`，确保兼容字段与版本字段一致
+  - 文档：`docs/api.md` 增补创建算子/创建版本的参数约束说明
+- **算子重设计收敛修复（第八轮）**
+  - 后端：`internal/adapter/mcp/client.go` 预置默认 MCP Server/Tool（`default` + `echo`），避免默认部署下 MCP 列表为空
+  - 后端：`internal/app/command/create_operator.go` 创建算子时 `is_builtin` 与 `origin` 语义对齐（`origin=builtin` 自动视为内置）
+  - 后端：`internal/app/command/update_operator.go`、`delete_operator.go` 统一按 `origin==builtin || is_builtin` 阻断内置算子修改/删除
+  - 后端：`internal/app/command/sync_mcp_templates.go` 增加模板按 code 查询异常分支（仅 `record not found` 走新建，其它 DB 错误直接返回）
+  - 后端：新增 `internal/app/command/workflow_trigger_config.go`，并在 `create_workflow.go`/`update_workflow.go` 落地 `trigger_conf` 解析写入（`schedule`、`interval_sec`、`event_type`、`event_filter`）
+  - 前端：`web/src/views/operator-marketplace/index.vue` 预览 MCP Tool 时改用 `exec_config.mcp.tool_name`，修复模板 code 与 tool name 不一致导致预览失败
+  - 前端：`web/src/views/operator/index.vue` 补齐 `utility` 分类筛选、文案与标签颜色映射
+  - 前端：`web/src/views/operator/components/ExecConfigForm.vue` 增加按执行模式的 JSON 模板占位与一键填充能力，提升版本配置可用性
+- **算子兼容字段治理 + 测试连通性收口（第七轮）**
+  - `internal/app/command/test_operator.go`：`TestOperator` 从占位检查升级为真实试运行，按 `ActiveVersion.ExecMode` 路由执行器，执行前强制 `HealthCheck`，并返回耗时/输出统计诊断
+  - `internal/api/handler/handlers.go`：为 `TestOperatorHandler` 注入执行器注册表（HTTP/CLI/MCP）
+  - `internal/api/dto/operator.go`：对 `version/endpoint/method/input_schema/output_spec/config/is_builtin` 标注 Deprecated 兼容语义，收敛新旧字段认知
+  - `internal/api/dto/operator.go`：响应 `is_builtin` 优先由 `origin==builtin` 推导，减少兼容字段与新模型语义偏差
+  - `docs/api.md`：补充创建算子兼容字段说明，明确 `/operators/:id/test` 为真实连通性试运行
+- **算子重设计对齐收敛（第六轮）**
+  - `internal/infra/persistence/repo/operator.go`：`List` 查询增加 `Preload("ActiveVersion")`，修复算子列表响应中 `active_version/exec_mode` 可能为空的问题
+  - `web/src/views/operator/index.vue`：筛选栏新增 `origin`、`exec_mode` 条件，和后端查询参数保持一致
+  - 算子列表新增“来源/执行模式”列，增强多执行模式可见性
+  - 算子详情新增 `来源`、`执行模式`、`激活版本ID`、`执行配置(JSON)` 展示，减少对旧 `endpoint/method` 兼容字段的依赖
+- **算子前端重设计交互收敛（第五轮）**
+  - `web/src/views/operator/index.vue` 创建/编辑弹窗统一接入 `OperatorForm`，移除旧的 `endpoint/method` 兼容输入表单
+  - 编辑流程支持 `origin/exec_mode/exec_config` 回填展示，并在保存后提示“执行配置调整需通过创建版本完成”
+  - `web/src/views/operator/components/TemplateCard.vue` 新增“预览”入口，支持模板侧快速查看
+  - `web/src/views/operator-marketplace/index.vue` 新增模板安装参数弹窗（`operator_code/operator_name` 可自定义）
+  - 模板市场新增 MCP Tool 预览弹窗，展示输入/输出 schema（通过 MCP preview API 获取）
+  - `web/src/api/operator.ts` 中 MCP tool 预览接口增加 `toolName` URL 编码，避免特殊字符导致路由解析失败
+- **算子重设计对照复核与缺口补齐（第四轮）**
+  - 对照 `docs/operator-redesign.md` 与审计报告完成当前实现复核，聚焦缺失路径优先补齐
+  - 后端新增 `internal/adapter/mcp/template_sync.go`：提供 MCP Tool → `OperatorTemplate` 最小映射适配层（为后续真实 MCP 接入保留替换点）
+  - 前端新增：
+    - `web/src/views/operator/components/OperatorForm.vue`
+    - `web/src/views/operator/components/TemplateCard.vue`
+    - `web/src/views/operator-marketplace/index.vue`
+  - 路由新增 `/operator-marketplace`，并在 `web/src/views/operator/index.vue` 增加“模板市场”入口按钮
+- **算子 Schema 前端校验能力补齐（第三轮）**
+  - 新增 `web/src/composables/useJsonSchema.ts`：
+    - `parseJsonObject`：统一 JSON 对象解析与错误文案
+    - `validateSchema`：封装 `POST /api/v1/operators/validate-schema` 调用
+  - `web/src/composables/index.ts` 导出 `useJsonSchema`
+  - `web/src/views/operator/components/SchemaEditor.vue` 接入 JSON + Schema 双阶段校验，新增 `validate` 事件并展示“校验中”状态
+  - `web/src/views/operator/components/VersionForm.vue` 增加 schema 校验状态门禁，未通过时禁用“创建版本”按钮
+- **算子前端重设计组件骨架（第二轮）**
+  - 新增组件：
+    - `web/src/views/operator/components/VersionList.vue`
+    - `web/src/views/operator/components/VersionForm.vue`
+    - `web/src/views/operator/components/ExecConfigForm.vue`
+    - `web/src/views/operator/components/DependencyManager.vue`
+    - `web/src/views/operator/components/SchemaEditor.vue`
+  - `web/src/views/operator/index.vue` 新增“版本与依赖管理”弹窗，接入最小可用交互：
+    - 版本：`list/create/activate/rollback/archive`
+    - 依赖：`list/set`
+  - 说明：当前为骨架与主链路打通阶段，表单校验、字段联动和交互细节后续迭代完善
+- **算子前端 API 契约对齐（第一轮）**
+  - 重写 `web/src/api/operator.ts`，前端算子客户端切换至新生命周期与扩展端点：
+    - 生命周期：`publish/deprecate/test`
+    - 版本：`versions`（list/get/create/activate/rollback/archive）
+    - Schema：`validate-schema`、`validate-connection`
+    - 模板：`templates`（list/get/install）
+    - 依赖：`dependencies`（list/set/check）
+    - MCP：`servers/tools/preview/install/sync-templates`
+  - `web/src/views/operator/index.vue` 列表交互同步改造：
+    - 操作按钮由“启用/禁用”切换为“发布/弃用/测试”
+    - 新增“版本”入口按钮（占位交互）
+  - 目的：消除前端调用旧端点（`/enable`、`/disable`）导致的运行时 404 与语义错配风险
+- **算子模块重设计后端治理（Workflow Schema 门禁 + 依赖 min_version）**
+  - `CreateWorkflowHandler`、`UpdateWorkflowHandler` 注入 `SchemaValidator`，在工作流创建/更新（节点重建）时对边两端算子执行 `ValidateConnection` 强校验，失败阻断写入
+  - 新增 `workflow_connection_validation.go`：统一处理上游 `output_spec` 与下游 `input_schema` 的连接校验逻辑，优先读取 `ActiveVersion`，兼容回退到算子兼容字段
+  - `OperatorDependencyRepo.CheckDependenciesSatisfied` 增加 `min_version` 语义校验：仅对必需依赖生效；支持 `v` 前缀、`-`/`+` 后缀裁剪与分段比较
+  - `handlers.NewHandlers` 工作流命令注入链路同步接入 `schemaValidator`
+  - `docs/api.md` 同步补充：工作流写路径 Schema 门禁说明、依赖检查返回示例更新、发布门禁增加 `min_version` 说明
+- **版本发布门禁细化（Phase C）**
+  - `PublishOperatorHandler` 增加发布前依赖校验：`OperatorDependencies.CheckDependenciesSatisfied`
+  - MCP 模式发布新增门禁：`server health check + tool exists`
+  - 发布前新增 ActiveVersion Schema 门禁：`input_schema` / `output_spec` 必须通过 JSON Schema 合法性校验
+  - 发布前 ActiveVersion 校验由“弱判断”调整为“必须存在且可加载”
+- **Schema 连接校验增强（Phase D）**
+  - `JSONSchemaValidator` 从“仅 required 字段存在校验”升级为“JSON Schema 编译 + 数据校验 + 类型兼容性校验”
+  - `ValidateConnection` 新增同名字段类型兼容检查，阻断上下游字段类型冲突
+  - 引入并启用 `github.com/santhosh-tekuri/jsonschema/v5`
+- **工作流执行器注册扩展（HTTP + CLI + MCP）**
+  - `cmd/server/main.go` 在执行器注册表新增 MCP 执行器注册入口
+- **MCP 依赖装配收口**
+  - `internal/api/handler/handlers.go` 中 `PublishOperator`、`InstallMCPOperator`、`SyncMCPTemplates`、`ListMCPServers`、`ListMCPTools`、`PreviewMCPTool` 改为注入同一 MCP 客户端实例，避免空依赖导致的 `service unavailable`
+- **工作流引擎执行器注入改造（HTTP + CLI）**
+  - `cmd/server/main.go` 中创建并注册 `HTTPOperatorExecutor` 与 `CLIOperatorExecutor`
+  - DAG 引擎改为注入 `RoutingOperatorExecutor`，按 `OperatorVersion.ExecMode` 动态路由
+- **创建算子与创建版本接入 Schema 基础校验**
+  - `CreateOperatorHandler` 与 `CreateOperatorVersionHandler` 注入 `SchemaValidator`
+  - 在创建时对 `input_schema`、`output_spec` 执行 JSON Schema 合法性校验
+- **依赖注入链路扩展 SchemaValidator**
+  - `cmd/server/main.go` 注入 `schema.NewJSONSchemaValidator()`
+  - `internal/api/router.go`、`internal/api/handler/handlers.go` 新增 `schemaValidator` 注入参数并透传
+- **算子版本响应与兼容字段同步增强**
+  - `OperatorVersionResponse` 增加 `exec_config` 输出
+  - 新增 `OperatorVersionToResponse` / `OperatorVersionsToResponse` 转换函数
+  - 激活/回滚版本时同步刷新 `Operator` 兼容字段（`version`、`input_schema`、`output_spec`、`config`、`endpoint`、`method`）
 - **算子生命周期 API 收口（enable/disable → publish/deprecate/test）**
   - API 路由调整：`POST /api/v1/operators/:id/publish`、`POST /api/v1/operators/:id/deprecate`、`POST /api/v1/operators/:id/test`
   - 新增应用命令处理器：`PublishOperatorHandler`、`DeprecateOperatorHandler`、`TestOperatorHandler`

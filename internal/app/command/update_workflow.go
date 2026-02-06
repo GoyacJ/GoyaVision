@@ -13,11 +13,12 @@ import (
 )
 
 type UpdateWorkflowHandler struct {
-	uow port.UnitOfWork
+	uow             port.UnitOfWork
+	schemaValidator port.SchemaValidator
 }
 
-func NewUpdateWorkflowHandler(uow port.UnitOfWork) *UpdateWorkflowHandler {
-	return &UpdateWorkflowHandler{uow: uow}
+func NewUpdateWorkflowHandler(uow port.UnitOfWork, schemaValidator port.SchemaValidator) *UpdateWorkflowHandler {
+	return &UpdateWorkflowHandler{uow: uow, schemaValidator: schemaValidator}
 }
 
 func (h *UpdateWorkflowHandler) Handle(ctx context.Context, cmd dto.UpdateWorkflowCommand) (*workflow.Workflow, error) {
@@ -38,7 +39,11 @@ func (h *UpdateWorkflowHandler) Handle(ctx context.Context, cmd dto.UpdateWorkfl
 			wf.Description = *cmd.Description
 		}
 		if cmd.TriggerConf != nil {
-			// TODO: Parse and set TriggerConf properly
+			triggerConf, err := buildTriggerConfig(cmd.TriggerConf)
+			if err != nil {
+				return apperr.InvalidInput(err.Error())
+			}
+			wf.TriggerConf = triggerConf
 		}
 		if cmd.Status != nil {
 			wf.Status = *cmd.Status
@@ -48,6 +53,10 @@ func (h *UpdateWorkflowHandler) Handle(ctx context.Context, cmd dto.UpdateWorkfl
 		}
 
 		if len(cmd.Nodes) > 0 {
+			if err := validateWorkflowConnections(ctx, repos, h.schemaValidator, cmd.Nodes, cmd.Edges); err != nil {
+				return err
+			}
+
 			if err := repos.Workflows.DeleteNodes(ctx, wf.ID); err != nil {
 				return apperr.Wrap(err, apperr.CodeDBError, "failed to delete old nodes")
 			}

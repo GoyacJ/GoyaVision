@@ -31,7 +31,7 @@ func (h *UpdateOperatorHandler) Handle(ctx context.Context, cmd dto.UpdateOperat
 			return apperr.Wrap(err, apperr.CodeDBError, "failed to get operator")
 		}
 
-		if op.IsBuiltin {
+		if op.Origin == operator.OriginBuiltin {
 			return apperr.InvalidInput("cannot update builtin operator")
 		}
 

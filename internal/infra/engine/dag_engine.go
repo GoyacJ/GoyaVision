@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -18,10 +19,11 @@ var _ workflow.Engine = (*DAGWorkflowEngine)(nil)
 
 // DAGWorkflowEngine implements parallel DAG execution with topological sorting
 type DAGWorkflowEngine struct {
-	uow      port.UnitOfWork
-	executor workflow.OperatorExecutor
-	tasks    map[uuid.UUID]*taskExecution
-	mu       sync.RWMutex
+	uow             port.UnitOfWork
+	executor        workflow.OperatorExecutor
+	schemaValidator port.SchemaValidator
+	tasks           map[uuid.UUID]*taskExecution
+	mu              sync.RWMutex
 }
 
 type taskExecution struct {
@@ -34,11 +36,17 @@ type taskExecution struct {
 }
 
 // NewDAGWorkflowEngine creates a new DAG workflow engine
-func NewDAGWorkflowEngine(uow port.UnitOfWork, executor workflow.OperatorExecutor) *DAGWorkflowEngine {
+func NewDAGWorkflowEngine(uow port.UnitOfWork, executor workflow.OperatorExecutor, validators ...port.SchemaValidator) *DAGWorkflowEngine {
+	var schemaValidator port.SchemaValidator
+	if len(validators) > 0 {
+		schemaValidator = validators[0]
+	}
+
 	return &DAGWorkflowEngine{
-		uow:      uow,
-		executor: executor,
-		tasks:    make(map[uuid.UUID]*taskExecution),
+		uow:             uow,
+		executor:        executor,
+		schemaValidator: schemaValidator,
+		tasks:           make(map[uuid.UUID]*taskExecution),
 	}
 }
 
@@ -346,6 +354,9 @@ func (e *DAGWorkflowEngine) executeNode(
 
 	// Prepare input (merge task input + node config + previous outputs)
 	input := e.prepareNodeInput(task, node, exec)
+	if err := e.validateNodeInput(ctx, op.ActiveVersion, input); err != nil {
+		return err
+	}
 
 	// Apply timeout if configured
 	nodeCtx := ctx
@@ -378,6 +389,10 @@ func (e *DAGWorkflowEngine) executeNode(
 		return fmt.Errorf("node %s failed after %d attempts: %w", node.NodeKey, retryCount, lastErr)
 	}
 
+	if err := e.validateNodeOutput(nodeCtx, op.ActiveVersion, output); err != nil {
+		return err
+	}
+
 	// Store output for downstream nodes
 	exec.mu.Lock()
 	exec.nodeResults[node.NodeKey] = output
@@ -386,6 +401,59 @@ func (e *DAGWorkflowEngine) executeNode(
 	// Save artifacts
 	if err := e.saveArtifacts(ctx, task.ID, node.NodeKey, output); err != nil {
 		return fmt.Errorf("failed to save artifacts: %w", err)
+	}
+
+	return nil
+}
+
+func (e *DAGWorkflowEngine) validateNodeInput(ctx context.Context, version *operator.OperatorVersion, input *operator.Input) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if e.schemaValidator == nil || version == nil || len(version.InputSchema) == 0 {
+		return nil
+	}
+
+	inputPayload := make(map[string]interface{})
+	if input != nil {
+		for k, v := range input.Params {
+			inputPayload[k] = v
+		}
+		if input.AssetID != uuid.Nil {
+			inputPayload["asset_id"] = input.AssetID.String()
+		}
+	}
+
+	if err := e.schemaValidator.ValidateInput(ctx, version.InputSchema, inputPayload); err != nil {
+		return fmt.Errorf("runtime input schema validation failed: %w", err)
+	}
+
+	return nil
+}
+
+func (e *DAGWorkflowEngine) validateNodeOutput(ctx context.Context, version *operator.OperatorVersion, output *operator.Output) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if e.schemaValidator == nil || version == nil || len(version.OutputSpec) == 0 {
+		return nil
+	}
+
+	if output == nil {
+		output = &operator.Output{}
+	}
+
+	outputPayload := make(map[string]interface{})
+	b, err := json.Marshal(output)
+	if err != nil {
+		return fmt.Errorf("marshal runtime output failed: %w", err)
+	}
+	if err := json.Unmarshal(b, &outputPayload); err != nil {
+		return fmt.Errorf("unmarshal runtime output failed: %w", err)
+	}
+
+	if err := e.schemaValidator.ValidateOutput(ctx, version.OutputSpec, outputPayload); err != nil {
+		return fmt.Errorf("runtime output schema validation failed: %w", err)
 	}
 
 	return nil

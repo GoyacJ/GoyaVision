@@ -87,14 +87,7 @@ type CreateOperatorCommand struct {
 	Origin      operator.Origin
 	ExecMode    operator.ExecMode
 	ExecConfig  *operator.ExecConfig
-	Version     string
-	Endpoint    string
-	Method      string
-	InputSchema map[string]interface{}
-	OutputSpec  map[string]interface{}
-	Config      map[string]interface{}
 	Status      operator.Status
-	IsBuiltin   bool
 	Tags        []string
 }
 
@@ -124,6 +117,33 @@ type TestOperatorCommand struct {
 	Params  map[string]interface{}
 }
 
+type CreateOperatorVersionCommand struct {
+	OperatorID  uuid.UUID
+	Version     string
+	ExecMode    operator.ExecMode
+	ExecConfig  *operator.ExecConfig
+	InputSchema map[string]interface{}
+	OutputSpec  map[string]interface{}
+	Config      map[string]interface{}
+	Changelog   string
+	Status      operator.VersionStatus
+}
+
+type ActivateVersionCommand struct {
+	OperatorID uuid.UUID
+	VersionID  uuid.UUID
+}
+
+type RollbackVersionCommand struct {
+	OperatorID uuid.UUID
+	VersionID  uuid.UUID
+}
+
+type ArchiveVersionCommand struct {
+	OperatorID uuid.UUID
+	VersionID  uuid.UUID
+}
+
 type TestOperatorResult struct {
 	Success     bool                   `json:"success"`
 	Message     string                 `json:"message"`
@@ -150,6 +170,24 @@ type SyncMCPTemplatesResult struct {
 	Total    int    `json:"total"`
 	Created  int    `json:"created"`
 	Updated  int    `json:"updated"`
+}
+
+type InstallTemplateCommand struct {
+	TemplateID   uuid.UUID
+	OperatorCode string
+	OperatorName string
+	Tags         []string
+}
+
+type DependencyItemInput struct {
+	DependsOnID uuid.UUID
+	MinVersion  string
+	IsOptional  bool
+}
+
+type SetOperatorDependenciesCommand struct {
+	OperatorID   uuid.UUID
+	Dependencies []DependencyItemInput
 }
 
 // Workflow Commands

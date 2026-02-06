@@ -15,11 +15,12 @@ import (
 )
 
 type CreateOperatorHandler struct {
-	uow port.UnitOfWork
+	uow             port.UnitOfWork
+	schemaValidator port.SchemaValidator
 }
 
-func NewCreateOperatorHandler(uow port.UnitOfWork) *CreateOperatorHandler {
-	return &CreateOperatorHandler{uow: uow}
+func NewCreateOperatorHandler(uow port.UnitOfWork, schemaValidator port.SchemaValidator) *CreateOperatorHandler {
+	return &CreateOperatorHandler{uow: uow, schemaValidator: schemaValidator}
 }
 
 func (h *CreateOperatorHandler) Handle(ctx context.Context, cmd dto.CreateOperatorCommand) (*operator.Operator, error) {
@@ -43,13 +44,8 @@ func (h *CreateOperatorHandler) Handle(ctx context.Context, cmd dto.CreateOperat
 	}
 
 	version := "1.0.0"
-	if cmd.Version != "" {
-		version = cmd.Version
-	}
-
-	method := "POST"
-	if cmd.Method != "" {
-		method = cmd.Method
+	if err := validateSemver(version); err != nil {
+		return nil, err
 	}
 
 	status := operator.StatusDraft
@@ -59,16 +55,15 @@ func (h *CreateOperatorHandler) Handle(ctx context.Context, cmd dto.CreateOperat
 
 	origin := cmd.Origin
 	if origin == "" {
-		if cmd.IsBuiltin {
-			origin = operator.OriginBuiltin
-		} else {
-			origin = operator.OriginCustom
-		}
+		origin = operator.OriginCustom
 	}
 
 	execMode := cmd.ExecMode
 	if execMode == "" {
 		execMode = operator.ExecModeHTTP
+	}
+	if err := validateExecMode(execMode); err != nil {
+		return nil, err
 	}
 
 	var result *operator.Operator
@@ -86,14 +81,7 @@ func (h *CreateOperatorHandler) Handle(ctx context.Context, cmd dto.CreateOperat
 			Category:    cmd.Category,
 			Type:        cmd.Type,
 			Origin:      origin,
-			Version:     version,
-			Endpoint:    cmd.Endpoint,
-			Method:      method,
-			InputSchema: cmd.InputSchema,
-			OutputSpec:  cmd.OutputSpec,
-			Config:      cmd.Config,
 			Status:      status,
-			IsBuiltin:   cmd.IsBuiltin,
 			Tags:        cmd.Tags,
 		}
 
@@ -101,16 +89,7 @@ func (h *CreateOperatorHandler) Handle(ctx context.Context, cmd dto.CreateOperat
 			return apperr.Wrap(err, apperr.CodeDBError, "failed to create operator")
 		}
 
-		// Phase A：创建首个版本并绑定为激活版本（兼容旧字段）
 		execConfig := cmd.ExecConfig
-		if execConfig == nil && (cmd.Endpoint != "" || method != "") {
-			execConfig = &operator.ExecConfig{
-				HTTP: &operator.HTTPExecConfig{
-					Endpoint: cmd.Endpoint,
-					Method:   method,
-				},
-			}
-		}
 
 		ov := &operator.OperatorVersion{
 			ID:          uuid.New(),
@@ -118,9 +97,9 @@ func (h *CreateOperatorHandler) Handle(ctx context.Context, cmd dto.CreateOperat
 			Version:     version,
 			ExecMode:    execMode,
 			ExecConfig:  execConfig,
-			InputSchema: cmd.InputSchema,
-			OutputSpec:  cmd.OutputSpec,
-			Config:      cmd.Config,
+			InputSchema: map[string]interface{}{},
+			OutputSpec:  map[string]interface{}{},
+			Config:      map[string]interface{}{},
 			Status:      operator.VersionStatusActive,
 		}
 
@@ -130,6 +109,7 @@ func (h *CreateOperatorHandler) Handle(ctx context.Context, cmd dto.CreateOperat
 
 		op.ActiveVersionID = &ov.ID
 		op.ActiveVersion = ov
+		syncOperatorCompatFieldsFromVersion(op, ov)
 		if err := repos.Operators.Update(ctx, op); err != nil {
 			return apperr.Wrap(err, apperr.CodeDBError, "failed to bind operator active version")
 		}

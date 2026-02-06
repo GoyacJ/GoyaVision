@@ -18,6 +18,9 @@ import (
 
 func NewHandlers(
 	uow port.UnitOfWork,
+	schemaValidator port.SchemaValidator,
+	mcpClient portrepo.MCPClient,
+	mcpRegistry portrepo.MCPRegistry,
 	mediaGateway port.MediaGateway,
 	tokenService port.TokenService,
 	cfg *config.Config,
@@ -28,6 +31,9 @@ func NewHandlers(
 ) *handler.Handlers {
 	return handler.NewHandlers(
 		uow,
+		schemaValidator,
+		mcpClient,
+		mcpRegistry,
 		mediaGateway,
 		tokenService,
 		cfg,

@@ -15,11 +15,14 @@
             :show-button="false"
             @search="() => { pagination.page = 1 }"
           />
-          <GvButton @click="showCreateDialog = true">
+          <GvButton @click="openCreateDialog">
             <template #icon>
               <el-icon><Plus /></el-icon>
             </template>
             添加算子
+          </GvButton>
+          <GvButton variant="tonal" @click="router.push('/operator-marketplace')">
+            模板市场
           </GvButton>
         </GvSpace>
       </template>
@@ -48,7 +51,7 @@
       description="添加 AI 算子以处理您的媒体资产"
       action-text="添加算子"
       show-action
-      @action="showCreateDialog = true"
+      @action="openCreateDialog"
     />
 
     <!-- 数据表格 -->
@@ -68,6 +71,14 @@
         <GvTag :color="getCategoryColor(row.category)" size="small">
           {{ getCategoryLabel(row.category) }}
         </GvTag>
+      </template>
+
+      <template #origin="{ row }">
+        {{ getOriginLabel(row.origin, row.is_builtin) }}
+      </template>
+
+      <template #exec_mode="{ row }">
+        {{ getExecModeLabel(row.exec_mode || row.active_version?.exec_mode) }}
       </template>
       
       <template #is_builtin="{ row }">
@@ -90,6 +101,9 @@
           <GvButton size="small" variant="tonal" @click="handleView(row)">
             查看
           </GvButton>
+          <GvButton size="small" variant="text" @click="handleOpenVersions(row)">
+            版本
+          </GvButton>
           <GvButton
             size="small"
             @click="handleEdit(row)"
@@ -101,17 +115,24 @@
             v-if="row.status === 'published'"
             size="small"
             variant="text"
-            @click="handleDisable(row)"
+            @click="handleDeprecate(row)"
           >
-            禁用
+            弃用
           </GvButton>
           <GvButton
             v-else
             size="small"
             variant="text"
-            @click="handleEnable(row)"
+            @click="handlePublish(row)"
           >
-            启用
+            发布
+          </GvButton>
+          <GvButton
+            size="small"
+            variant="text"
+            @click="handleTest(row)"
+          >
+            测试
           </GvButton>
           <GvButton
             size="small"
@@ -130,39 +151,30 @@
       v-model="showCreateDialog"
       title="添加算子"
       size="large"
-      :confirm-loading="creating"
-      @confirm="handleCreate"
+      :show-confirm="false"
       @cancel="showCreateDialog = false"
     >
-      <el-form ref="createFormRef" :model="createForm" :rules="createRules" label-width="100px">
-        <el-form-item label="算子代码" prop="code">
-          <GvInput v-model="createForm.code" placeholder="唯一标识，如：frame_extract" />
-        </el-form-item>
-        <el-form-item label="算子名称" prop="name">
-          <GvInput v-model="createForm.name" placeholder="算子显示名称" />
-        </el-form-item>
-        <el-form-item label="描述" prop="description">
-          <GvInput v-model="createForm.description" type="textarea" :rows="2" />
-        </el-form-item>
-        <el-form-item label="分类" prop="category">
-          <GvSelect
-            v-model="createForm.category"
-            :options="categoryOptions"
-          />
-        </el-form-item>
-        <el-form-item label="类型" prop="type">
-          <GvInput v-model="createForm.type" placeholder="如：object_detection, frame_extract" />
-        </el-form-item>
-        <el-form-item label="端点地址" prop="endpoint">
-          <GvInput v-model="createForm.endpoint" placeholder="http://..." />
-        </el-form-item>
-        <el-form-item label="HTTP方法" prop="method">
-          <GvSelect
-            v-model="createForm.method"
-            :options="methodOptions"
-          />
-        </el-form-item>
-      </el-form>
+      <OperatorForm
+        :model-value="operatorFormModel"
+        :loading="creating"
+        @submit="handleCreateSubmit"
+        @cancel="showCreateDialog = false"
+      />
+    </GvModal>
+
+    <GvModal
+      v-model="showEditDialog"
+      title="编辑算子"
+      size="large"
+      :show-confirm="false"
+      @cancel="showEditDialog = false"
+    >
+      <OperatorForm
+        :model-value="operatorFormModel"
+        :loading="editing"
+        @submit="handleEditSubmit"
+        @cancel="showEditDialog = false"
+      />
     </GvModal>
 
     <!-- 详情对话框 -->
@@ -183,12 +195,16 @@
           </GvTag>
         </el-descriptions-item>
         <el-descriptions-item label="类型">{{ currentOperator.type }}</el-descriptions-item>
+        <el-descriptions-item label="来源">{{ getOriginLabel(currentOperator.origin, currentOperator.is_builtin) }}</el-descriptions-item>
+        <el-descriptions-item label="执行模式">{{ getExecModeLabel(currentOperator.exec_mode || currentOperator.active_version?.exec_mode) }}</el-descriptions-item>
         <el-descriptions-item label="版本">{{ currentOperator.version }}</el-descriptions-item>
         <el-descriptions-item label="状态">
           <StatusBadge :status="mapStatus(currentOperator.status)" />
         </el-descriptions-item>
-        <el-descriptions-item label="端点地址" :span="2">{{ currentOperator.endpoint }}</el-descriptions-item>
-        <el-descriptions-item label="HTTP方法">{{ currentOperator.method }}</el-descriptions-item>
+        <el-descriptions-item label="激活版本ID" :span="2">{{ currentOperator.active_version_id || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="执行配置" :span="2">
+          <pre class="max-h-64 overflow-auto rounded bg-neutral-50 p-2 text-xs">{{ formatJson(currentOperator.active_version?.exec_config || {}) }}</pre>
+        </el-descriptions-item>
         <el-descriptions-item label="内置">
           <GvTag v-if="currentOperator.is_builtin" color="info" size="small" variant="tonal">
             是
@@ -199,12 +215,48 @@
         <el-descriptions-item label="创建时间" :span="2">{{ formatDate(currentOperator.created_at) }}</el-descriptions-item>
       </el-descriptions>
     </GvModal>
+
+    <GvModal
+      v-model="showVersionDialog"
+      :title="`版本与依赖管理 - ${currentOperator?.name || ''}`"
+      size="large"
+      :show-confirm="false"
+      cancel-text="关闭"
+    >
+      <el-tabs>
+        <el-tab-pane label="版本列表">
+          <VersionList
+            :versions="versionList"
+            :loading="versionLoading"
+            @activate="handleActivateVersion"
+            @rollback="handleRollbackVersion"
+            @archive="handleArchiveVersion"
+          />
+        </el-tab-pane>
+        <el-tab-pane label="创建版本">
+          <VersionForm :loading="versionSubmitting" @submit="handleCreateVersion" />
+        </el-tab-pane>
+        <el-tab-pane label="依赖管理">
+          <div class="mb-3">
+            <GvButton size="small" variant="tonal" :loading="dependencyChecking" @click="handleCheckDependencies">
+              检查依赖满足性
+            </GvButton>
+          </div>
+          <DependencyManager
+            :dependencies="dependencyList"
+            :loading="dependencyLoading"
+            @save="handleSaveDependencies"
+          />
+        </el-tab-pane>
+      </el-tabs>
+    </GvModal>
   </GvContainer>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
-import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
+import { useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { operatorApi, type Operator, type OperatorCreateReq } from '@/api/operator'
 import { useTable } from '@/composables'
@@ -214,8 +266,6 @@ import GvModal from '@/components/base/GvModal/index.vue'
 import GvButton from '@/components/base/GvButton/index.vue'
 import GvSpace from '@/components/layout/GvSpace/index.vue'
 import GvTag from '@/components/base/GvTag/index.vue'
-import GvInput from '@/components/base/GvInput/index.vue'
-import GvSelect from '@/components/base/GvSelect/index.vue'
 import PageHeader from '@/components/business/PageHeader/index.vue'
 import FilterBar from '@/components/business/FilterBar/index.vue'
 import SearchBar from '@/components/business/SearchBar/index.vue'
@@ -223,20 +273,47 @@ import StatusBadge from '@/components/business/StatusBadge/index.vue'
 import { ErrorState, EmptyState } from '@/components/common'
 import type { TableColumn } from '@/components/base/GvTable/types'
 import type { FilterField } from '@/components/business/FilterBar/types'
+import VersionList from './components/VersionList.vue'
+import VersionForm from './components/VersionForm.vue'
+import DependencyManager from './components/DependencyManager.vue'
+import OperatorForm from './components/OperatorForm.vue'
 
 // UI 状态
 const creating = ref(false)
+const editing = ref(false)
+const router = useRouter()
 const showCreateDialog = ref(false)
+const showEditDialog = ref(false)
 const showViewDialog = ref(false)
+const showVersionDialog = ref(false)
 const currentOperator = ref<Operator | null>(null)
-const createFormRef = ref<FormInstance>()
+const editOperatorID = ref('')
+const versionList = ref<Array<any>>([])
+const dependencyList = ref<Array<any>>([])
+const versionLoading = ref(false)
+const versionSubmitting = ref(false)
+const dependencyLoading = ref(false)
+const dependencyChecking = ref(false)
 
 const searchKeyword = ref('')
 
 const filters = ref({
   category: '',
   status: '',
+  origin: '',
+  exec_mode: '',
   is_builtin: ''
+})
+
+const operatorFormModel = reactive<OperatorCreateReq>({
+  code: '',
+  name: '',
+  description: '',
+  category: 'analysis',
+  type: '',
+  origin: 'custom',
+  exec_mode: 'http',
+  exec_config: {}
 })
 
 // 计算筛选参数
@@ -244,6 +321,8 @@ const filterParams = computed(() => ({
   keyword: searchKeyword.value || undefined,
   category: filters.value.category || undefined,
   status: filters.value.status || undefined,
+  origin: filters.value.origin || undefined,
+  exec_mode: filters.value.exec_mode || undefined,
   is_builtin: filters.value.is_builtin ? filters.value.is_builtin === 'true' : undefined
 }))
 
@@ -268,28 +347,11 @@ const {
   }
 )
 
-const createForm = reactive<OperatorCreateReq>({
-  code: '',
-  name: '',
-  description: '',
-  category: 'analysis',
-  type: '',
-  endpoint: '',
-  method: 'POST'
-})
-
-const createRules: FormRules = {
-  code: [{ required: true, message: '请输入算子代码', trigger: 'blur' }],
-  name: [{ required: true, message: '请输入算子名称', trigger: 'blur' }],
-  category: [{ required: true, message: '请选择分类', trigger: 'change' }],
-  type: [{ required: true, message: '请输入类型', trigger: 'blur' }],
-  endpoint: [{ required: true, message: '请输入端点地址', trigger: 'blur' }]
-}
-
 const categoryOptions = [
   { label: '分析', value: 'analysis' },
   { label: '处理', value: 'processing' },
-  { label: '生成', value: 'generation' }
+  { label: '生成', value: 'generation' },
+  { label: '工具', value: 'utility' }
 ]
 
 const statusOptions = [
@@ -297,11 +359,6 @@ const statusOptions = [
   { label: '测试中', value: 'testing' },
   { label: '已发布', value: 'published' },
   { label: '已废弃', value: 'deprecated' }
-]
-
-const methodOptions = [
-  { label: 'POST', value: 'POST' },
-  { label: 'GET', value: 'GET' }
 ]
 
 const filterFields: FilterField[] = [
@@ -320,6 +377,29 @@ const filterFields: FilterField[] = [
     options: statusOptions
   },
   {
+    key: 'origin',
+    label: '来源',
+    type: 'select',
+    placeholder: '选择来源',
+    options: [
+      { label: '内置', value: 'builtin' },
+      { label: '自定义', value: 'custom' },
+      { label: '模板市场', value: 'marketplace' },
+      { label: 'MCP', value: 'mcp' }
+    ]
+  },
+  {
+    key: 'exec_mode',
+    label: '执行模式',
+    type: 'select',
+    placeholder: '选择执行模式',
+    options: [
+      { label: 'HTTP', value: 'http' },
+      { label: 'CLI', value: 'cli' },
+      { label: 'MCP', value: 'mcp' }
+    ]
+  },
+  {
     key: 'is_builtin',
     label: '内置',
     type: 'select',
@@ -335,12 +415,14 @@ const columns: TableColumn[] = [
   { prop: 'name', label: '名称', minWidth: '150', showOverflowTooltip: true },
   { prop: 'code', label: '代码', width: '150' },
   { prop: 'category', label: '分类', width: '100' },
+  { prop: 'origin', label: '来源', width: '100' },
+  { prop: 'exec_mode', label: '执行模式', width: '100' },
   { prop: 'type', label: '类型', width: '120' },
   { prop: 'version', label: '版本', width: '80' },
   { prop: 'is_builtin', label: '内置', width: '80' },
   { prop: 'status', label: '状态', width: '120' },
   { prop: 'created_at', label: '创建时间', width: '160' },
-  { prop: 'actions', label: '操作', width: '320', fixed: 'right' }
+  { prop: 'actions', label: '操作', width: '420', fixed: 'right' }
 ]
 
 const paginationConfig = computed(() => ({
@@ -350,22 +432,41 @@ const paginationConfig = computed(() => ({
 }))
 
 
-async function handleCreate() {
-  if (!createFormRef.value) return
-  await createFormRef.value.validate(async (valid) => {
-    if (!valid) return
-    creating.value = true
-    try {
-      await operatorApi.create(createForm)
-      ElMessage.success('创建成功')
-      showCreateDialog.value = false
-      refreshTable()
-    } catch (error: any) {
-      ElMessage.error(error.response?.data?.message || '创建失败')
-    } finally {
-      creating.value = false
-    }
+function resetOperatorForm() {
+  Object.assign(operatorFormModel, {
+    code: '',
+    name: '',
+    description: '',
+    category: 'analysis',
+    type: '',
+    origin: 'custom',
+    exec_mode: 'http',
+    exec_config: {}
   })
+}
+
+function openCreateDialog() {
+  resetOperatorForm()
+  showCreateDialog.value = true
+}
+
+async function handleCreateSubmit(payload: OperatorCreateReq) {
+  if (!payload.code || !payload.name || !payload.type || !payload.category) {
+    ElMessage.warning('请完整填写算子代码、名称、分类与类型')
+    return
+  }
+  creating.value = true
+  try {
+    await operatorApi.create(payload)
+    ElMessage.success('创建成功')
+    showCreateDialog.value = false
+    resetOperatorForm()
+    refreshTable()
+  } catch (error: any) {
+    ElMessage.error(error.response?.data?.message || '创建失败')
+  } finally {
+    creating.value = false
+  }
 }
 
 function handleView(row: Operator) {
@@ -374,26 +475,189 @@ function handleView(row: Operator) {
 }
 
 function handleEdit(row: Operator) {
-  ElMessage.info('编辑功能开发中')
+  editOperatorID.value = row.id
+  Object.assign(operatorFormModel, {
+    code: row.code,
+    name: row.name,
+    description: row.description || '',
+    category: row.category,
+    type: row.type,
+    origin: row.origin || (row.is_builtin ? 'builtin' : 'custom'),
+    exec_mode: row.exec_mode || row.active_version?.exec_mode || 'http',
+    exec_config: row.active_version?.exec_config || {}
+  })
+  showEditDialog.value = true
 }
 
-async function handleEnable(row: Operator) {
+async function handleEditSubmit(payload: OperatorCreateReq) {
+  if (!editOperatorID.value) return
+  editing.value = true
   try {
-    await operatorApi.enable(row.id)
-    ElMessage.success('启用成功')
+    await operatorApi.update(editOperatorID.value, {
+      name: payload.name,
+      description: payload.description,
+      category: payload.category,
+      tags: payload.tags
+    })
+    ElMessage.success('更新成功')
+    ElMessage.warning('执行模式/执行配置变更需通过“创建版本”完成')
+    showEditDialog.value = false
     refreshTable()
   } catch (error: any) {
-    ElMessage.error(error.response?.data?.message || '启用失败')
+    ElMessage.error(error.response?.data?.message || '更新失败')
+  } finally {
+    editing.value = false
   }
 }
 
-async function handleDisable(row: Operator) {
+async function handlePublish(row: Operator) {
   try {
-    await operatorApi.disable(row.id)
-    ElMessage.success('禁用成功')
+    await operatorApi.publish(row.id)
+    ElMessage.success('发布成功')
     refreshTable()
   } catch (error: any) {
-    ElMessage.error(error.response?.data?.message || '禁用失败')
+    ElMessage.error(error.response?.data?.message || '发布失败')
+  }
+}
+
+async function handleDeprecate(row: Operator) {
+  try {
+    await operatorApi.deprecate(row.id)
+    ElMessage.success('弃用成功')
+    refreshTable()
+  } catch (error: any) {
+    ElMessage.error(error.response?.data?.message || '弃用失败')
+  }
+}
+
+async function handleTest(row: Operator) {
+  try {
+    const res = await operatorApi.test(row.id)
+    const message = res.data?.message || '测试完成'
+    ElMessage.success(message)
+    if (res.data?.diagnostics) {
+      await ElMessageBox.alert(`<pre style="max-height:360px;overflow:auto">${formatJson(res.data.diagnostics)}</pre>`, '测试诊断信息', {
+        dangerouslyUseHTMLString: true,
+        confirmButtonText: '关闭'
+      })
+    }
+  } catch (error: any) {
+    ElMessage.error(error.response?.data?.message || '测试失败')
+  }
+}
+
+async function handleOpenVersions(row: Operator) {
+  currentOperator.value = row
+  showVersionDialog.value = true
+  await Promise.all([loadVersions(row.id), loadDependencies(row.id)])
+}
+
+async function loadVersions(operatorId: string) {
+  versionLoading.value = true
+  try {
+    const res = await operatorApi.listVersions(operatorId, { page: 1, page_size: 100 })
+    versionList.value = res.data?.items || []
+  } catch (error: any) {
+    ElMessage.error(error.response?.data?.message || '加载版本失败')
+  } finally {
+    versionLoading.value = false
+  }
+}
+
+async function loadDependencies(operatorId: string) {
+  dependencyLoading.value = true
+  try {
+    const res = await operatorApi.listDependencies(operatorId)
+    dependencyList.value = res.data || []
+  } catch (error: any) {
+    ElMessage.error(error.response?.data?.message || '加载依赖失败')
+  } finally {
+    dependencyLoading.value = false
+  }
+}
+
+async function handleCreateVersion(payload: any) {
+  if (!currentOperator.value) return
+  versionSubmitting.value = true
+  try {
+    await operatorApi.createVersion(currentOperator.value.id, payload)
+    ElMessage.success('创建版本成功')
+    await loadVersions(currentOperator.value.id)
+  } catch (error: any) {
+    ElMessage.error(error.response?.data?.message || '创建版本失败')
+  } finally {
+    versionSubmitting.value = false
+  }
+}
+
+async function handleActivateVersion(versionId: string) {
+  if (!currentOperator.value) return
+  try {
+    await operatorApi.activateVersion(currentOperator.value.id, { version_id: versionId })
+    ElMessage.success('激活成功')
+    await loadVersions(currentOperator.value.id)
+    refreshTable()
+  } catch (error: any) {
+    ElMessage.error(error.response?.data?.message || '激活失败')
+  }
+}
+
+async function handleRollbackVersion(versionId: string) {
+  if (!currentOperator.value) return
+  try {
+    await operatorApi.rollbackVersion(currentOperator.value.id, { version_id: versionId })
+    ElMessage.success('回滚成功')
+    await loadVersions(currentOperator.value.id)
+    refreshTable()
+  } catch (error: any) {
+    ElMessage.error(error.response?.data?.message || '回滚失败')
+  }
+}
+
+async function handleArchiveVersion(versionId: string) {
+  if (!currentOperator.value) return
+  try {
+    await operatorApi.archiveVersion(currentOperator.value.id, { version_id: versionId })
+    ElMessage.success('归档成功')
+    await loadVersions(currentOperator.value.id)
+  } catch (error: any) {
+    ElMessage.error(error.response?.data?.message || '归档失败')
+  }
+}
+
+async function handleSaveDependencies(deps: Array<{ depends_on_id: string; min_version?: string; is_optional?: boolean }>) {
+  if (!currentOperator.value) return
+  try {
+    await operatorApi.setDependencies(currentOperator.value.id, {
+      dependencies: deps.filter((d) => d.depends_on_id)
+    })
+    ElMessage.success('依赖保存成功')
+    await loadDependencies(currentOperator.value.id)
+  } catch (error: any) {
+    ElMessage.error(error.response?.data?.message || '依赖保存失败')
+  }
+}
+
+async function handleCheckDependencies() {
+  if (!currentOperator.value) return
+  dependencyChecking.value = true
+  try {
+    const res = await operatorApi.checkDependencies(currentOperator.value.id)
+    if (res.data?.satisfied) {
+      ElMessage.success('依赖检查通过')
+      return
+    }
+
+    const unmet = res.data?.unmet || []
+    await ElMessageBox.alert(
+      `<div>以下依赖未满足：</div><pre style="max-height:280px;overflow:auto">${unmet.join('\n') || '(空)'}</pre>`,
+      '依赖检查未通过',
+      { dangerouslyUseHTMLString: true, confirmButtonText: '关闭' }
+    )
+  } catch (error: any) {
+    ElMessage.error(error.response?.data?.message || '依赖检查失败')
+  } finally {
+    dependencyChecking.value = false
   }
 }
 
@@ -426,7 +690,8 @@ function getCategoryLabel(category: string) {
   const map: Record<string, string> = {
     analysis: '分析',
     processing: '处理',
-    generation: '生成'
+    generation: '生成',
+    utility: '工具'
   }
   return map[category] || category
 }
@@ -435,9 +700,35 @@ function getCategoryColor(category: string) {
   const map: Record<string, string> = {
     analysis: 'primary',
     processing: 'success',
-    generation: 'warning'
+    generation: 'warning',
+    utility: 'info'
   }
   return map[category] || 'neutral'
+}
+
+function getOriginLabel(origin?: string, isBuiltin?: boolean) {
+  const resolved = origin || (isBuiltin ? 'builtin' : 'custom')
+  const map: Record<string, string> = {
+    builtin: '内置',
+    custom: '自定义',
+    marketplace: '市场',
+    mcp: 'MCP'
+  }
+  return map[resolved] || resolved
+}
+
+function getExecModeLabel(execMode?: string) {
+  const map: Record<string, string> = {
+    http: 'HTTP',
+    cli: 'CLI',
+    mcp: 'MCP'
+  }
+  return map[execMode || ''] || '-'
+}
+
+function formatJson(value: any) {
+  if (!value || typeof value !== 'object') return '{}'
+  return JSON.stringify(value, null, 2)
 }
 
 function mapStatus(status: string): any {

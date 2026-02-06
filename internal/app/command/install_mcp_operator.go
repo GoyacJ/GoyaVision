@@ -105,6 +105,7 @@ func (h *InstallMCPOperatorHandler) Handle(ctx context.Context, cmd dto.InstallM
 
 		op.ActiveVersionID = &ov.ID
 		op.ActiveVersion = ov
+		syncOperatorCompatFieldsFromVersion(op, ov)
 		if err := repos.Operators.Update(ctx, op); err != nil {
 			return apperr.Wrap(err, apperr.CodeDBError, "failed to bind operator active version")
 		}
