@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strings"
 
-	appdto "goyavision/internal/app/dto"
 	"goyavision/internal/api/dto"
+	appdto "goyavision/internal/app/dto"
 	"goyavision/internal/domain/media"
 
 	"github.com/google/uuid"

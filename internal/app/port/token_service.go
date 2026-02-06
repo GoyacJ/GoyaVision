@@ -14,7 +14,7 @@ import (
 //  3. Token 刷新
 //
 // 实现：
-//  - infra/auth/jwt.go (golang-jwt/jwt 实现)
+//   - infra/auth/jwt.go (golang-jwt/jwt 实现)
 type TokenService interface {
 	// GenerateTokenPair 生成 Token 对（Access + Refresh）
 	GenerateTokenPair(userID uuid.UUID, username string) (*TokenPair, error)

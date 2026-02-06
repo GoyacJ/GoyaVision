@@ -102,7 +102,7 @@ func TestTopologicalSort(t *testing.T) {
 				{NodeKey: "B"},
 				{NodeKey: "C"},
 			},
-			edges: []workflow.Edge{},
+			edges:   []workflow.Edge{},
 			wantLen: 3,
 			wantErr: false,
 		},

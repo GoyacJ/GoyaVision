@@ -6,10 +6,10 @@ import (
 	"goyavision/config"
 	"goyavision/internal/adapter/mediamtx"
 	"goyavision/internal/api/handler"
+	authMiddleware "goyavision/internal/api/middleware"
 	"goyavision/internal/app"
 	"goyavision/internal/app/port"
 	portrepo "goyavision/internal/port"
-	authMiddleware "goyavision/internal/api/middleware"
 	"goyavision/pkg/storage"
 
 	"github.com/labstack/echo/v4"

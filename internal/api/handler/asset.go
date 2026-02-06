@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	appdto "goyavision/internal/app/dto"
 	"goyavision/internal/api/dto"
+	appdto "goyavision/internal/app/dto"
 	"goyavision/internal/domain/media"
 
 	"github.com/google/uuid"

@@ -17,11 +17,11 @@ type SourceListQuery struct {
 
 // SourceCreateReq 创建媒体源请求
 type SourceCreateReq struct {
-	Name  string `json:"name" validate:"required"`
-	Type  string `json:"type" validate:"required"`
-	URL   string `json:"url,omitempty"`
+	Name     string `json:"name" validate:"required"`
+	Type     string `json:"type" validate:"required"`
+	URL      string `json:"url,omitempty"`
 	Protocol string `json:"protocol,omitempty"`
-	Enabled bool  `json:"enabled,omitempty"`
+	Enabled  bool   `json:"enabled,omitempty"`
 }
 
 // SourceUpdateReq 更新媒体源请求
@@ -35,13 +35,13 @@ type SourceUpdateReq struct {
 // SourceResponse 媒体源响应
 type SourceResponse struct {
 	ID            uuid.UUID `json:"id"`
-	Name          string   `json:"name"`
-	PathName      string   `json:"path_name"`
-	Type          string   `json:"type"`
-	URL           string   `json:"url,omitempty"`
-	Protocol      string   `json:"protocol,omitempty"`
-	Enabled       bool     `json:"enabled"`
-	RecordEnabled bool     `json:"record_enabled"`
+	Name          string    `json:"name"`
+	PathName      string    `json:"path_name"`
+	Type          string    `json:"type"`
+	URL           string    `json:"url,omitempty"`
+	Protocol      string    `json:"protocol,omitempty"`
+	Enabled       bool      `json:"enabled"`
+	RecordEnabled bool      `json:"record_enabled"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 }
