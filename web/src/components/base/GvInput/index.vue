@@ -18,10 +18,11 @@
       </span>
       
       <!-- 输入框 -->
-      <input
+      <component
+        :is="type === 'textarea' ? 'textarea' : 'input'"
         ref="inputRef"
-        :class="inputClasses"
-        :type="computedType"
+        :class="[inputClasses, type === 'textarea' ? 'h-auto py-2 resize-none' : '']"
+        :type="type === 'textarea' ? undefined : computedType"
         :value="modelValue"
         :placeholder="placeholder"
         :disabled="disabled"
@@ -31,6 +32,7 @@
         :name="name"
         :form="form"
         :autofocus="autofocus"
+        :rows="rows"
         @input="handleInput"
         @change="handleChange"
         @focus="handleFocus"
@@ -104,7 +106,8 @@ const props = withDefaults(defineProps<InputProps>(), {
   showPassword: false,
   showCount: false,
   autofocus: false,
-  required: false
+  required: false,
+  rows: 2
 })
 
 const emit = defineEmits<InputEmits>()
@@ -138,9 +141,15 @@ const labelClasses = computed(() => {
 const wrapperClasses = computed(() => {
   const base = [
     'gv-input__wrapper',
-    'relative flex items-center',
+    'relative flex',
     'bg-white border rounded-xl'
   ]
+
+  if (props.type === 'textarea') {
+    base.push('items-start')
+  } else {
+    base.push('items-center')
+  }
 
   // 尺寸
   const sizeClasses = {
@@ -149,9 +158,12 @@ const wrapperClasses = computed(() => {
     large: 'h-12'
   }
 
+  const sizeClass = props.type === 'textarea' ? 'h-auto' : sizeClasses[props.size]
+
   // 状态
   const stateClasses = {
-    default: 'border-neutral-300',
+    default: 'border-neutral-300 hover:border-neutral-400 transition-colors',
+    focused: 'border-primary-600 ring-4 ring-primary-50 transition-all',
     disabled: 'bg-neutral-100 border-neutral-200 cursor-not-allowed',
     readonly: 'bg-neutral-50 border-neutral-200',
     success: 'border-success-600',
@@ -166,9 +178,11 @@ const wrapperClasses = computed(() => {
     stateClass = stateClasses.readonly
   } else if (props.status) {
     stateClass = stateClasses[props.status]
+  } else if (isFocused.value) {
+    stateClass = stateClasses.focused
   }
   
-  return cn(base, sizeClasses[props.size], stateClass)
+  return cn(base, sizeClass, stateClass)
 })
 
 // 输入框类名
@@ -311,5 +325,18 @@ defineExpose({
 
 .dark .gv-input__label {
   @apply text-text-inverse;
+}
+
+/* 强制移除默认 outline 和 border */
+.gv-input__inner {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.gv-input__inner:focus {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 </style>

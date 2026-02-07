@@ -1,53 +1,44 @@
 <template>
-  <el-form :model="form" label-width="100px">
-    <el-form-item label="算子代码">
-      <el-input v-model="form.code" placeholder="唯一标识，如 frame_extract" />
-    </el-form-item>
-    <el-form-item label="算子名称">
-      <el-input v-model="form.name" placeholder="请输入算子名称" />
-    </el-form-item>
-    <el-form-item label="描述">
-      <el-input v-model="form.description" type="textarea" :rows="2" />
-    </el-form-item>
-    <el-form-item label="分类">
-      <el-select v-model="form.category" style="width: 100%">
-        <el-option label="分析" value="analysis" />
-        <el-option label="处理" value="processing" />
-        <el-option label="生成" value="generation" />
-        <el-option label="工具" value="utility" />
-      </el-select>
-    </el-form-item>
-    <el-form-item label="类型">
-      <el-input v-model="form.type" placeholder="如 object_detection / transcode" />
-    </el-form-item>
-    <el-form-item label="来源">
-      <el-select v-model="form.origin" style="width: 100%">
-        <el-option label="自定义" value="custom" />
-        <el-option label="内置" value="builtin" />
-        <el-option label="市场" value="marketplace" />
-        <el-option label="MCP" value="mcp" />
-      </el-select>
-    </el-form-item>
-    <el-form-item label="执行模式">
-      <el-select v-model="form.exec_mode" style="width: 100%">
-        <el-option label="HTTP" value="http" />
-        <el-option label="CLI" value="cli" />
-        <el-option label="MCP" value="mcp" />
-      </el-select>
-    </el-form-item>
+  <div class="space-y-4">
+    <GvInput v-model="form.code" label="算子代码" placeholder="唯一标识，如 frame_extract" />
+    <GvInput v-model="form.name" label="算子名称" placeholder="请输入算子名称" />
+    <GvInput v-model="form.description" label="描述" type="textarea" :rows="2" />
+    
+    <div class="grid grid-cols-2 gap-4">
+      <GvSelect
+        v-model="form.category"
+        label="分类"
+        :options="categoryOptions"
+        class="w-full"
+      />
+      <GvInput v-model="form.type" label="类型" placeholder="如 object_detection / transcode" />
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <GvSelect
+        v-model="form.origin"
+        label="来源"
+        :options="originOptions"
+        class="w-full"
+      />
+      <GvSelect
+        v-model="form.exec_mode"
+        label="执行模式"
+        :options="execModeOptions"
+        class="w-full"
+      />
+    </div>
 
     <ExecConfigForm v-model="form.exec_config" :exec-mode="form.exec_mode" />
-
-    <div class="mt-4 flex gap-2">
-      <el-button type="primary" :loading="loading" @click="emit('submit', form)">保存</el-button>
-      <el-button @click="emit('cancel')">取消</el-button>
-    </div>
-  </el-form>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { reactive, watch } from 'vue'
 import ExecConfigForm from './ExecConfigForm.vue'
+import GvInput from '@/components/base/GvInput/index.vue'
+import GvSelect from '@/components/base/GvSelect/index.vue'
+import GvButton from '@/components/base/GvButton/index.vue'
 
 type OperatorFormModel = {
   code: string
@@ -81,6 +72,26 @@ const form = reactive<OperatorFormModel>({
   exec_config: {}
 })
 
+const categoryOptions = [
+  { label: '分析', value: 'analysis' },
+  { label: '处理', value: 'processing' },
+  { label: '生成', value: 'generation' },
+  { label: '工具', value: 'utility' }
+]
+
+const originOptions = [
+  { label: '自定义', value: 'custom' },
+  { label: '内置', value: 'builtin' },
+  { label: '市场', value: 'marketplace' },
+  { label: 'MCP', value: 'mcp' }
+]
+
+const execModeOptions = [
+  { label: 'HTTP', value: 'http' },
+  { label: 'CLI', value: 'cli' },
+  { label: 'MCP', value: 'mcp' }
+]
+
 watch(
   () => props.modelValue,
   (value) => {
@@ -89,4 +100,12 @@ watch(
   },
   { immediate: true, deep: true }
 )
+
+const submit = () => {
+  emit('submit', form)
+}
+
+defineExpose({
+  submit
+})
 </script>

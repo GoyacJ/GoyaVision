@@ -64,6 +64,12 @@ func (h *ActivateVersionHandler) Handle(ctx context.Context, cmd dto.ActivateVer
 		op.ActiveVersionID = &target.ID
 		op.ActiveVersion = target
 		syncOperatorCompatFieldsFromVersion(op, target)
+
+		// 每次切换版本后，将算子状态重置为草稿，强制重新发布以进行完整校验
+		if op.Status == operator.StatusPublished || op.Status == operator.StatusDeprecated {
+			op.Status = operator.StatusDraft
+		}
+
 		if err := repos.Operators.Update(ctx, op); err != nil {
 			return apperr.Wrap(err, apperr.CodeDBError, "failed to update operator active version")
 		}

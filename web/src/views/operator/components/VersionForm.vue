@@ -1,16 +1,13 @@
 <template>
-  <el-form :model="form" label-width="100px">
-    <el-form-item label="版本号">
-      <el-input v-model="form.version" placeholder="如 v1.0.1" />
-    </el-form-item>
+  <div class="space-y-4">
+    <GvInput v-model="form.version" label="版本号" placeholder="如 v1.0.1" />
 
-    <el-form-item label="执行模式">
-      <el-select v-model="form.exec_mode" style="width: 100%">
-        <el-option label="HTTP" value="http" />
-        <el-option label="CLI" value="cli" />
-        <el-option label="MCP" value="mcp" />
-      </el-select>
-    </el-form-item>
+    <GvSelect
+      v-model="form.exec_mode"
+      label="执行模式"
+      :options="execModeOptions"
+      class="w-full"
+    />
 
     <ExecConfigForm v-model="form.exec_config" :exec-mode="form.exec_mode" />
 
@@ -36,10 +33,12 @@
       />
     </div>
 
-    <div class="mt-4">
-      <el-button type="primary" :loading="loading" :disabled="!canSubmit" @click="handleSubmit">创建版本</el-button>
+    <div class="mt-4 flex justify-end">
+      <GvButton variant="filled" color="primary" :loading="loading" :disabled="!canSubmit" @click="handleSubmit">
+        创建版本
+      </GvButton>
     </div>
-  </el-form>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -47,6 +46,9 @@ import { computed, reactive, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import ExecConfigForm from './ExecConfigForm.vue'
 import SchemaEditor from './SchemaEditor.vue'
+import GvInput from '@/components/base/GvInput/index.vue'
+import GvSelect from '@/components/base/GvSelect/index.vue'
+import GvButton from '@/components/base/GvButton/index.vue'
 
 type VersionFormModel = {
   version: string
@@ -87,6 +89,12 @@ const canSubmit = computed(() => {
 })
 
 const semverPattern = /^v?\d+\.\d+\.\d+$/
+
+const execModeOptions = [
+  { label: 'HTTP', value: 'http' },
+  { label: 'CLI', value: 'cli' },
+  { label: 'MCP', value: 'mcp' }
+]
 
 function handleSubmit() {
   if (!semverPattern.test(form.version)) {

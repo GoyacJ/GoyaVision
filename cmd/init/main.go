@@ -112,10 +112,26 @@ func createTables(db *gorm.DB) error {
 	log.Println("  ✓ 已创建/更新以下表:")
 	log.Println("    - users, roles, permissions, menus")
 	log.Println("    - media_sources, media_assets")
-	log.Println("    - operators")
+	log.Println("    - operators, operator_versions, operator_templates, operator_dependencies")
 	log.Println("    - workflows, workflow_nodes, workflow_edges")
 	log.Println("    - tasks, artifacts")
 	log.Println("    - files")
+
+	// 兼容性处理：删除旧版本的 legacy 字段
+	// 由于 operator 重设计去除了这些字段，如果数据库中残留会导致 GORM 插入失败（因旧字段可能为 NOT NULL）
+	legacyColumns := []string{"version", "endpoint", "method", "input_schema", "output_spec", "config", "is_builtin"}
+	migrator := db.Migrator()
+	if migrator.HasTable(&model.OperatorModel{}) {
+		log.Println("  检查并清理 Operator 旧兼容字段...")
+		for _, col := range legacyColumns {
+			if migrator.HasColumn(&model.OperatorModel{}, col) {
+				log.Printf("    - 删除旧字段: %s", col)
+				if err := migrator.DropColumn(&model.OperatorModel{}, col); err != nil {
+					log.Printf("      ⚠️ 删除失败: %v", err)
+				}
+			}
+		}
+	}
 
 	log.Println("✅ 数据库表结构创建完成")
 	return nil
@@ -160,6 +176,21 @@ func initPermissions(ctx context.Context, db *gorm.DB) error {
 		{"operator:delete", "删除算子", "DELETE", "/api/v1/operators/*", ""},
 		{"operator:enable", "启用算子", "PUT", "/api/v1/operators/*/enable", ""},
 		{"operator:disable", "禁用算子", "PUT", "/api/v1/operators/*/disable", ""},
+		{"operator:publish", "发布算子", "POST", "/api/v1/operators/*/publish", ""},
+		{"operator:deprecate", "弃用算子", "POST", "/api/v1/operators/*/deprecate", ""},
+		{"operator:test", "测试算子", "POST", "/api/v1/operators/*/test", ""},
+		{"operator:version:list", "查看版本列表", "GET", "/api/v1/operators/*/versions", ""},
+		{"operator:version:create", "创建版本", "POST", "/api/v1/operators/*/versions", ""},
+		{"operator:version:activate", "激活版本", "POST", "/api/v1/operators/*/versions/activate", ""},
+		{"operator:version:rollback", "回滚版本", "POST", "/api/v1/operators/*/versions/rollback", ""},
+		{"operator:version:archive", "归档版本", "POST", "/api/v1/operators/*/versions/archive", ""},
+		{"operator:template:list", "查看模板列表", "GET", "/api/v1/operators/templates", ""},
+		{"operator:template:install", "安装模板", "POST", "/api/v1/operators/templates/install", ""},
+		{"operator:dependency:list", "查看依赖列表", "GET", "/api/v1/operators/*/dependencies", ""},
+		{"operator:dependency:update", "更新依赖", "PUT", "/api/v1/operators/*/dependencies", ""},
+		{"operator:mcp:list", "查看MCP服务", "GET", "/api/v1/operators/mcp/servers", ""},
+		{"operator:mcp:install", "安装MCP算子", "POST", "/api/v1/operators/mcp/install", ""},
+		{"operator:mcp:sync", "同步MCP模板", "POST", "/api/v1/operators/mcp/sync-templates", ""},
 		{"workflow:list", "查看工作流列表", "GET", "/api/v1/workflows", ""},
 		{"workflow:create", "创建工作流", "POST", "/api/v1/workflows", ""},
 		{"workflow:update", "更新工作流", "PUT", "/api/v1/workflows/*", ""},
@@ -273,8 +304,9 @@ func initMenus(ctx context.Context, db *gorm.DB) error {
 		{uuid.MustParse("00000000-0000-0000-0000-000000000010"), nil, "asset", "媒体资产", 2, "/assets", "Files", "asset/index", "asset:list", 1, true},
 		{uuid.MustParse("00000000-0000-0000-0000-000000000011"), nil, "source", "媒体源", 2, "/sources", "VideoCamera", "source/index", "source:list", 2, true},
 		{uuid.MustParse("00000000-0000-0000-0000-000000000020"), nil, "operator", "算子管理", 2, "/operators", "Cpu", "operator/index", "operator:list", 3, true},
-		{uuid.MustParse("00000000-0000-0000-0000-000000000030"), nil, "workflow", "工作流", 2, "/workflows", "Connection", "workflow/index", "workflow:list", 4, true},
-		{uuid.MustParse("00000000-0000-0000-0000-000000000040"), nil, "task", "任务管理", 2, "/tasks", "List", "task/index", "task:list", 5, true},
+		{uuid.MustParse("00000000-0000-0000-0000-000000000021"), nil, "operator-marketplace", "算子市场", 2, "/operator-marketplace", "Shop", "operator-marketplace/index", "operator:template:list", 4, true},
+		{uuid.MustParse("00000000-0000-0000-0000-000000000030"), nil, "workflow", "工作流", 2, "/workflows", "Connection", "workflow/index", "workflow:list", 5, true},
+		{uuid.MustParse("00000000-0000-0000-0000-000000000040"), nil, "task", "任务管理", 2, "/tasks", "List", "task/index", "task:list", 6, true},
 		{uuid.MustParse("00000000-0000-0000-0000-000000000001"), nil, "system", "系统管理", 1, "/system", "Setting", "", "", 100, true},
 		{uuid.MustParse("00000000-0000-0000-0000-000000000002"), ptrUUID("00000000-0000-0000-0000-000000000001"), "system:user", "用户管理", 2, "/system/user", "User", "system/user/index", "user:list", 1, true},
 		{uuid.MustParse("00000000-0000-0000-0000-000000000003"), ptrUUID("00000000-0000-0000-0000-000000000001"), "system:role", "角色管理", 2, "/system/role", "UserFilled", "system/role/index", "role:list", 2, true},

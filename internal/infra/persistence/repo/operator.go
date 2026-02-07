@@ -59,16 +59,16 @@ func (r *OperatorRepo) List(ctx context.Context, filter operator.Filter) ([]*ope
 	q := r.db.WithContext(ctx).Model(&model.OperatorModel{})
 
 	if filter.Category != nil {
-		q = q.Where("category = ?", string(*filter.Category))
+		q = q.Where("operators.category = ?", string(*filter.Category))
 	}
 	if filter.Type != nil {
-		q = q.Where("type = ?", string(*filter.Type))
+		q = q.Where("operators.type = ?", string(*filter.Type))
 	}
 	if filter.Status != nil {
-		q = q.Where("status = ?", string(*filter.Status))
+		q = q.Where("operators.status = ?", string(*filter.Status))
 	}
 	if filter.Origin != nil {
-		q = q.Where("origin = ?", string(*filter.Origin))
+		q = q.Where("operators.origin = ?", string(*filter.Origin))
 	}
 	if filter.ExecMode != nil {
 		q = q.Joins("LEFT JOIN operator_versions ov ON ov.id = operators.active_version_id").
@@ -76,11 +76,11 @@ func (r *OperatorRepo) List(ctx context.Context, filter operator.Filter) ([]*ope
 	}
 	if len(filter.Tags) > 0 {
 		tagsJSON, _ := json.Marshal(filter.Tags)
-		q = q.Where("tags @> ?::jsonb", string(tagsJSON))
+		q = q.Where("operators.tags @> ?::jsonb", string(tagsJSON))
 	}
 	if filter.Keyword != "" {
 		keyword := "%" + filter.Keyword + "%"
-		q = q.Where("name ILIKE ? OR description ILIKE ? OR code ILIKE ?", keyword, keyword, keyword)
+		q = q.Where("operators.name ILIKE ? OR operators.description ILIKE ? OR operators.code ILIKE ?", keyword, keyword, keyword)
 	}
 
 	var total int64
@@ -92,7 +92,7 @@ func (r *OperatorRepo) List(ctx context.Context, filter operator.Filter) ([]*ope
 	if err := q.Preload("ActiveVersion").
 		Limit(filter.Limit).
 		Offset(filter.Offset).
-		Order("created_at DESC").
+		Order("operators.created_at DESC").
 		Find(&models).Error; err != nil {
 		return nil, 0, err
 	}

@@ -13,7 +13,7 @@ export type InputSize = 'small' | 'medium' | 'large'
 /**
  * 输入框类型
  */
-export type InputType = 'text' | 'password' | 'number' | 'email' | 'tel' | 'url' | 'search'
+export type InputType = 'text' | 'password' | 'number' | 'email' | 'tel' | 'url' | 'search' | 'textarea'
 
 /**
  * 输入框 Props
@@ -127,6 +127,11 @@ export interface InputProps {
    * 标签文本
    */
   label?: string
+
+  /**
+   * 文本域行数
+   */
+  rows?: number
 }
 
 /**
