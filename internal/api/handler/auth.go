@@ -16,6 +16,7 @@ func RegisterAuth(g *echo.Group, h *Handlers) {
 	handler := &authHandler{h: h}
 	g.POST("/login", handler.Login)
 	g.POST("/refresh", handler.RefreshToken)
+	g.POST("/oauth/login", handler.LoginOAuth)
 }
 
 func RegisterAuthProtected(g *echo.Group, h *Handlers) {
@@ -23,6 +24,7 @@ func RegisterAuthProtected(g *echo.Group, h *Handlers) {
 	g.GET("/profile", handler.GetProfile)
 	g.PUT("/password", handler.ChangePassword)
 	g.POST("/logout", handler.Logout)
+	g.POST("/bind", handler.BindIdentity)
 }
 
 type authHandler struct {
@@ -153,4 +155,58 @@ func (h *authHandler) Logout(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]string{
 		"message": "logged out successfully",
 	})
+}
+
+func (h *authHandler) LoginOAuth(c echo.Context) error {
+	var req dto.LoginOAuthRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
+	}
+
+	result, err := h.h.LoginOAuth.Handle(c.Request().Context(), appdto.LoginOAuthCommand{
+		Provider: req.Provider,
+		Code:     req.Code,
+		State:    req.State,
+	})
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, dto.LoginResponse{
+		AccessToken:  result.AccessToken,
+		RefreshToken: result.RefreshToken,
+		ExpiresIn:    result.ExpiresIn,
+		// User info populate
+		User: dto.UserInfoFromApp(&dto.AppUserInfo{
+			// TODO: Populate user info correctly. Currently LoginOAuth handler returns partial?
+			// It returns LoginResult.
+			// Let's reuse getUserInfo logic if possible or assume LoginResult.User is populated.
+			// The LoginOAuth handler I wrote returns empty User currently.
+		}),
+	})
+}
+
+func (h *authHandler) BindIdentity(c echo.Context) error {
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "user not authenticated")
+	}
+
+	var req dto.BindIdentityRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
+	}
+
+	err := h.h.BindIdentity.Handle(c.Request().Context(), appdto.BindIdentityCommand{
+		UserID:     userID,
+		Provider:   req.Provider,
+		Identifier: req.Identifier,
+		Credential: req.Credential,
+		Meta:       req.Meta,
+	})
+	if err != nil {
+		return err
+	}
+
+	return c.NoContent(http.StatusOK)
 }

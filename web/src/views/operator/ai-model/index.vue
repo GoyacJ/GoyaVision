@@ -6,6 +6,20 @@
     >
       <template #actions>
         <GvSpace>
+          <GvSelect
+            v-model="filterProvider"
+            placeholder="提供商"
+            :options="[{ label: '全部提供商', value: '' }, ...providerOptions]"
+            class="w-36"
+            @change="refreshTable"
+          />
+          <GvSelect
+            v-model="filterStatus"
+            placeholder="状态"
+            :options="[{ label: '全部状态', value: '' }, ...statusOptions]"
+            class="w-28"
+            @change="refreshTable"
+          />
           <SearchBar
             v-model="searchKeyword"
             placeholder="搜索模型"
@@ -40,17 +54,31 @@
           {{ row.provider }}
         </GvTag>
       </template>
-      
+
+      <template #has_api_key="{ row }">
+        <GvTag :color="row.has_api_key ? 'success' : 'neutral'" size="small">
+          {{ row.has_api_key ? '已配置' : '未配置' }}
+        </GvTag>
+      </template>
+
       <template #status="{ row }">
         <StatusBadge :status="row.status === 'active' ? 'active' : 'disabled'" />
       </template>
-      
+
       <template #created_at="{ row }">
         {{ formatDate(row.created_at) }}
       </template>
-      
+
       <template #actions="{ row }">
         <GvSpace size="xs">
+          <GvButton
+            size="small"
+            variant="text"
+            :loading="testingId === row.id"
+            @click="handleTestConnection(row)"
+          >
+            测试连接
+          </GvButton>
           <GvButton size="small" variant="text" @click="handleEdit(row)">
             编辑
           </GvButton>
@@ -73,6 +101,7 @@
     >
       <div class="space-y-4">
         <GvInput v-model="form.name" label="名称" placeholder="如 GPT-4, Llama3" />
+        <GvInput v-model="form.description" label="描述" type="textarea" :rows="2" placeholder="模型用途说明 (可选)" />
         <GvSelect
           v-model="form.provider"
           label="提供商"
@@ -80,9 +109,24 @@
           class="w-full"
         />
         <GvInput v-model="form.endpoint" label="Endpoint" placeholder="API 地址 (可选)" />
-        <GvInput v-model="form.api_key" label="API Key" type="password" show-password placeholder="密钥 (可选)" />
+        <div class="space-y-1.5">
+          <label class="block text-sm font-medium text-text-primary">API Key</label>
+          <div class="flex items-center gap-2">
+            <GvInput
+              v-model="form.api_key"
+              type="password"
+              show-password
+              placeholder="密钥 (可选)"
+              class="flex-1"
+            />
+            <GvTag v-if="isEdit" :color="editHasApiKey ? 'success' : 'neutral'" size="small">
+              {{ editHasApiKey ? '已配置' : '未配置' }}
+            </GvTag>
+          </div>
+          <p v-if="isEdit" class="text-xs text-text-tertiary">留空则不更新密钥</p>
+        </div>
         <GvInput v-model="form.model_name" label="模型标识" placeholder="如 gpt-4-turbo" />
-        
+
         <div class="space-y-1.5">
           <label class="block text-sm font-medium text-text-primary">额外配置 (JSON)</label>
           <SchemaEditor
@@ -107,7 +151,7 @@
 import { ref, reactive, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import { aiModelApi, type AIModel, type AIModelCreateReq } from '@/api/ai-model'
+import { aiModelApi, type AIModel } from '@/api/ai-model'
 import { useTable } from '@/composables'
 import GvContainer from '@/components/layout/GvContainer/index.vue'
 import GvTable from '@/components/base/GvTable/index.vue'
@@ -124,13 +168,18 @@ import SchemaEditor from '@/views/operator/components/SchemaEditor.vue'
 import type { TableColumn } from '@/components/base/GvTable/types'
 
 const searchKeyword = ref('')
+const filterProvider = ref('')
+const filterStatus = ref('')
 const showDialog = ref(false)
 const submitting = ref(false)
 const isEdit = ref(false)
 const editId = ref('')
+const editHasApiKey = ref(false)
+const testingId = ref('')
 
 const form = reactive({
   name: '',
+  description: '',
   provider: 'openai',
   endpoint: '',
   api_key: '',
@@ -148,7 +197,12 @@ const {
   refreshTable
 } = useTable(
   async (params) => {
-    const res = await aiModelApi.list({ ...params, keyword: searchKeyword.value })
+    const res = await aiModelApi.list({
+      ...params,
+      keyword: searchKeyword.value || undefined,
+      provider: filterProvider.value || undefined,
+      status: filterStatus.value || undefined
+    })
     return { items: res.data?.items ?? [], total: res.data?.total ?? 0 }
   },
   {
@@ -171,13 +225,15 @@ const statusOptions = [
 ]
 
 const columns: TableColumn[] = [
-  { prop: 'name', label: '名称', minWidth: '150' },
+  { prop: 'name', label: '名称', minWidth: '140' },
+  { prop: 'description', label: '描述', minWidth: '160', showOverflowTooltip: true },
   { prop: 'provider', label: '提供商', width: '120' },
-  { prop: 'model_name', label: '模型标识', minWidth: '150' },
-  { prop: 'endpoint', label: 'Endpoint', minWidth: '200', showOverflowTooltip: true },
+  { prop: 'model_name', label: '模型标识', minWidth: '140' },
+  { prop: 'endpoint', label: 'Endpoint', minWidth: '180', showOverflowTooltip: true },
+  { prop: 'has_api_key', label: 'API Key', width: '100' },
   { prop: 'status', label: '状态', width: '100' },
   { prop: 'created_at', label: '创建时间', width: '160' },
-  { prop: 'actions', label: '操作', width: '150', fixed: 'right' }
+  { prop: 'actions', label: '操作', width: '200', fixed: 'right' }
 ]
 
 const paginationConfig = computed(() => ({
@@ -208,6 +264,7 @@ function formatDate(dateStr: string): string {
 
 function resetForm() {
   form.name = ''
+  form.description = ''
   form.provider = 'openai'
   form.endpoint = ''
   form.api_key = ''
@@ -219,6 +276,7 @@ function resetForm() {
 function openCreateDialog() {
   isEdit.value = false
   editId.value = ''
+  editHasApiKey.value = false
   resetForm()
   showDialog.value = true
 }
@@ -226,14 +284,32 @@ function openCreateDialog() {
 function handleEdit(row: AIModel) {
   isEdit.value = true
   editId.value = row.id
+  editHasApiKey.value = row.has_api_key
   form.name = row.name
+  form.description = row.description || ''
   form.provider = row.provider
   form.endpoint = row.endpoint
-  form.api_key = '' // API Key usually not returned or masked, leave empty to not update
+  form.api_key = ''
   form.model_name = row.model_name
   form.config = row.config || {}
   form.status = row.status
   showDialog.value = true
+}
+
+async function handleTestConnection(row: AIModel) {
+  testingId.value = row.id
+  try {
+    const res = await aiModelApi.testConnection(row.id)
+    if (res.data?.success) {
+      ElMessage.success(res.data.message || '连接成功')
+    } else {
+      ElMessage.error(res.data?.message || '连接失败')
+    }
+  } catch (error: any) {
+    ElMessage.error(error.response?.data?.message || '测试连接失败')
+  } finally {
+    testingId.value = ''
+  }
 }
 
 async function handleSubmit() {
@@ -241,11 +317,12 @@ async function handleSubmit() {
     ElMessage.warning('请填写名称和提供商')
     return
   }
-  
+
   submitting.value = true
   try {
     const data: any = {
       name: form.name,
+      description: form.description,
       provider: form.provider,
       endpoint: form.endpoint,
       model_name: form.model_name,
@@ -254,7 +331,7 @@ async function handleSubmit() {
     if (form.api_key) {
       data.api_key = form.api_key
     }
-    
+
     if (isEdit.value) {
       data.status = form.status
       await aiModelApi.update(editId.value, data)

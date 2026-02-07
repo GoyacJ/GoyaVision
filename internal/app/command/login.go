@@ -103,7 +103,8 @@ func (h *LoginHandler) getUserInfo(ctx context.Context, userID uuid.UUID) (*dto.
 		var allMenus []*identity.Menu
 		err := h.uow.Do(ctx, func(ctx context.Context, repos *port.Repositories) error {
 			var err error
-			allMenus, err = repos.Menus.List(ctx, nil)
+			enabled := 1
+			allMenus, err = repos.Menus.List(ctx, &enabled)
 			return err
 		})
 		if err != nil {

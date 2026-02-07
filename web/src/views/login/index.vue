@@ -59,6 +59,24 @@
           </el-button>
         </el-form-item>
       </el-form>
+
+      <div class="mt-6 mb-4 flex items-center gap-3">
+        <div class="h-px bg-gray-200 flex-1"></div>
+        <span class="text-xs text-gray-400">其他登录方式</span>
+        <div class="h-px bg-gray-200 flex-1"></div>
+      </div>
+      <div class="flex justify-center gap-6 mb-6">
+        <div 
+          v-for="item in loginMethods" 
+          :key="item.key"
+          class="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors border border-gray-200"
+          @click="handleOtherLogin(item.key)"
+          :title="item.label"
+        >
+          <span class="text-sm font-bold text-gray-600">{{ item.icon }}</span>
+        </div>
+      </div>
+
       <div class="login-footer">
         <div class="footer-tip">
           <el-icon><InfoFilled /></el-icon>
@@ -98,6 +116,21 @@ const loginRules: FormRules = {
     { required: true, message: '请输入密码', trigger: 'blur' },
     { min: 6, message: '密码长度至少6位', trigger: 'blur' }
   ]
+}
+
+const loginMethods = [
+  { key: 'github', label: 'Github', icon: 'G' },
+  { key: 'wechat', label: '微信', icon: 'W' },
+  { key: 'phone', label: '手机号', icon: 'P' }
+]
+
+function handleOtherLogin(type: string) {
+  if (type === 'phone') {
+    ElMessage.info('手机号登录功能开发中')
+    return
+  }
+  // Redirect to OAuth endpoint
+  window.location.href = `/api/v1/auth/oauth/login?provider=${type}`
 }
 
 async function handleLogin() {

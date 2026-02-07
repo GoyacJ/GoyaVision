@@ -11,17 +11,18 @@ import (
 )
 
 type Config struct {
-	Env      string
-	Server   Server
-	DB       DB
-	FFmpeg   FFmpeg
-	Preview  Preview
-	Record   Record
-	AI       AI
-	JWT      JWT
-	MediaMTX MediaMTX
-	MinIO    MinIO
-	MCP      MCP
+	Env        string
+	Server     Server
+	DB         DB
+	FFmpeg     FFmpeg
+	Preview    Preview
+	Record     Record
+	AI         AI
+	JWT        JWT
+	MediaMTX   MediaMTX
+	MinIO      MinIO
+	MCP        MCP
+	EncryptKey string
 }
 
 type MCP struct {
@@ -217,6 +218,8 @@ func Load() (*Config, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
+
+	cfg.EncryptKey = v.GetString("encrypt_key")
 
 	_ = v.UnmarshalKey("mcp", &cfg.MCP)
 	return cfg, nil

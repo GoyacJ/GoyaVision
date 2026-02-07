@@ -8,9 +8,10 @@ import (
 )
 
 type AIModelModel struct {
-	ID        uuid.UUID      `gorm:"type:uuid;primaryKey"`
-	Name      string         `gorm:"type:varchar(100);not null"`
-	Provider  string         `gorm:"type:varchar(50);not null"`
+	ID          uuid.UUID      `gorm:"type:uuid;primaryKey"`
+	Name        string         `gorm:"type:varchar(100);not null"`
+	Description string         `gorm:"type:text"`
+	Provider    string         `gorm:"type:varchar(50);not null"`
 	Endpoint  string         `gorm:"type:varchar(255)"`
 	APIKey    string         `gorm:"type:varchar(255)"`
 	ModelName string         `gorm:"type:varchar(100)"`

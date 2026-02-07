@@ -72,6 +72,23 @@ func (e *HTTPOperatorExecutor) Execute(ctx context.Context, version *operator.Op
 		req.Header.Set(k, v)
 	}
 
+	switch httpCfg.AuthType {
+	case "bearer":
+		if token := httpCfg.AuthConfig["token"]; token != "" {
+			req.Header.Set("Authorization", "Bearer "+token)
+		}
+	case "api_key":
+		headerName := httpCfg.AuthConfig["header_name"]
+		if headerName == "" {
+			headerName = "X-API-Key"
+		}
+		if key := httpCfg.AuthConfig["api_key"]; key != "" {
+			req.Header.Set(headerName, key)
+		}
+	case "basic":
+		req.SetBasicAuth(httpCfg.AuthConfig["username"], httpCfg.AuthConfig["password"])
+	}
+
 	resp, err := e.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute request: %w", err)

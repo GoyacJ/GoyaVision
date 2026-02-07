@@ -49,7 +49,13 @@
         </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
-            <StatusBadge :status="row.status === 1 ? 'enabled' : 'disabled'" />
+            <el-switch
+              v-model="row.status"
+              :active-value="1"
+              :inactive-value="0"
+              :loading="row.statusLoading"
+              @change="(val) => handleStatusChange(row, val)"
+            />
           </template>
         </el-table-column>
         <el-table-column label="操作" width="240" fixed="right">
@@ -220,6 +226,22 @@ async function loadData() {
     ElMessage.error(error.message || '加载失败')
   } finally {
     loading.value = false
+  }
+}
+
+async function handleStatusChange(row: any, val: number | string | boolean) {
+  if (!row || !row.id) return
+  row.statusLoading = true
+  try {
+    await menuApi.update(row.id, {
+      status: val as number
+    })
+    ElMessage.success('状态更新成功')
+  } catch (error) {
+    row.status = val === 1 ? 0 : 1
+    ElMessage.error('状态更新失败')
+  } finally {
+    row.statusLoading = false
   }
 }
 

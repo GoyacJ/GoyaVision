@@ -9,12 +9,19 @@ export interface Permission {
   description: string
 }
 
+export interface AutoAssignConfig {
+  trigger: string
+  conditions: Record<string, string>
+}
+
 export interface Role {
   id: string
   code: string
   name: string
   description: string
   status: number
+  is_default: boolean
+  auto_assign_config?: AutoAssignConfig
   permissions: { id: string; code: string; name: string }[]
   menus: { id: string; code: string; name: string }[]
   created_at: string
@@ -26,6 +33,8 @@ export interface CreateRoleRequest {
   name: string
   description?: string
   status?: number
+  is_default?: boolean
+  auto_assign_config?: AutoAssignConfig
   permission_ids?: string[]
   menu_ids?: string[]
 }
@@ -34,6 +43,8 @@ export interface UpdateRoleRequest {
   name?: string
   description?: string
   status?: number
+  is_default?: boolean
+  auto_assign_config?: AutoAssignConfig
   permission_ids?: string[]
   menu_ids?: string[]
 }

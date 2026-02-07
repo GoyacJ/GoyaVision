@@ -61,7 +61,7 @@ func (r *UserRepo) List(ctx context.Context, status *int, limit, offset int) ([]
 		return nil, 0, err
 	}
 	var models []*model.UserModel
-	if err := q.Limit(limit).Offset(offset).Order("created_at DESC").Find(&models).Error; err != nil {
+	if err := q.Preload("Roles").Limit(limit).Offset(offset).Order("created_at DESC").Find(&models).Error; err != nil {
 		return nil, 0, err
 	}
 	result := make([]*identity.User, len(models))
@@ -197,6 +197,18 @@ func (r *RoleRepo) SetMenus(ctx context.Context, roleID uuid.UUID, menuIDs []uui
 		}
 	}
 	return r.db.WithContext(ctx).Model(&role).Association("Menus").Replace(menus)
+}
+
+func (r *RoleRepo) GetDefaultRoles(ctx context.Context) ([]*identity.Role, error) {
+	var models []*model.RoleModel
+	if err := r.db.WithContext(ctx).Where("is_default = ?", true).Find(&models).Error; err != nil {
+		return nil, err
+	}
+	result := make([]*identity.Role, len(models))
+	for i, m := range models {
+		result[i] = mapper.RoleToDomain(m)
+	}
+	return result, nil
 }
 
 type PermissionRepo struct {
@@ -344,6 +356,7 @@ func (r *MenuRepo) GetByRoleIDs(ctx context.Context, roleIDs []uuid.UUID) ([]*id
 		Distinct().
 		Joins("JOIN role_menus ON role_menus.menu_id = menus.id").
 		Where("role_menus.role_id IN ?", roleIDs).
+		Where("menus.status = ?", 1). // 只返回启用的菜单
 		Order("menus.sort, menus.created_at").
 		Find(&models).Error
 	if err != nil {

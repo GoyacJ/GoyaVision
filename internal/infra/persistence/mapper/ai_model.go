@@ -11,9 +11,10 @@ import (
 
 func AIModelToModel(d *ai_model.AIModel) *model.AIModelModel {
 	m := &model.AIModelModel{
-		ID:        d.ID,
-		Name:      d.Name,
-		Provider:  string(d.Provider),
+		ID:          d.ID,
+		Name:        d.Name,
+		Description: d.Description,
+		Provider:    string(d.Provider),
 		Endpoint:  d.Endpoint,
 		APIKey:    d.APIKey,
 		ModelName: d.ModelName,
@@ -30,9 +31,10 @@ func AIModelToModel(d *ai_model.AIModel) *model.AIModelModel {
 
 func AIModelToDomain(m *model.AIModelModel) *ai_model.AIModel {
 	d := &ai_model.AIModel{
-		ID:        m.ID,
-		Name:      m.Name,
-		Provider:  ai_model.Provider(m.Provider),
+		ID:          m.ID,
+		Name:        m.Name,
+		Description: m.Description,
+		Provider:    ai_model.Provider(m.Provider),
 		Endpoint:  m.Endpoint,
 		APIKey:    m.APIKey,
 		ModelName: m.ModelName,

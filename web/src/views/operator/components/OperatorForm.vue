@@ -3,7 +3,7 @@
     <GvInput v-model="form.code" label="算子代码" placeholder="唯一标识，如 frame_extract" />
     <GvInput v-model="form.name" label="算子名称" placeholder="请输入算子名称" />
     <GvInput v-model="form.description" label="描述" type="textarea" :rows="2" />
-    
+
     <div class="grid grid-cols-2 gap-4">
       <GvSelect
         v-model="form.category"
@@ -29,26 +29,15 @@
       />
     </div>
 
-    <GvSelect
-      v-model="form.ai_model_id"
-      label="AI 模型"
-      :options="aiModelOptions"
-      placeholder="选择关联的 AI 模型 (可选)"
-      clearable
-      class="w-full"
-    />
-
     <ExecConfigForm v-model="form.exec_config" :exec-mode="form.exec_mode" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { reactive, watch, ref } from 'vue'
-import { aiModelApi } from '@/api/ai-model'
+import { reactive, watch } from 'vue'
 import ExecConfigForm from './ExecConfigForm.vue'
 import GvInput from '@/components/base/GvInput/index.vue'
 import GvSelect from '@/components/base/GvSelect/index.vue'
-import GvButton from '@/components/base/GvButton/index.vue'
 
 type OperatorFormModel = {
   code: string
@@ -57,9 +46,8 @@ type OperatorFormModel = {
   category: 'analysis' | 'processing' | 'generation' | 'utility'
   type: string
   origin: 'custom' | 'builtin' | 'marketplace' | 'mcp'
-  exec_mode: 'http' | 'cli' | 'mcp'
+  exec_mode: 'http' | 'cli' | 'mcp' | 'ai_model'
   exec_config?: Record<string, any>
-  ai_model_id?: string
 }
 
 const props = defineProps<{
@@ -80,23 +68,8 @@ const form = reactive<OperatorFormModel>({
   type: '',
   origin: 'custom',
   exec_mode: 'http',
-  exec_config: {},
-  ai_model_id: ''
+  exec_config: {}
 })
-
-const aiModelOptions = ref<Array<{ label: string; value: string }>>([])
-const loadAIModels = async () => {
-  try {
-    const res = await aiModelApi.list({ page: 1, page_size: 100 })
-    aiModelOptions.value = (res.data?.items || []).map((m: any) => ({
-      label: m.name,
-      value: m.id
-    }))
-  } catch (e) {
-    console.error(e)
-  }
-}
-loadAIModels()
 
 const categoryOptions = [
   { label: '分析', value: 'analysis' },
@@ -115,7 +88,8 @@ const originOptions = [
 const execModeOptions = [
   { label: 'HTTP', value: 'http' },
   { label: 'CLI', value: 'cli' },
-  { label: 'MCP', value: 'mcp' }
+  { label: 'MCP', value: 'mcp' },
+  { label: 'AI 模型', value: 'ai_model' }
 ]
 
 watch(

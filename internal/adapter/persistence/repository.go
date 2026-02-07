@@ -39,25 +39,27 @@ type repository struct {
 	tasks     *repo.TaskRepo
 	artifacts *repo.ArtifactRepo
 
-	files    *repo.FileRepo
-	aiModels *repo.AIModelRepo
+	files          *repo.FileRepo
+	aiModels       *repo.AIModelRepo
+	userIdentities *repo.UserIdentityRepo
 }
 
 func NewRepository(db *gorm.DB) *repository {
 	return &repository{
-		db:          db,
-		users:       repo.NewUserRepo(db),
-		roles:       repo.NewRoleRepo(db),
-		permissions: repo.NewPermissionRepo(db),
-		menus:       repo.NewMenuRepo(db),
-		assets:      repo.NewMediaAssetRepo(db),
-		sources:     repo.NewMediaSourceRepo(db),
-		operators:   repo.NewOperatorRepo(db),
-		workflows:   repo.NewWorkflowRepo(db),
-		tasks:       repo.NewTaskRepo(db),
-		artifacts:   repo.NewArtifactRepo(db),
-		files:       repo.NewFileRepo(db),
-		aiModels:    repo.NewAIModelRepo(db),
+		db:             db,
+		users:          repo.NewUserRepo(db),
+		roles:          repo.NewRoleRepo(db),
+		permissions:    repo.NewPermissionRepo(db),
+		menus:          repo.NewMenuRepo(db),
+		assets:         repo.NewMediaAssetRepo(db),
+		sources:        repo.NewMediaSourceRepo(db),
+		operators:      repo.NewOperatorRepo(db),
+		workflows:      repo.NewWorkflowRepo(db),
+		tasks:          repo.NewTaskRepo(db),
+		artifacts:      repo.NewArtifactRepo(db),
+		files:          repo.NewFileRepo(db),
+		aiModels:       repo.NewAIModelRepo(db),
+		userIdentities: repo.NewUserIdentityRepo(db),
 	}
 }
 
@@ -90,6 +92,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&model.ArtifactModel{},
 		&model.FileModel{},
 		&model.AIModelModel{},
+		&model.UserIdentityModel{},
 	)
 }
 
@@ -212,6 +215,49 @@ func (r *repository) SetRoleMenus(ctx context.Context, roleID uuid.UUID, menuIDs
 		return err
 	}
 	return r.roles.SetMenus(ctx, roleID, menuIDs)
+}
+
+func (r *repository) GetDefaultRoles(ctx context.Context) ([]*identity.Role, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	return r.roles.GetDefaultRoles(ctx)
+}
+
+// UserIdentity methods
+func (r *repository) CreateUserIdentity(ctx context.Context, i *identity.UserIdentity) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.userIdentities.Create(ctx, i)
+}
+
+func (r *repository) GetUserIdentity(ctx context.Context, id uuid.UUID) (*identity.UserIdentity, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	return r.userIdentities.Get(ctx, id)
+}
+
+func (r *repository) GetUserIdentityByIdentifier(ctx context.Context, identityType identity.IdentityType, identifier string) (*identity.UserIdentity, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	return r.userIdentities.GetByIdentifier(ctx, identityType, identifier)
+}
+
+func (r *repository) ListUserIdentities(ctx context.Context, userID uuid.UUID) ([]*identity.UserIdentity, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	return r.userIdentities.ListByUserID(ctx, userID)
+}
+
+func (r *repository) DeleteUserIdentity(ctx context.Context, id uuid.UUID) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.userIdentities.Delete(ctx, id)
 }
 
 // Permission methods

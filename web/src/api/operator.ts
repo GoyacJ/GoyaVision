@@ -3,7 +3,7 @@ import apiClient from './client'
 export type OperatorCategory = 'analysis' | 'processing' | 'generation' | 'utility'
 export type OperatorStatus = 'draft' | 'testing' | 'published' | 'deprecated'
 export type OperatorOrigin = 'builtin' | 'custom' | 'marketplace' | 'mcp'
-export type OperatorExecMode = 'http' | 'cli' | 'mcp'
+export type OperatorExecMode = 'http' | 'cli' | 'mcp' | 'ai_model'
 
 export interface OperatorVersion {
   id: string

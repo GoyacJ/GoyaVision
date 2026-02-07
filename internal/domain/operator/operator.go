@@ -49,9 +49,10 @@ const (
 type ExecMode string
 
 const (
-	ExecModeHTTP ExecMode = "http"
-	ExecModeCLI  ExecMode = "cli"
-	ExecModeMCP  ExecMode = "mcp"
+	ExecModeHTTP    ExecMode = "http"
+	ExecModeCLI     ExecMode = "cli"
+	ExecModeMCP     ExecMode = "mcp"
+	ExecModeAIModel ExecMode = "ai_model"
 )
 
 type Origin string
@@ -71,8 +72,6 @@ type Operator struct {
 	Category    Category
 	Type        Type
 	Origin      Origin
-
-	AIModelID *uuid.UUID
 
 	// 版本化字段
 	ActiveVersionID *uuid.UUID

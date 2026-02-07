@@ -5,23 +5,25 @@ import (
 )
 
 type CreateAIModelCommand struct {
-	Name      string
-	Provider  string
-	Endpoint  string
-	APIKey    string
-	ModelName string
-	Config    map[string]interface{}
+	Name        string
+	Description string
+	Provider    string
+	Endpoint    string
+	APIKey      string
+	ModelName   string
+	Config      map[string]interface{}
 }
 
 type UpdateAIModelCommand struct {
-	ID        uuid.UUID
-	Name      *string
-	Provider  *string
-	Endpoint  *string
-	APIKey    *string
-	ModelName *string
-	Config    map[string]interface{}
-	Status    *string
+	ID          uuid.UUID
+	Name        *string
+	Description *string
+	Provider    *string
+	Endpoint    *string
+	APIKey      *string
+	ModelName   *string
+	Config      map[string]interface{}
+	Status      *string
 }
 
 type DeleteAIModelCommand struct {
@@ -33,6 +35,17 @@ type GetAIModelQuery struct {
 }
 
 type ListAIModelsQuery struct {
-	Keyword string
+	Keyword  string
+	Provider *string
+	Status   *string
 	Pagination
+}
+
+type TestAIModelCommand struct {
+	ID uuid.UUID
+}
+
+type TestAIModelResult struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
 }

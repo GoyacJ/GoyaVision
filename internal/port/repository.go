@@ -34,6 +34,14 @@ type Repository interface {
 	DeleteRole(ctx context.Context, id uuid.UUID) error
 	SetRolePermissions(ctx context.Context, roleID uuid.UUID, permissionIDs []uuid.UUID) error
 	SetRoleMenus(ctx context.Context, roleID uuid.UUID, menuIDs []uuid.UUID) error
+	GetDefaultRoles(ctx context.Context) ([]*identity.Role, error)
+
+	// UserIdentity
+	CreateUserIdentity(ctx context.Context, i *identity.UserIdentity) error
+	GetUserIdentity(ctx context.Context, id uuid.UUID) (*identity.UserIdentity, error)
+	GetUserIdentityByIdentifier(ctx context.Context, identityType identity.IdentityType, identifier string) (*identity.UserIdentity, error)
+	ListUserIdentities(ctx context.Context, userID uuid.UUID) ([]*identity.UserIdentity, error)
+	DeleteUserIdentity(ctx context.Context, id uuid.UUID) error
 
 	// Permission
 	CreatePermission(ctx context.Context, p *identity.Permission) error

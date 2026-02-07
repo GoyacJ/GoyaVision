@@ -75,8 +75,19 @@ func (s *UserService) Create(ctx context.Context, req *CreateUserRequest) (*iden
 		return nil, err
 	}
 
-	if len(req.RoleIDs) > 0 {
-		if err := s.repo.SetUserRoles(ctx, user.ID, req.RoleIDs); err != nil {
+	roleIDs := req.RoleIDs
+	if len(roleIDs) == 0 {
+		// 分配默认角色
+		defaultRoles, err := s.repo.GetDefaultRoles(ctx)
+		if err == nil && len(defaultRoles) > 0 {
+			for _, r := range defaultRoles {
+				roleIDs = append(roleIDs, r.ID)
+			}
+		}
+	}
+
+	if len(roleIDs) > 0 {
+		if err := s.repo.SetUserRoles(ctx, user.ID, roleIDs); err != nil {
 			return nil, err
 		}
 	}
@@ -186,12 +197,14 @@ func NewRoleService(repo port.Repository) *RoleService {
 }
 
 type CreateRoleRequest struct {
-	Code          string
-	Name          string
-	Description   string
-	Status        int
-	PermissionIDs []uuid.UUID
-	MenuIDs       []uuid.UUID
+	Code             string
+	Name             string
+	Description      string
+	Status           int
+	IsDefault        bool
+	AutoAssignConfig *identity.AutoAssignConfig
+	PermissionIDs    []uuid.UUID
+	MenuIDs          []uuid.UUID
 }
 
 func (s *RoleService) Create(ctx context.Context, req *CreateRoleRequest) (*identity.Role, error) {
@@ -206,9 +219,11 @@ func (s *RoleService) Create(ctx context.Context, req *CreateRoleRequest) (*iden
 	role := &identity.Role{
 		ID:          uuid.New(),
 		Code:        req.Code,
-		Name:        req.Name,
-		Description: req.Description,
-		Status:      req.Status,
+		Name:             req.Name,
+		Description:      req.Description,
+		Status:           req.Status,
+		IsDefault:        req.IsDefault,
+		AutoAssignConfig: req.AutoAssignConfig,
 	}
 
 	if role.Status == 0 {
@@ -243,11 +258,13 @@ func (s *RoleService) List(ctx context.Context, status *int) ([]*identity.Role, 
 }
 
 type UpdateRoleRequest struct {
-	Name          *string
-	Description   *string
-	Status        *int
-	PermissionIDs []uuid.UUID
-	MenuIDs       []uuid.UUID
+	Name             *string
+	Description      *string
+	Status           *int
+	IsDefault        *bool
+	AutoAssignConfig *identity.AutoAssignConfig
+	PermissionIDs    []uuid.UUID
+	MenuIDs          []uuid.UUID
 }
 
 func (s *RoleService) Update(ctx context.Context, id uuid.UUID, req *UpdateRoleRequest) (*identity.Role, error) {
@@ -267,6 +284,12 @@ func (s *RoleService) Update(ctx context.Context, id uuid.UUID, req *UpdateRoleR
 	}
 	if req.Status != nil {
 		role.Status = *req.Status
+	}
+	if req.IsDefault != nil {
+		role.IsDefault = *req.IsDefault
+	}
+	if req.AutoAssignConfig != nil {
+		role.AutoAssignConfig = req.AutoAssignConfig
 	}
 
 	if err := s.repo.UpdateRole(ctx, role); err != nil {

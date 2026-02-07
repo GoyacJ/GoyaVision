@@ -5,6 +5,7 @@ import (
 
 	"goyavision/internal/api/dto"
 	"goyavision/internal/app"
+	"goyavision/internal/domain/identity"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -61,13 +62,23 @@ func (h *roleHandler) Create(c echo.Context) error {
 		})
 	}
 
+	var autoAssignConfig *identity.AutoAssignConfig
+	if req.AutoAssignConfig != nil {
+		autoAssignConfig = &identity.AutoAssignConfig{
+			Trigger:    req.AutoAssignConfig.Trigger,
+			Conditions: req.AutoAssignConfig.Conditions,
+		}
+	}
+
 	role, err := h.svc.Create(c.Request().Context(), &app.CreateRoleRequest{
-		Code:          req.Code,
-		Name:          req.Name,
-		Description:   req.Description,
-		Status:        req.Status,
-		PermissionIDs: req.PermissionIDs,
-		MenuIDs:       req.MenuIDs,
+		Code:             req.Code,
+		Name:             req.Name,
+		Description:      req.Description,
+		Status:           req.Status,
+		IsDefault:        req.IsDefault,
+		AutoAssignConfig: autoAssignConfig,
+		PermissionIDs:    req.PermissionIDs,
+		MenuIDs:          req.MenuIDs,
 	})
 	if err != nil {
 		if err == app.ErrRoleCodeExists {
@@ -130,12 +141,22 @@ func (h *roleHandler) Update(c echo.Context) error {
 		})
 	}
 
+	var autoAssignConfig *identity.AutoAssignConfig
+	if req.AutoAssignConfig != nil {
+		autoAssignConfig = &identity.AutoAssignConfig{
+			Trigger:    req.AutoAssignConfig.Trigger,
+			Conditions: req.AutoAssignConfig.Conditions,
+		}
+	}
+
 	role, err := h.svc.Update(c.Request().Context(), id, &app.UpdateRoleRequest{
-		Name:          req.Name,
-		Description:   req.Description,
-		Status:        req.Status,
-		PermissionIDs: req.PermissionIDs,
-		MenuIDs:       req.MenuIDs,
+		Name:             req.Name,
+		Description:      req.Description,
+		Status:           req.Status,
+		IsDefault:        req.IsDefault,
+		AutoAssignConfig: autoAssignConfig,
+		PermissionIDs:    req.PermissionIDs,
+		MenuIDs:          req.MenuIDs,
 	})
 	if err != nil {
 		if err == app.ErrRoleNotFound {

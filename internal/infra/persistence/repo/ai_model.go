@@ -49,7 +49,13 @@ func (r *AIModelRepo) List(ctx context.Context, filter ai_model.Filter) ([]*ai_m
 
 	if filter.Keyword != "" {
 		k := "%" + filter.Keyword + "%"
-		q = q.Where("name ILIKE ?", k)
+		q = q.Where("name ILIKE ? OR description ILIKE ?", k, k)
+	}
+	if filter.Provider != nil {
+		q = q.Where("provider = ?", string(*filter.Provider))
+	}
+	if filter.Status != nil {
+		q = q.Where("status = ?", string(*filter.Status))
 	}
 
 	var total int64

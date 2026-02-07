@@ -36,7 +36,13 @@
       </template>
       
       <template #status="{ row }">
-        <StatusBadge :status="row.status === 1 ? 'enabled' : 'disabled'" />
+        <el-switch
+          v-model="row.status"
+          :active-value="1"
+          :inactive-value="0"
+          :loading="row.statusLoading"
+          @change="(val) => handleStatusChange(row, val)"
+        />
       </template>
       
       <template #created_at="{ row }">
@@ -226,6 +232,22 @@ function handleSizeChange(size: number) {
   pageSize.value = size
   currentPage.value = 1
   loadData()
+}
+
+async function handleStatusChange(row: any, val: number | string | boolean) {
+  if (!row || !row.id) return
+  row.statusLoading = true
+  try {
+    await userApi.update(row.id, {
+      status: val as number
+    })
+    ElMessage.success('状态更新成功')
+  } catch (error) {
+    row.status = val === 1 ? 0 : 1 // Revert
+    ElMessage.error('状态更新失败')
+  } finally {
+    row.statusLoading = false
+  }
 }
 
 function handleAdd() {

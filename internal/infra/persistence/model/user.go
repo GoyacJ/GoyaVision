@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 )
 
 type UserModel struct {
@@ -15,9 +16,10 @@ type UserModel struct {
 	Phone     string      `gorm:"size:32"`
 	Avatar    string      `gorm:"size:256"`
 	Status    int         `gorm:"default:1"`
-	CreatedAt time.Time   `gorm:"autoCreateTime"`
-	UpdatedAt time.Time   `gorm:"autoUpdateTime"`
-	Roles     []RoleModel `gorm:"many2many:user_roles"`
+	CreatedAt  time.Time           `gorm:"autoCreateTime"`
+	UpdatedAt  time.Time           `gorm:"autoUpdateTime"`
+	Roles      []RoleModel         `gorm:"many2many:user_roles"`
+	Identities []UserIdentityModel `gorm:"foreignKey:UserID"`
 }
 
 func (UserModel) TableName() string { return "users" }
@@ -25,10 +27,12 @@ func (UserModel) TableName() string { return "users" }
 type RoleModel struct {
 	ID          uuid.UUID         `gorm:"type:uuid;primaryKey"`
 	Code        string            `gorm:"uniqueIndex;not null;size:64"`
-	Name        string            `gorm:"not null;size:64"`
-	Description string            `gorm:"size:256"`
-	Status      int               `gorm:"default:1"`
-	CreatedAt   time.Time         `gorm:"autoCreateTime"`
+	Name             string            `gorm:"not null;size:64"`
+	Description      string            `gorm:"size:256"`
+	Status           int               `gorm:"default:1"`
+	IsDefault        bool              `gorm:"default:false;index:idx_roles_is_default"`
+	AutoAssignConfig datatypes.JSON    `gorm:"type:jsonb"`
+	CreatedAt        time.Time         `gorm:"autoCreateTime"`
 	UpdatedAt   time.Time         `gorm:"autoUpdateTime"`
 	Permissions []PermissionModel `gorm:"many2many:role_permissions"`
 	Menus       []MenuModel       `gorm:"many2many:role_menus"`

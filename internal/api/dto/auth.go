@@ -14,6 +14,21 @@ type LoginRequest struct {
 	Password string `json:"password" validate:"required"`
 }
 
+// LoginOAuthRequest OAuth登录请求
+type LoginOAuthRequest struct {
+	Provider string `json:"provider" validate:"required"`
+	Code     string `json:"code" validate:"required"`
+	State    string `json:"state"`
+}
+
+// BindIdentityRequest 绑定身份请求
+type BindIdentityRequest struct {
+	Provider   string                 `json:"provider" validate:"required"`
+	Identifier string                 `json:"identifier" validate:"required"`
+	Credential string                 `json:"credential"`
+	Meta       map[string]interface{} `json:"meta"`
+}
+
 // LoginResponse 登录响应
 type LoginResponse struct {
 	AccessToken  string    `json:"access_token"`

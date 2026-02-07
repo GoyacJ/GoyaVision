@@ -117,6 +117,7 @@ func createTables(db *gorm.DB) error {
 	log.Println("    - workflows, workflow_nodes, workflow_edges")
 	log.Println("    - tasks, artifacts")
 	log.Println("    - files")
+	log.Println("    - user_identities")
 
 	// 兼容性处理：删除旧版本的 legacy 字段
 	// 由于 operator 重设计去除了这些字段，如果数据库中残留会导致 GORM 插入失败（因旧字段可能为 NOT NULL）
@@ -130,6 +131,14 @@ func createTables(db *gorm.DB) error {
 				if err := migrator.DropColumn(&model.OperatorModel{}, col); err != nil {
 					log.Printf("      ⚠️ 删除失败: %v", err)
 				}
+			}
+		}
+
+		// AI 模型重构：ai_model_id 已移入 ExecConfig.AIModel，需删除旧字段
+		if migrator.HasColumn(&model.OperatorModel{}, "ai_model_id") {
+			log.Println("    - 删除旧字段: ai_model_id (已迁移至 exec_config)")
+			if err := migrator.DropColumn(&model.OperatorModel{}, "ai_model_id"); err != nil {
+				log.Printf("      ⚠️ 删除失败: %v", err)
 			}
 		}
 	}
@@ -196,6 +205,7 @@ func initPermissions(ctx context.Context, db *gorm.DB) error {
 		{"ai-model:create", "创建AI模型", "POST", "/api/v1/ai-models", ""},
 		{"ai-model:update", "更新AI模型", "PUT", "/api/v1/ai-models/*", ""},
 		{"ai-model:delete", "删除AI模型", "DELETE", "/api/v1/ai-models/*", ""},
+		{"ai-model:test", "测试AI模型连接", "POST", "/api/v1/ai-models/*/test-connection", ""},
 		{"workflow:list", "查看工作流列表", "GET", "/api/v1/workflows", ""},
 		{"workflow:create", "创建工作流", "POST", "/api/v1/workflows", ""},
 		{"workflow:update", "更新工作流", "PUT", "/api/v1/workflows/*", ""},
@@ -428,6 +438,64 @@ func initRoles(ctx context.Context, db *gorm.DB) error {
 		log.Println("  清理现有权限和菜单关联...")
 		db.Exec("DELETE FROM role_permissions WHERE role_model_id = ?", superAdminRole.ID)
 		db.Exec("DELETE FROM role_menus WHERE role_model_id = ?", superAdminRole.ID)
+	}
+
+	// Create default user role
+	userRoleID := uuid.MustParse("00000000-0000-0000-0000-000000000101")
+	var existingUserRole model.RoleModel
+	err = db.WithContext(ctx).Where("code = ?", "user").First(&existingUserRole).Error
+
+	if err == nil {
+		if *force {
+			log.Println("  更新普通用户角色...")
+			existingUserRole.Name = "普通用户"
+			existingUserRole.Description = "默认普通用户"
+			existingUserRole.Status = int(identity.RoleStatusEnabled)
+			existingUserRole.IsDefault = true
+			if err := db.WithContext(ctx).Save(&existingUserRole).Error; err != nil {
+				return fmt.Errorf("更新角色失败: %w", err)
+			}
+			log.Println("  ✓ 已更新普通用户角色")
+		} else {
+			log.Println("  ⊙ 普通用户角色已存在，跳过创建")
+		}
+	} else {
+		log.Println("  创建普通用户角色...")
+		role := &model.RoleModel{
+			ID:          userRoleID,
+			Code:        "user",
+			Name:        "普通用户",
+			Description: "默认普通用户",
+			Status:      int(identity.RoleStatusEnabled),
+			IsDefault:   true,
+		}
+		if err := db.WithContext(ctx).Create(role).Error; err != nil {
+			return fmt.Errorf("创建角色失败: %w", err)
+		}
+		log.Println("  ✓ 已创建普通用户角色")
+	}
+
+	// Assign basic permissions to user role
+	var userRole model.RoleModel
+	if err := db.WithContext(ctx).Where("code = ?", "user").First(&userRole).Error; err == nil {
+		basicPermCodes := []string{"asset:list", "asset:create", "operator:list", "workflow:list", "task:list"}
+		var basicPerms []model.PermissionModel
+		if err := db.WithContext(ctx).Where("code IN ?", basicPermCodes).Find(&basicPerms).Error; err == nil {
+			if *force {
+				db.Exec("DELETE FROM role_permissions WHERE role_model_id = ?", userRole.ID)
+			}
+			for _, perm := range basicPerms {
+				var count int64
+				if err := db.WithContext(ctx).Table("role_permissions").
+					Where("role_model_id = ? AND permission_model_id = ?", userRole.ID, perm.ID).
+					Count(&count).Error; err == nil && count == 0 {
+					db.WithContext(ctx).Exec(
+						"INSERT INTO role_permissions (role_model_id, permission_model_id) VALUES (?, ?)",
+						userRole.ID, perm.ID,
+					)
+				}
+			}
+		}
 	}
 
 	var allPermissions []model.PermissionModel

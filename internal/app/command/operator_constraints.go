@@ -10,10 +10,11 @@ import (
 var semverPattern = regexp.MustCompile(`^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$`)
 
 func validateExecMode(mode operator.ExecMode) error {
-	if mode == operator.ExecModeHTTP || mode == operator.ExecModeCLI || mode == operator.ExecModeMCP {
+	switch mode {
+	case operator.ExecModeHTTP, operator.ExecModeCLI, operator.ExecModeMCP, operator.ExecModeAIModel:
 		return nil
 	}
-	return apperr.InvalidInput("invalid exec_mode, allowed values: http|cli|mcp")
+	return apperr.InvalidInput("invalid exec_mode, allowed values: http|cli|mcp|ai_model")
 }
 
 func validateSemver(version string) error {

@@ -27,6 +27,7 @@
 | **算子中心** | | | |
 | 算子管理 | CRUD、分类、关联 AI 模型 | ✅ 已完成 | 包含 Operator、OperatorVersion 等 |
 | AI 模型管理 | CRUD、连接配置 | ✅ 已完成 | 支持 OpenAI/Anthropic/Local 等模型配置 |
+| AI 模型执行 | 模型调用、Vision支持 | ✅ 已完成 | 实现 AIModelExecutor，支持 OpenAI/Anthropic/Ollama，支持 Vision 输入 |
 | MCP 市场 | 浏览、同步、安装 | ✅ 已完成 | 集成 MCP 工具生态 |
 | 内置算子 | 抽帧、目标检测 | ✅ 部分完成 | 已有抽帧和推理，需要重构为算子 |
 | **任务中心** | | | |
@@ -36,9 +37,9 @@
 | 任务调度 | 定时调度、事件触发 | ✅ 已完成 | WorkflowScheduler 已实现 |
 | 产物管理 | 查询、关联 | ✅ 已完成 | Artifact 实体与服务已实现 |
 | **控制台** | | | |
-| 认证服务 | 登录、Token 刷新 | ✅ 已完成 | JWT 双 Token 机制 |
-| 用户管理 | CRUD、角色分配 | ✅ 已完成 | RBAC 权限模型 |
-| 角色管理 | CRUD、权限分配 | ✅ 已完成 | |
+| 认证服务 | 登录、Token 刷新、OAuth | ✅ 已完成 | JWT 双 Token 机制；支持 OAuth 第三方登录与账号绑定 |
+| 用户管理 | CRUD、角色分配 | ✅ 已完成 | RBAC 权限模型；支持 UserIdentity 管理 |
+| 角色管理 | CRUD、权限分配、自动分配 | ✅ 已完成 | 支持基于条件的自动角色分配（AutoAssignConfig） |
 | 菜单管理 | CRUD、树形结构 | ✅ 已完成 | 动态菜单 |
 | 仪表盘 | 系统概览 | ⏸️ 待开始 | |
 | 审计日志 | 操作日志 | ⏸️ 待开始 | |
@@ -624,6 +625,7 @@
 
 | 日期 | 版本 | 变更内容 |
 |------|------|----------|
+| 2026-02-07 | V1.0 | **AI 模型执行与 OAuth 认证集成**：新增 `AIModelExecutor` 支持 AI 算子执行（OpenAI/Anthropic/Ollama）；新增 OAuth 登录与账号绑定功能（`UserIdentity`）；实现角色自动分配机制（`AutoAssignConfig`）。 |
 | 2026-02-07 | V1.0 | **超级管理员菜单可见性修复**：修复超级管理员在 `/auth/profile` 接口获取菜单时包含禁用状态菜单的问题，确保前端导航栏正确隐藏被禁用的菜单。 |
 | 2026-02-07 | V1.0 | **算子重设计文档口径校准（第十九轮）**：根据代码复核，`syncOperatorCompatFieldsFromVersion` 当前为空实现（no-op）。虽 `install_template` / `install_mcp_operator` / `create_operator` 仍保留函数调用，但已不再执行 `operators` 旧兼容字段写回；当前策略为“写路径兼容字段收口，统一以 `ActiveVersion` 为事实来源”。文档口径已同步修正，避免继续误导为“安装后会自动回填兼容字段”。 |
 | 2026-02-07 | V1.0 | **算子重设计收口推进（第十八轮）**：MCP 适配器从“约定式 HTTP”升级为“真实 MCP JSON-RPC 协议客户端”。`internal/adapter/mcp/client.go` 新增标准握手流程（`initialize` → `notifications/initialized`），工具发现与调用改为 `tools/list`、`tools/call`；同时引入按 server 维度的懒初始化与并发锁，避免多协程下重复初始化竞态。`HealthCheck/ListTools/CallTool` 统一基于协议会话执行，并保持 `MCPClient/MCPRegistry` Port 与注入链路不变，确保上层 Command/Query/Executor 无侵入切换到真协议。 |

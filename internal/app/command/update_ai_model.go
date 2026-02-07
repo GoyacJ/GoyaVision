@@ -13,11 +13,12 @@ import (
 )
 
 type UpdateAIModelHandler struct {
-	uow port.UnitOfWork
+	uow    port.UnitOfWork
+	crypto port.CryptoService
 }
 
-func NewUpdateAIModelHandler(uow port.UnitOfWork) *UpdateAIModelHandler {
-	return &UpdateAIModelHandler{uow: uow}
+func NewUpdateAIModelHandler(uow port.UnitOfWork, crypto port.CryptoService) *UpdateAIModelHandler {
+	return &UpdateAIModelHandler{uow: uow, crypto: crypto}
 }
 
 func (h *UpdateAIModelHandler) Handle(ctx context.Context, cmd dto.UpdateAIModelCommand) (*ai_model.AIModel, error) {
@@ -34,6 +35,9 @@ func (h *UpdateAIModelHandler) Handle(ctx context.Context, cmd dto.UpdateAIModel
 		if cmd.Name != nil {
 			model.Name = *cmd.Name
 		}
+		if cmd.Description != nil {
+			model.Description = *cmd.Description
+		}
 		if cmd.Provider != nil {
 			model.Provider = ai_model.Provider(*cmd.Provider)
 		}
@@ -41,7 +45,15 @@ func (h *UpdateAIModelHandler) Handle(ctx context.Context, cmd dto.UpdateAIModel
 			model.Endpoint = *cmd.Endpoint
 		}
 		if cmd.APIKey != nil {
-			model.APIKey = *cmd.APIKey
+			apiKey := *cmd.APIKey
+			if apiKey != "" && h.crypto != nil {
+				encrypted, encErr := h.crypto.Encrypt(apiKey)
+				if encErr != nil {
+					return apperr.Wrap(encErr, apperr.CodeInternal, "failed to encrypt api key")
+				}
+				apiKey = encrypted
+			}
+			model.APIKey = apiKey
 		}
 		if cmd.ModelName != nil {
 			model.ModelName = *cmd.ModelName

@@ -229,6 +229,9 @@ func OperatorVersionToResponse(v *operator.OperatorVersion) *OperatorVersionResp
 		if v.ExecConfig.MCP != nil {
 			execConfig["mcp"] = v.ExecConfig.MCP
 		}
+		if v.ExecConfig.AIModel != nil {
+			execConfig["ai_model"] = v.ExecConfig.AIModel
+		}
 	}
 
 	return &OperatorVersionResponse{
@@ -264,6 +267,9 @@ func TemplateToResponse(t *operator.OperatorTemplate) *OperatorTemplateResponse 
 		}
 		if t.ExecConfig.MCP != nil {
 			execConfig["mcp"] = t.ExecConfig.MCP
+		}
+		if t.ExecConfig.AIModel != nil {
+			execConfig["ai_model"] = t.ExecConfig.AIModel
 		}
 	}
 

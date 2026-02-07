@@ -12,6 +12,7 @@ import (
 
 	"goyavision"
 	"goyavision/config"
+	adaptercrypto "goyavision/internal/adapter/crypto"
 	"goyavision/internal/adapter/engine"
 	mcpadapter "goyavision/internal/adapter/mcp"
 	"goyavision/internal/adapter/mediamtx"
@@ -109,6 +110,12 @@ func main() {
 		}, tools, serverCfg.Endpoint, serverCfg.APIToken, serverCfg.TimeoutSec)
 	}
 
+	encryptKey := cfg.EncryptKey
+	if encryptKey == "" {
+		encryptKey = cfg.JWT.Secret
+	}
+	cryptoService, _ := adaptercrypto.NewAESCryptoService(encryptKey)
+
 	var workflowScheduler *app.WorkflowScheduler
 	if db != nil {
 		ctx := context.Background()
@@ -116,10 +123,12 @@ func main() {
 		httpExecutor := engine.NewHTTPOperatorExecutor()
 		cliExecutor := engine.NewCLIOperatorExecutor()
 		mcpExecutor := engine.NewMCPOperatorExecutor(mcpClient)
+		aiModelExecutor := engine.NewAIModelExecutor(repo, cryptoService)
 		registry := engine.NewExecutorRegistry()
 		registry.Register(httpExecutor.Mode(), httpExecutor)
 		registry.Register(cliExecutor.Mode(), cliExecutor)
 		registry.Register(mcpExecutor.Mode(), mcpExecutor)
+		registry.Register(aiModelExecutor.Mode(), aiModelExecutor)
 		routingExecutor := engine.NewRoutingOperatorExecutor(registry)
 
 		workflowEngine := infraengine.NewDAGWorkflowEngine(uow, routingExecutor, schemaValidator)

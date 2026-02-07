@@ -8,23 +8,32 @@ import (
 	"github.com/google/uuid"
 )
 
+type AutoAssignConfigDTO struct {
+	Trigger    string            `json:"trigger"`
+	Conditions map[string]string `json:"conditions"`
+}
+
 // RoleCreateRequest 创建角色请求
 type RoleCreateRequest struct {
-	Code          string      `json:"code" validate:"required"`
-	Name          string      `json:"name" validate:"required"`
-	Description   string      `json:"description"`
-	Status        int         `json:"status"`
-	PermissionIDs []uuid.UUID `json:"permission_ids"`
-	MenuIDs       []uuid.UUID `json:"menu_ids"`
+	Code             string               `json:"code" validate:"required"`
+	Name             string               `json:"name" validate:"required"`
+	Description      string               `json:"description"`
+	Status           int                  `json:"status"`
+	IsDefault        bool                 `json:"is_default"`
+	AutoAssignConfig *AutoAssignConfigDTO `json:"auto_assign_config"`
+	PermissionIDs    []uuid.UUID          `json:"permission_ids"`
+	MenuIDs          []uuid.UUID          `json:"menu_ids"`
 }
 
 // RoleUpdateRequest 更新角色请求
 type RoleUpdateRequest struct {
-	Name          *string     `json:"name"`
-	Description   *string     `json:"description"`
-	Status        *int        `json:"status"`
-	PermissionIDs []uuid.UUID `json:"permission_ids"`
-	MenuIDs       []uuid.UUID `json:"menu_ids"`
+	Name             *string              `json:"name"`
+	Description      *string              `json:"description"`
+	Status           *int                 `json:"status"`
+	IsDefault        *bool                `json:"is_default"`
+	AutoAssignConfig *AutoAssignConfigDTO `json:"auto_assign_config"`
+	PermissionIDs    []uuid.UUID          `json:"permission_ids"`
+	MenuIDs          []uuid.UUID          `json:"menu_ids"`
 }
 
 // RoleListQuery 角色列表查询参数
@@ -34,15 +43,17 @@ type RoleListQuery struct {
 
 // RoleResponse 角色响应
 type RoleResponse struct {
-	ID          uuid.UUID          `json:"id"`
-	Code        string             `json:"code"`
-	Name        string             `json:"name"`
-	Description string             `json:"description"`
-	Status      int                `json:"status"`
-	Permissions []PermissionSimple `json:"permissions,omitempty"`
-	Menus       []MenuSimple       `json:"menus,omitempty"`
-	CreatedAt   time.Time          `json:"created_at"`
-	UpdatedAt   time.Time          `json:"updated_at"`
+	ID               uuid.UUID            `json:"id"`
+	Code             string               `json:"code"`
+	Name             string               `json:"name"`
+	Description      string               `json:"description"`
+	Status           int                  `json:"status"`
+	IsDefault        bool                 `json:"is_default"`
+	AutoAssignConfig *AutoAssignConfigDTO `json:"auto_assign_config,omitempty"`
+	Permissions      []PermissionSimple   `json:"permissions,omitempty"`
+	Menus            []MenuSimple         `json:"menus,omitempty"`
+	CreatedAt        time.Time            `json:"created_at"`
+	UpdatedAt        time.Time            `json:"updated_at"`
 }
 
 // PermissionSimple 简化的权限信息
@@ -73,16 +84,27 @@ func RoleToResponse(r *identity.Role) *RoleResponse {
 			Name: m.Name,
 		}
 	}
+
+	var autoAssignConfig *AutoAssignConfigDTO
+	if r.AutoAssignConfig != nil {
+		autoAssignConfig = &AutoAssignConfigDTO{
+			Trigger:    r.AutoAssignConfig.Trigger,
+			Conditions: r.AutoAssignConfig.Conditions,
+		}
+	}
+
 	return &RoleResponse{
-		ID:          r.ID,
-		Code:        r.Code,
-		Name:        r.Name,
-		Description: r.Description,
-		Status:      r.Status,
-		Permissions: permissions,
-		Menus:       menus,
-		CreatedAt:   r.CreatedAt,
-		UpdatedAt:   r.UpdatedAt,
+		ID:               r.ID,
+		Code:             r.Code,
+		Name:             r.Name,
+		Description:      r.Description,
+		Status:           r.Status,
+		IsDefault:        r.IsDefault,
+		AutoAssignConfig: autoAssignConfig,
+		Permissions:      permissions,
+		Menus:            menus,
+		CreatedAt:        r.CreatedAt,
+		UpdatedAt:        r.UpdatedAt,
 	}
 }
 

@@ -66,6 +66,15 @@ func (h *CreateOperatorHandler) Handle(ctx context.Context, cmd dto.CreateOperat
 		return nil, err
 	}
 
+	if execMode == operator.ExecModeAIModel {
+		if cmd.ExecConfig == nil || cmd.ExecConfig.AIModel == nil {
+			return nil, apperr.InvalidInput("ai_model exec config is required when exec_mode is ai_model")
+		}
+		if cmd.ExecConfig.AIModel.ModelID == uuid.Nil {
+			return nil, apperr.InvalidInput("ai_model.model_id is required")
+		}
+	}
+
 	var result *operator.Operator
 	err := h.uow.Do(ctx, func(ctx context.Context, repos *port.Repositories) error {
 		if _, err := repos.Operators.GetByCode(ctx, cmd.Code); err == nil {
@@ -81,7 +90,6 @@ func (h *CreateOperatorHandler) Handle(ctx context.Context, cmd dto.CreateOperat
 			Category:    cmd.Category,
 			Type:        cmd.Type,
 			Origin:      origin,
-			AIModelID:   cmd.AIModelID,
 			Status:      status,
 			Tags:        cmd.Tags,
 		}

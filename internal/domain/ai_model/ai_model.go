@@ -1,6 +1,7 @@
 package ai_model
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,20 +25,50 @@ const (
 )
 
 type AIModel struct {
-	ID        uuid.UUID
-	Name      string
-	Provider  Provider
-	Endpoint  string
-	APIKey    string
-	ModelName string
-	Config    map[string]interface{}
-	Status    Status
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID          uuid.UUID
+	Name        string
+	Description string
+	Provider    Provider
+	Endpoint    string
+	APIKey      string
+	ModelName   string
+	Config      map[string]interface{}
+	Status      Status
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+func (m *AIModel) IsActive() bool {
+	return m.Status == StatusActive
+}
+
+func (m *AIModel) IsDisabled() bool {
+	return m.Status == StatusDisabled
+}
+
+func (m *AIModel) MaskAPIKey() string {
+	if len(m.APIKey) <= 8 {
+		return "***"
+	}
+	return m.APIKey[:3] + "..." + m.APIKey[len(m.APIKey)-3:]
+}
+
+func (m *AIModel) Validate() error {
+	if m.Name == "" {
+		return fmt.Errorf("name is required")
+	}
+	switch m.Provider {
+	case ProviderOpenAI, ProviderAnthropic, ProviderOllama, ProviderLocal, ProviderCustom:
+	default:
+		return fmt.Errorf("invalid provider: %s", m.Provider)
+	}
+	return nil
 }
 
 type Filter struct {
-	Keyword string
-	Limit   int
-	Offset  int
+	Keyword  string
+	Provider *Provider
+	Status   *Status
+	Limit    int
+	Offset   int
 }

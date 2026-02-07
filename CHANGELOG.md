@@ -8,6 +8,15 @@
 ## [未发布]
 
 ### 新增
+- **AI 模型执行器**：实现 `AIModelExecutor`，支持 `ExecModeAIModel` 模式算子执行。
+  - 集成 OpenAI、Anthropic、Ollama 模型提供商。
+  - 支持 System/User Prompt 模板渲染与 Vision 多模态输入。
+  - 支持 API Key 加密存储与运行时解密。
+- **OAuth 认证集成**：新增 OAuth 登录与账号绑定功能。
+  - 支持第三方身份提供商（Provider）接入与验证。
+  - 实现 `UserIdentity` 关联模型，支持多账号绑定。
+  - 新增 `LoginOAuth` 与 `BindIdentity` 命令处理。
+- **角色自动分配**：增强角色管理，支持基于条件（如登录方式、注册来源）自动分配角色（`AutoAssignConfig`）。
 - **AI 模型管理**：新增 AI 模型管理模块，支持 OpenAI、Anthropic、Ollama、Local 等多种模型提供商配置。
 - **算子关联模型**：创建/编辑算子时支持选择关联的 AI 模型。
 - **MinIO 公网基址**：新增 `GOYAVISION_MINIO_PUBLIC_BASE` 配置，支持自定义对象存储对外访问 URL。

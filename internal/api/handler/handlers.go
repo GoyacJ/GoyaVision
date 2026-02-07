@@ -2,12 +2,14 @@ package handler
 
 import (
 	"goyavision/config"
+	"goyavision/internal/adapter/crypto"
 	"goyavision/internal/adapter/engine"
 	"goyavision/internal/adapter/mediamtx"
 	"goyavision/internal/app"
 	"goyavision/internal/app/command"
 	appport "goyavision/internal/app/port"
 	"goyavision/internal/app/query"
+	infraauth "goyavision/internal/infra/auth"
 	"goyavision/internal/port"
 	"goyavision/pkg/storage"
 )
@@ -20,6 +22,8 @@ type Handlers struct {
 	UpdateAsset              *command.UpdateAssetHandler
 	DeleteAsset              *command.DeleteAssetHandler
 	Login                    *command.LoginHandler
+	LoginOAuth               *command.LoginOAuthHandler
+	BindIdentity             *command.BindIdentityHandler
 	CreateOperator           *command.CreateOperatorHandler
 	UpdateOperator           *command.UpdateOperatorHandler
 	DeleteOperator           *command.DeleteOperatorHandler
@@ -37,6 +41,7 @@ type Handlers struct {
 	CreateAIModel            *command.CreateAIModelHandler
 	UpdateAIModel            *command.UpdateAIModelHandler
 	DeleteAIModel            *command.DeleteAIModelHandler
+	TestAIModel              *command.TestAIModelHandler
 	ListAIModels             *query.ListAIModelsHandler
 	GetAIModel               *query.GetAIModelHandler
 	CreateWorkflow           *command.CreateWorkflowHandler
@@ -108,13 +113,23 @@ func NewHandlers(
 	workflowScheduler *app.WorkflowScheduler,
 	repo port.Repository,
 ) *Handlers {
+	authProviderFactory := infraauth.NewProviderFactory()
+	userService := app.NewUserService(repo)
+	encryptKey := cfg.EncryptKey
+	if encryptKey == "" {
+		encryptKey = cfg.JWT.Secret
+	}
+	cryptoService, _ := crypto.NewAESCryptoService(encryptKey)
+
 	httpExecutor := engine.NewHTTPOperatorExecutor()
 	cliExecutor := engine.NewCLIOperatorExecutor()
 	mcpExecutor := engine.NewMCPOperatorExecutor(mcpClient)
+	aiModelExecutor := engine.NewAIModelExecutor(repo, cryptoService)
 	executorRegistry := engine.NewExecutorRegistry()
 	executorRegistry.Register(httpExecutor.Mode(), httpExecutor)
 	executorRegistry.Register(cliExecutor.Mode(), cliExecutor)
 	executorRegistry.Register(mcpExecutor.Mode(), mcpExecutor)
+	executorRegistry.Register(aiModelExecutor.Mode(), aiModelExecutor)
 
 	return &Handlers{
 		CreateSource:             command.NewCreateSourceHandler(uow, mediaGateway),
@@ -124,6 +139,8 @@ func NewHandlers(
 		UpdateAsset:              command.NewUpdateAssetHandler(uow),
 		DeleteAsset:              command.NewDeleteAssetHandler(uow),
 		Login:                    command.NewLoginHandler(uow, tokenService),
+		LoginOAuth:               command.NewLoginOAuthHandler(uow, tokenService, authProviderFactory, userService),
+		BindIdentity:             command.NewBindIdentityHandler(uow, tokenService),
 		CreateOperator:           command.NewCreateOperatorHandler(uow, schemaValidator),
 		UpdateOperator:           command.NewUpdateOperatorHandler(uow),
 		DeleteOperator:           command.NewDeleteOperatorHandler(uow),
@@ -138,9 +155,10 @@ func NewHandlers(
 		TestOperator:             command.NewTestOperatorHandler(uow, executorRegistry),
 		InstallMCPOperator:       command.NewInstallMCPOperatorHandler(uow, mcpClient),
 		SyncMCPTemplates:         command.NewSyncMCPTemplatesHandler(uow, mcpClient),
-		CreateAIModel:            command.NewCreateAIModelHandler(uow),
-		UpdateAIModel:            command.NewUpdateAIModelHandler(uow),
+		CreateAIModel:            command.NewCreateAIModelHandler(uow, cryptoService),
+		UpdateAIModel:            command.NewUpdateAIModelHandler(uow, cryptoService),
 		DeleteAIModel:            command.NewDeleteAIModelHandler(uow),
+		TestAIModel:              command.NewTestAIModelHandler(repo, cryptoService),
 		ListAIModels:             query.NewListAIModelsHandler(repo),
 		GetAIModel:               query.NewGetAIModelHandler(repo),
 		CreateWorkflow:           command.NewCreateWorkflowHandler(uow, schemaValidator),

@@ -51,5 +51,6 @@ type Repositories struct {
 	Permissions identity.PermissionRepository
 	Menus       identity.MenuRepository
 	Files       storage.FileRepository
-	AIModels    ai_model.Repository
+	AIModels       ai_model.Repository
+	UserIdentities identity.UserIdentityRepository
 }

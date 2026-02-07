@@ -39,8 +39,9 @@ func newRepositories(db *gorm.DB) *appport.Repositories {
 		Roles:       repo.NewRoleRepo(db),
 		Permissions: repo.NewPermissionRepo(db),
 		Menus:       repo.NewMenuRepo(db),
-		Files:       repo.NewFileRepo(db),
-		AIModels:    repo.NewAIModelRepo(db),
+		Files:          repo.NewFileRepo(db),
+		AIModels:       repo.NewAIModelRepo(db),
+		UserIdentities: repo.NewUserIdentityRepo(db),
 	}
 }
 
