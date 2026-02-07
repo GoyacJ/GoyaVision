@@ -47,7 +47,7 @@
 | 基础设施 | Tenant实体、JWT增强 | ✅ 已完成 | Phase 1 & 2 完成 |
 | 持久层改造 | GORM Scopes | ✅ 已完成 | ScopeTenant, ScopeVisibility 实现 |
 | 业务改造 | Service/API适配 | ✅ 已完成 | Phase 4: Asset, Source, Operator, Workflow, AIModel DTO & Handler 更新 |
-| 前端适配 | 可见性设置 | ✅ 已完成 | Phase 5: 资产、媒体源、算子、工作流、AI模型表单已全面适配可见性设置，并修复了参数传递类型不一致导致的始终为0的问题 |
+| 前端适配 | 可见性设置 | ✅ 已完成 | Phase 5: 资产、媒体源、算子、工作流、AI模型表单已全面适配可见性设置，通过改进 GvSelect 绑定逻辑彻底修复了参数传递失效的问题 |
 | **前端** | | | |
 | 媒体源页面 | 流管理、预览 | ✅ 已完成 | 独立页面 /sources，CRUD、预览 URL（含 push 时 push_url）、与设计文档对齐 |
 | 媒体资产页面 | 左右布局、类型/标签筛选、网格展示 | ✅ 已完成 | 支持 URL 地址与文件上传两种方式添加资产；资产类型 video/image/audio；来源类型 upload/generated/operator_output；类型与标签筛选实时生效（useTable 监听 extraParams）；流媒体接入功能已迁移至媒体源模块 |
@@ -631,7 +631,7 @@
 
 | 日期 | 版本 | 变更内容 |
 |------|------|----------|
-| 2026-02-08 | V1.0 | **可见性参数传递修复**：修复所有涉及页面（资产、媒体源、算子、工作流、AI模型）可见性设置下拉框参数传递始终为 0 的问题。统一前端 visibility 字段为 Number 类型，消除与 options 的类型冲突。 |
+| 2026-02-08 | V1.0 | **可见性参数传递修复**：修复所有涉及页面可见性设置参数传递失效的问题。改进了 `GvSelect` 基础组件的 `v-model` 绑定逻辑（改用 computed getter/setter 模式），并统一前端 visibility 字段为 Number 类型，彻底解决类型冲突导致的绑定失效。 |
 | 2026-02-08 | V1.0 | **前端响应式重构**：全面优化移动端体验。实现全局抽屉导航、资产页响应式布局（单栏/网格强制）、表格组件水平滚动适配及分页器简化。 |
 | 2026-02-07 | V1.0 | **AI 模型执行与 OAuth 认证集成**：新增 `AIModelExecutor` 支持 AI 算子执行（OpenAI/Anthropic/Ollama）；新增 OAuth 登录与账号绑定功能（`UserIdentity`）；实现角色自动分配机制（`AutoAssignConfig`）。 |
 | 2026-02-07 | V1.0 | **超级管理员菜单可见性修复**：修复超级管理员在 `/auth/profile` 接口获取菜单时包含禁用状态菜单的问题，确保前端导航栏正确隐藏被禁用的菜单。 |
