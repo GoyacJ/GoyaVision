@@ -154,3 +154,12 @@ type ProfileResponse struct {
 	Avatar    string    `json:"avatar"`
 	CreatedAt time.Time `json:"created_at"`
 }
+
+// RolesToCodes 转换角色对象为代码列表
+func RolesToCodes(roles []identity.Role) []string {
+	codes := make([]string, len(roles))
+	for i, r := range roles {
+		codes[i] = r.Code
+	}
+	return codes
+}

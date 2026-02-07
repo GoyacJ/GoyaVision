@@ -91,7 +91,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { useUserStore } from '../../store/user'
@@ -106,6 +106,34 @@ const loading = ref(false)
 const loginForm = reactive({
   username: '',
   password: ''
+})
+
+onMounted(async () => {
+  const code = route.query.code as string
+  if (code) {
+    const provider = localStorage.getItem('oauth_provider')
+    if (provider) {
+      loading.value = true
+      try {
+        await userStore.loginOAuth({
+          provider,
+          code
+        })
+        ElMessage.success('登录成功')
+        localStorage.removeItem('oauth_provider')
+        
+        const redirect = route.query.redirect as string
+        const targetPath = redirect || '/assets'
+        
+        await router.push(targetPath)
+      } catch (error: any) {
+        ElMessage.error(error.response?.data?.message || '登录失败')
+        localStorage.removeItem('oauth_provider')
+      } finally {
+        loading.value = false
+      }
+    }
+  }
 })
 
 const loginRules: FormRules = {
@@ -129,7 +157,9 @@ function handleOtherLogin(type: string) {
     ElMessage.info('手机号登录功能开发中')
     return
   }
-  // Redirect to OAuth endpoint
+  
+  localStorage.setItem('oauth_provider', type)
+  // Redirect to OAuth authorize endpoint
   window.location.href = `/api/v1/auth/oauth/login?provider=${type}`
 }
 

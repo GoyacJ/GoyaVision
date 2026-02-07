@@ -50,6 +50,16 @@ minio:
   use_ssl: false
   public_base: ""
 
+oauth:
+  github:
+    client_id: ""
+    client_secret: ""
+    redirect_uri: "http://localhost:5173/login"
+  wechat:
+    client_id: ""
+    client_secret: ""
+    redirect_uri: "http://localhost:5173/login"
+
 mcp:
   servers:
     - id: "default"

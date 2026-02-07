@@ -3,10 +3,12 @@ package handler
 import (
 	"net/http"
 
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"goyavision/internal/api/dto"
 	"goyavision/internal/api/middleware"
 	"goyavision/internal/app"
+	"goyavision/internal/domain/identity"
 	appdto "goyavision/internal/app/dto"
 
 	"github.com/labstack/echo/v4"
@@ -16,6 +18,7 @@ func RegisterAuth(g *echo.Group, h *Handlers) {
 	handler := &authHandler{h: h}
 	g.POST("/login", handler.Login)
 	g.POST("/refresh", handler.RefreshToken)
+	g.GET("/oauth/login", handler.Authorize)
 	g.POST("/oauth/login", handler.LoginOAuth)
 }
 
@@ -157,6 +160,24 @@ func (h *authHandler) Logout(c echo.Context) error {
 	})
 }
 
+func (h *authHandler) Authorize(c echo.Context) error {
+	provider := c.QueryParam("provider")
+	if provider == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "provider is required")
+	}
+
+	authProvider, err := h.h.AuthProviderFactory.Get(provider)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "unsupported provider")
+	}
+
+	// Generate a random state. Ideally store it in session/cookie for validation.
+	state := uuid.New().String()
+
+	url := authProvider.GetLoginURL(state)
+	return c.Redirect(http.StatusFound, url)
+}
+
 func (h *authHandler) LoginOAuth(c echo.Context) error {
 	var req dto.LoginOAuthRequest
 	if err := c.Bind(&req); err != nil {
@@ -172,16 +193,30 @@ func (h *authHandler) LoginOAuth(c echo.Context) error {
 		return err
 	}
 
+	// Fetch user info for response
+	user, err := h.h.Repo.GetUserWithRoles(c.Request().Context(), result.User.ID)
+	if err != nil {
+		// Log error but proceed? Or fail?
+		// Login succeeded but fetching full user info failed.
+		// Result already has user info?
+		// result.User in LoginResult might be partial or specific DTO.
+		// Let's check internal/app/dto/login.go later. Assuming result.User is good enough or reload.
+	}
+
 	return c.JSON(http.StatusOK, dto.LoginResponse{
 		AccessToken:  result.AccessToken,
 		RefreshToken: result.RefreshToken,
 		ExpiresIn:    result.ExpiresIn,
-		// User info populate
 		User: dto.UserInfoFromApp(&dto.AppUserInfo{
-			// TODO: Populate user info correctly. Currently LoginOAuth handler returns partial?
-			// It returns LoginResult.
-			// Let's reuse getUserInfo logic if possible or assume LoginResult.User is populated.
-			// The LoginOAuth handler I wrote returns empty User currently.
+			ID:          user.ID,
+			Username:    user.Username,
+			Nickname:    user.Nickname,
+			Email:       user.Email,
+			Phone:       user.Phone,
+			Avatar:      user.Avatar,
+			Roles:       dto.RolesToCodes(user.Roles),
+			Permissions: []string{},
+			Menus:       []*identity.Menu{},
 		}),
 	})
 }

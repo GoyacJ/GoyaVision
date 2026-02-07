@@ -48,9 +48,19 @@ export interface ChangePasswordRequest {
   new_password: string
 }
 
+export interface LoginOAuthRequest {
+  provider: string
+  code: string
+  state?: string
+}
+
 export const authApi = {
   login(data: LoginRequest) {
     return apiClient.post<LoginResponse>('/auth/login', data)
+  },
+
+  loginOAuth(data: LoginOAuthRequest) {
+    return apiClient.post<LoginResponse>('/auth/oauth/login', data)
   },
 
   refreshToken(data: RefreshTokenRequest) {

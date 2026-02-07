@@ -1,31 +1,27 @@
 package auth
 
 import (
-	"context"
+	"fmt"
 
+	"goyavision/config"
 	"goyavision/internal/app/port"
 )
 
-type MockProvider struct{ name string }
-
-func (p *MockProvider) Name() string { return p.name }
-func (p *MockProvider) GetLoginURL(state string) string { return "http://mock-login" }
-func (p *MockProvider) VerifyCode(ctx context.Context, code string) (*port.AuthUserInfo, error) {
-	return &port.AuthUserInfo{
-		ID:     "mock-id-" + code,
-		Name:   "Mock User " + p.name,
-		Email:  "mock@example.com",
-		Avatar: "",
-		Raw:    map[string]interface{}{"provider": p.name},
-	}, nil
+type ProviderFactory struct {
+	cfg *config.Config
 }
 
-type ProviderFactory struct{}
-
-func NewProviderFactory() *ProviderFactory {
-	return &ProviderFactory{}
+func NewProviderFactory(cfg *config.Config) *ProviderFactory {
+	return &ProviderFactory{cfg: cfg}
 }
 
 func (f *ProviderFactory) Get(provider string) (port.AuthProvider, error) {
-	return &MockProvider{name: provider}, nil
+	switch provider {
+	case "github":
+		return NewGitHubProvider(f.cfg.OAuth.Github), nil
+	case "wechat":
+		return NewWechatProvider(f.cfg.OAuth.Wechat), nil
+	default:
+		return nil, fmt.Errorf("unsupported provider: %s", provider)
+	}
 }

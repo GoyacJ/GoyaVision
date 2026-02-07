@@ -22,7 +22,19 @@ type Config struct {
 	MediaMTX   MediaMTX
 	MinIO      MinIO
 	MCP        MCP
+	OAuth      OAuth
 	EncryptKey string
+}
+
+type OAuth struct {
+	Github OAuthConfig `mapstructure:"github"`
+	Wechat OAuthConfig `mapstructure:"wechat"`
+}
+
+type OAuthConfig struct {
+	ClientID     string `mapstructure:"client_id"`
+	ClientSecret string `mapstructure:"client_secret"`
+	RedirectURI  string `mapstructure:"redirect_uri"`
 }
 
 type MCP struct {
@@ -222,6 +234,7 @@ func Load() (*Config, error) {
 	cfg.EncryptKey = v.GetString("encrypt_key")
 
 	_ = v.UnmarshalKey("mcp", &cfg.MCP)
+	_ = v.UnmarshalKey("oauth", &cfg.OAuth)
 	return cfg, nil
 }
 

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { authApi, type UserInfo, type MenuInfo, type LoginRequest } from '../api/auth'
+import { authApi, type UserInfo, type MenuInfo, type LoginRequest, type LoginOAuthRequest } from '../api/auth'
 import { getToken, setToken, getRefreshToken, setRefreshToken, clearTokens } from '../utils/auth'
 import router from '../router'
 import { buildRoutesFromMenus, hasRouteComponent } from '../utils/dynamic-routes'
@@ -38,6 +38,26 @@ export const useUserStore = defineStore('user', () => {
 
   async function login(loginData: LoginRequest) {
     const response = await authApi.login(loginData)
+    const data = response.data
+
+    token.value = data.access_token
+    refreshToken.value = data.refresh_token
+    userInfo.value = data.user
+
+    setToken(data.access_token)
+    setRefreshToken(data.refresh_token)
+
+    routesLoaded.value = false
+
+    if (data.user && data.user.menus) {
+      registerDynamicRoutes()
+    }
+
+    return data
+  }
+
+  async function loginOAuth(loginData: LoginOAuthRequest) {
+    const response = await authApi.loginOAuth(loginData)
     const data = response.data
 
     token.value = data.access_token
@@ -157,6 +177,7 @@ export const useUserStore = defineStore('user', () => {
     hasAnyPermission,
     hasRole,
     login,
+    loginOAuth,
     getProfile,
     registerDynamicRoutes,
     refreshAccessToken,

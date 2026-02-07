@@ -91,6 +91,7 @@ type Handlers struct {
 	WorkflowScheduler        *app.WorkflowScheduler
 	Repo                     port.Repository      // For middleware and non-migrated handlers
 	TokenService             appport.TokenService // For auth handlers
+	AuthProviderFactory      appport.AuthProviderFactory
 }
 
 // Deps 依赖注入结构
@@ -113,7 +114,7 @@ func NewHandlers(
 	workflowScheduler *app.WorkflowScheduler,
 	repo port.Repository,
 ) *Handlers {
-	authProviderFactory := infraauth.NewProviderFactory()
+	authProviderFactory := infraauth.NewProviderFactory(cfg)
 	userService := app.NewUserService(repo)
 	encryptKey := cfg.EncryptKey
 	if encryptKey == "" {
@@ -208,5 +209,6 @@ func NewHandlers(
 		WorkflowScheduler:        workflowScheduler,
 		Repo:                     repo,
 		TokenService:             tokenService,
+		AuthProviderFactory:      authProviderFactory,
 	}
 }
