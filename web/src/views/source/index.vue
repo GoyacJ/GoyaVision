@@ -112,11 +112,15 @@
         <el-form-item v-if="createForm.type === 'push'" label="说明">
           <span class="text-text-tertiary text-sm">推流源创建后，在详情/预览中可获取推流地址，用于 OBS 等配置</span>
         </el-form-item>
+        <el-form-item label="可见范围">
+          <GvSelect
+            v-model="createForm.visibility"
+            :options="VISIBILITY_OPTIONS"
+            placeholder="请选择可见范围"
+          />
+        </el-form-item>
         <el-form-item label="启用" prop="enabled">
           <el-switch v-model="createForm.enabled" />
-        </el-form-item>
-        <el-form-item label="可见范围" prop="visibility">
-          <GvSelect v-model="createForm.visibility" :options="visibilityOptions" placeholder="请选择可见范围" />
         </el-form-item>
       </el-form>
     </GvModal>
@@ -135,11 +139,15 @@
         <el-form-item v-if="currentSource?.type === 'pull'" label="流地址" prop="url">
           <GvInput v-model="editForm.url" type="textarea" :rows="2" />
         </el-form-item>
+        <el-form-item label="可见范围">
+          <GvSelect
+            v-model="editForm.visibility"
+            :options="VISIBILITY_OPTIONS"
+            placeholder="请选择可见范围"
+          />
+        </el-form-item>
         <el-form-item label="启用" prop="enabled">
           <el-switch v-model="editForm.enabled" />
-        </el-form-item>
-        <el-form-item label="可见范围" prop="visibility">
-          <GvSelect v-model="editForm.visibility" :options="visibilityOptions" placeholder="请选择可见范围" />
         </el-form-item>
       </el-form>
     </GvModal>
@@ -229,6 +237,7 @@ import GvSelect from '@/components/base/GvSelect/index.vue'
 import PageHeader from '@/components/business/PageHeader/index.vue'
 import SearchBar from '@/components/business/SearchBar/index.vue'
 import { ErrorState, EmptyState } from '@/components/common'
+import { VISIBILITY_OPTIONS } from '@/constants/visibility'
 
 // UI 状态
 const searchName = ref('')
@@ -244,11 +253,6 @@ const creating = ref(false)
 const updating = ref(false)
 const createFormRef = ref<FormInstance>()
 const editFormRef = ref<FormInstance>()
-const visibilityOptions = [
-  { label: '私有', value: '0' },
-  { label: '角色可见', value: '1' },
-  { label: '公开', value: '2' }
-]
 
 // 使用 useTable 管理媒体源列表
 const {
@@ -289,16 +293,14 @@ const createForm = reactive<any>({
   type: 'pull',
   url: '',
   enabled: true,
-  visibility: 0,
-  visible_role_ids: []
+  visibility: 0
 })
 
 const editForm = reactive<any>({
   name: '',
   url: '',
   enabled: true,
-  visibility: 0,
-  visible_role_ids: []
+  visibility: 0
 })
 
 const columns = [
@@ -352,8 +354,7 @@ async function handleCreate() {
         type: createForm.type,
         url: createForm.type === 'pull' ? createForm.url : undefined,
         enabled: createForm.enabled,
-        visibility: Number(createForm.visibility),
-        visible_role_ids: createForm.visible_role_ids
+        visibility: createForm.visibility ?? 0
       })
       ElMessage.success('创建成功')
       showCreateDialog.value = false
@@ -362,7 +363,6 @@ async function handleCreate() {
       createForm.url = ''
       createForm.enabled = true
       createForm.visibility = 0
-      createForm.visible_role_ids = []
       refreshTable()
     } catch (e: any) {
       ElMessage.error(e.response?.data?.message || '创建失败')
@@ -416,7 +416,6 @@ function handleEdit(row: MediaSource) {
   editForm.url = row.url ?? ''
   editForm.enabled = row.enabled
   editForm.visibility = row.visibility ?? 0
-  editForm.visible_role_ids = row.visible_role_ids || []
   showEditDialog.value = true
 }
 
@@ -430,8 +429,7 @@ async function handleUpdate() {
         name: editForm.name,
         url: currentSource.value!.type === 'pull' ? editForm.url : undefined,
         enabled: editForm.enabled,
-        visibility: Number(editForm.visibility),
-        visible_role_ids: editForm.visible_role_ids
+        visibility: editForm.visibility ?? 0
       })
       ElMessage.success('更新成功')
       showEditDialog.value = false

@@ -516,7 +516,8 @@ async function handleEditSubmit(payload: OperatorCreateReq) {
       name: payload.name,
       description: payload.description,
       category: payload.category,
-      tags: payload.tags
+      tags: payload.tags,
+      visibility: payload.visibility
     })
     ElMessage.success('更新成功')
     ElMessage.warning('执行模式/执行配置变更需通过“创建版本”完成')

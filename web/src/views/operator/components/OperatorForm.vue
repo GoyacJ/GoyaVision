@@ -32,7 +32,7 @@
     <GvSelect
       v-model="form.visibility"
       label="可见范围"
-      :options="visibilityOptions"
+      :options="VISIBILITY_OPTIONS"
       class="w-full"
     />
 
@@ -45,6 +45,7 @@ import { ref, reactive, watch } from 'vue'
 import ExecConfigForm from './ExecConfigForm.vue'
 import GvInput from '@/components/base/GvInput/index.vue'
 import GvSelect from '@/components/base/GvSelect/index.vue'
+import { VISIBILITY_OPTIONS } from '@/constants/visibility'
 
 type OperatorFormModel = {
   code: string
@@ -78,16 +79,8 @@ const form = reactive<any>({
   origin: 'custom',
   exec_mode: 'http',
   exec_config: {},
-  visibility: 0,
-  visible_role_ids: []
+  visibility: 0
 })
-
-
-const visibilityOptions = [
-  { label: '私有', value: 0 },
-  { label: '角色可见', value: 1 },
-  { label: '公开', value: 2 }
-]
 
 const categoryOptions = [
   { label: '分析', value: 'analysis' },
@@ -115,15 +108,12 @@ watch(
   (value) => {
     if (!value) return
     Object.assign(form, value)
-    if (value.visibility !== undefined) {
-      form.visibility = value.visibility
-    }
   },
   { immediate: true, deep: true }
 )
 
 const submit = () => {
-  const payload = { ...form, visibility: Number(form.visibility) }
+  const payload = { ...form }
   emit('submit', payload)
 }
 

@@ -47,7 +47,7 @@
 | 基础设施 | Tenant实体、JWT增强 | ✅ 已完成 | Phase 1 & 2 完成 |
 | 持久层改造 | GORM Scopes | ✅ 已完成 | ScopeTenant, ScopeVisibility 实现 |
 | 业务改造 | Service/API适配 | ✅ 已完成 | Phase 4: Asset, Source, Operator, Workflow, AIModel DTO & Handler 更新 |
-| 前端适配 | 可见性设置 | ✅ 已完成 | Phase 5: 资产、媒体源、算子、工作流、AI模型表单已全面适配可见性设置，通过改进 GvSelect 绑定逻辑彻底修复了参数传递失效的问题（已验证类型同步更新） |
+| 前端适配 | 可见性设置 | ✅ 已完成 | Phase 5: 资产、媒体源、算子、工作流、AI模型表单已全面适配可见性设置（添加/创建与编辑均含可见范围下拉框）；编辑保存后 visibility 可正确持久化（已修复应用层 Update 命令未写回 Visibility 的问题） |
 | **前端** | | | |
 | 媒体源页面 | 流管理、预览 | ✅ 已完成 | 独立页面 /sources，CRUD、预览 URL（含 push 时 push_url）、与设计文档对齐 |
 | 媒体资产页面 | 左右布局、类型/标签筛选、网格展示 | ✅ 已完成 | 支持 URL 地址与文件上传两种方式添加资产；资产类型 video/image/audio；来源类型 upload/generated/operator_output；类型与标签筛选实时生效（useTable 监听 extraParams）；流媒体接入功能已迁移至媒体源模块 |

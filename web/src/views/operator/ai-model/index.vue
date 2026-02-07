@@ -10,14 +10,14 @@
             v-model="filterProvider"
             placeholder="提供商"
             :options="[{ label: '全部提供商', value: '' }, ...providerOptions]"
-            class="w-36"
+            class="w-44"
             @change="refreshTable"
           />
           <GvSelect
             v-model="filterStatus"
             placeholder="状态"
             :options="[{ label: '全部状态', value: '' }, ...statusOptions]"
-            class="w-28"
+            class="w-32"
             @change="refreshTable"
           />
           <SearchBar
@@ -136,6 +136,13 @@
         </div>
 
         <GvSelect
+          v-model="form.visibility"
+          label="可见范围"
+          :options="VISIBILITY_OPTIONS"
+          class="w-full"
+        />
+
+        <GvSelect
           v-if="isEdit"
           v-model="form.status"
           label="状态"
@@ -143,12 +150,6 @@
           class="w-full"
         />
 
-        <GvSelect
-          v-model="form.visibility"
-          label="可见范围"
-          :options="visibilityOptions"
-          class="w-full"
-        />
       </div>
     </GvModal>
   </GvContainer>
@@ -173,6 +174,7 @@ import SearchBar from '@/components/business/SearchBar/index.vue'
 import StatusBadge from '@/components/business/StatusBadge/index.vue'
 import SchemaEditor from '@/views/operator/components/SchemaEditor.vue'
 import type { TableColumn } from '@/components/base/GvTable/types'
+import { VISIBILITY_OPTIONS } from '@/constants/visibility'
 
 const searchKeyword = ref('')
 const filterProvider = ref('')
@@ -184,12 +186,6 @@ const editId = ref('')
 const editHasApiKey = ref(false)
 const testingId = ref('')
 
-const visibilityOptions = [
-  { label: '私有', value: 0 },
-  { label: '角色可见', value: 1 },
-  { label: '公开', value: 2 }
-]
-
 
 const form = reactive<any>({
   name: '',
@@ -200,8 +196,7 @@ const form = reactive<any>({
   model_name: '',
   config: {},
   status: 'active',
-  visibility: 0,
-  visible_role_ids: []
+  visibility: 0
 })
 
 const {
@@ -230,7 +225,11 @@ const {
 const providerOptions = [
   { label: 'OpenAI', value: 'openai' },
   { label: 'Anthropic', value: 'anthropic' },
+  { label: '千问 (Qwen)', value: 'qwen' },
+  { label: '豆包 (Doubao)', value: 'doubao' },
+  { label: '智谱 (Zhipu)', value: 'zhipu' },
   { label: 'Ollama', value: 'ollama' },
+  { label: 'vLLM', value: 'vllm' },
   { label: 'Local', value: 'local' },
   { label: 'Custom', value: 'custom' }
 ]
@@ -265,7 +264,11 @@ function getProviderColor(provider: string): any {
   const map: Record<string, string> = {
     openai: 'success',
     anthropic: 'warning',
+    qwen: 'primary',
+    doubao: 'info',
+    zhipu: 'success',
     ollama: 'primary',
+    vllm: 'info',
     local: 'info',
     custom: 'neutral'
   }
@@ -288,7 +291,6 @@ function resetForm() {
   form.config = {}
   form.status = 'active'
   form.visibility = 0
-  form.visible_role_ids = []
 }
 
 function openCreateDialog() {
@@ -312,7 +314,6 @@ function handleEdit(row: AIModel) {
   form.config = row.config || {}
   form.status = row.status
   form.visibility = row.visibility ?? 0
-  form.visible_role_ids = row.visible_role_ids || []
   showDialog.value = true
 }
 
@@ -347,8 +348,7 @@ async function handleSubmit() {
       endpoint: form.endpoint,
       model_name: form.model_name,
       config: form.config,
-      visibility: Number(form.visibility),
-      visible_role_ids: form.visible_role_ids
+      visibility: form.visibility ?? 0
     }
     if (form.api_key) {
       data.api_key = form.api_key

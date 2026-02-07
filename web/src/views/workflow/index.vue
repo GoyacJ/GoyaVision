@@ -142,8 +142,12 @@
             :options="triggerTypeOptions"
           />
         </el-form-item>
-        <el-form-item label="可见范围" prop="visibility">
-          <GvSelect v-model="createForm.visibility" :options="visibilityOptions" placeholder="请选择可见范围" />
+        <el-form-item label="可见范围">
+          <GvSelect
+            v-model="createForm.visibility"
+            :options="VISIBILITY_OPTIONS"
+            placeholder="请选择可见范围"
+          />
         </el-form-item>
       </el-form>
     </GvModal>
@@ -213,6 +217,7 @@ import StatusBadge from '@/components/business/StatusBadge/index.vue'
 import { ErrorState, EmptyState } from '@/components/common'
 import type { TableColumn } from '@/components/base/GvTable/types'
 import type { FilterField } from '@/components/business/FilterBar/types'
+import { VISIBILITY_OPTIONS } from '@/constants/visibility'
 
 const router = useRouter()
 
@@ -224,12 +229,6 @@ const showViewDialog = ref(false)
 const showTriggerDialog = ref(false)
 const currentWorkflow = ref<Workflow | null>(null)
 const createFormRef = ref<FormInstance>()
-
-const visibilityOptions = [
-  { label: '私有', value: 0 },
-  { label: '角色可见', value: 1 },
-  { label: '公开', value: 2 }
-]
 
 
 const searchKeyword = ref('')
@@ -272,8 +271,7 @@ const createForm = reactive<any>({
   name: '',
   description: '',
   trigger_type: 'manual',
-  visibility: 0,
-  visible_role_ids: []
+  visibility: 0
 })
 
 const triggerForm = reactive({
@@ -338,7 +336,7 @@ async function handleCreate() {
     if (!valid) return
     creating.value = true
     try {
-      const data = { ...createForm, visibility: Number(createForm.visibility) }
+      const data = { ...createForm }
       await workflowApi.create(data)
       ElMessage.success('创建成功')
       showCreateDialog.value = false

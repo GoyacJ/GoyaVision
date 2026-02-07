@@ -9,6 +9,7 @@ export interface MediaSource {
   protocol?: string
   enabled: boolean
   record_enabled: boolean
+  visibility?: number
   created_at: string
   updated_at: string
 }
@@ -25,6 +26,7 @@ export interface SourceCreateReq {
   url?: string
   protocol?: string
   enabled?: boolean
+  visibility?: number
 }
 
 export interface SourceUpdateReq {
@@ -32,6 +34,7 @@ export interface SourceUpdateReq {
   url?: string
   protocol?: string
   enabled?: boolean
+  visibility?: number
 }
 
 export interface SourcePreviewResponse {

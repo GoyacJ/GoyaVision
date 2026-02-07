@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"goyavision/internal/app/dto"
 	"goyavision/internal/app/port"
@@ -39,7 +40,14 @@ func (h *UpdateAIModelHandler) Handle(ctx context.Context, cmd dto.UpdateAIModel
 			model.Description = *cmd.Description
 		}
 		if cmd.Provider != nil {
-			model.Provider = ai_model.Provider(*cmd.Provider)
+			p := ai_model.Provider(*cmd.Provider)
+			switch p {
+			case ai_model.ProviderOpenAI, ai_model.ProviderAnthropic, ai_model.ProviderOllama, ai_model.ProviderLocal, ai_model.ProviderCustom,
+				ai_model.ProviderQwen, ai_model.ProviderDoubao, ai_model.ProviderZhipu, ai_model.ProviderVLLM:
+			default:
+				return apperr.InvalidInput(fmt.Sprintf("invalid provider: %s", *cmd.Provider))
+			}
+			model.Provider = p
 		}
 		if cmd.Endpoint != nil {
 			model.Endpoint = *cmd.Endpoint
@@ -63,6 +71,9 @@ func (h *UpdateAIModelHandler) Handle(ctx context.Context, cmd dto.UpdateAIModel
 		}
 		if cmd.Status != nil {
 			model.Status = ai_model.Status(*cmd.Status)
+		}
+		if cmd.Visibility != nil {
+			model.Visibility = *cmd.Visibility
 		}
 
 		if err := repos.AIModels.Update(ctx, model); err != nil {

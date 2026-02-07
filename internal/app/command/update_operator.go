@@ -47,6 +47,9 @@ func (h *UpdateOperatorHandler) Handle(ctx context.Context, cmd dto.UpdateOperat
 		if len(cmd.Tags) > 0 {
 			op.Tags = cmd.Tags
 		}
+		if cmd.Visibility != nil {
+			op.Visibility = *cmd.Visibility
+		}
 
 		if err := repos.Operators.Update(ctx, op); err != nil {
 			return apperr.Wrap(err, apperr.CodeDBError, "failed to update operator")

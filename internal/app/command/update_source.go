@@ -42,6 +42,9 @@ func (h *UpdateSourceHandler) Handle(ctx context.Context, cmd dto.UpdateSourceCo
 		if cmd.Enabled != nil {
 			src.Enabled = *cmd.Enabled
 		}
+		if cmd.Visibility != nil {
+			src.Visibility = *cmd.Visibility
+		}
 
 		source := src.URL
 		if src.Type == media.SourceTypePush {

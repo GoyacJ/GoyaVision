@@ -259,6 +259,14 @@
               </el-form-item>
             </template>
 
+            <el-form-item label="可见范围">
+              <GvSelect
+                v-model="uploadForm.visibility"
+                :options="VISIBILITY_OPTIONS"
+                placeholder="请选择可见范围"
+              />
+            </el-form-item>
+
             <el-form-item label="标签" prop="tags">
               <el-select
                 v-model="uploadForm.tags"
@@ -275,9 +283,6 @@
                   :value="tag"
                 />
               </el-select>
-            </el-form-item>
-            <el-form-item label="可见范围" prop="visibility">
-              <GvSelect v-model="uploadForm.visibility" :options="visibilityOptions" placeholder="请选择可见范围" />
             </el-form-item>
           </el-form>
         </GvModal>
@@ -388,9 +393,13 @@
               <div class="info-item">
                 <span class="info-label">可见范围</span>
                 <template v-if="canEditPermission">
-                  <GvSelect v-model="editForm.visibility" :options="visibilityOptions" />
+                  <GvSelect
+                    v-model="editForm.visibility"
+                    :options="VISIBILITY_OPTIONS"
+                    placeholder="请选择可见范围"
+                  />
                 </template>
-                <span v-else class="info-value">{{ visibilityOptions.find(o => o.value === currentAsset.visibility)?.label || '私有' }}</span>
+                <span v-else class="info-value">{{ (currentAsset.visibility === 2 ? '公开' : (currentAsset.visibility === 1 ? '角色可见' : '私有')) }}</span>
               </div>
               <div class="info-item info-item--full">
                 <span class="info-label">标签</span>
@@ -478,6 +487,7 @@ import StatusBadge from '@/components/business/StatusBadge/index.vue'
 import AssetCard from '@/components/business/AssetCard/index.vue'
 import { LoadingState, ErrorState, EmptyState } from '@/components/common'
 import { useUserStore } from '@/store/user'
+import { VISIBILITY_OPTIONS } from '@/constants/visibility'
 
 // UI 状态
 const uploading = ref(false)
@@ -548,12 +558,6 @@ const {
 
 const tags = computed(() => tagsData.value?.data.tags || [])
 
-const visibilityOptions = [
-  { label: '私有', value: 0 },
-  { label: '角色可见', value: 1 },
-  { label: '公开', value: 2 }
-]
-
 const uploadForm = reactive<any>({
   type: 'video',
   source_type: 'upload',
@@ -563,16 +567,14 @@ const uploadForm = reactive<any>({
   format: '',
   source_id: undefined,
   tags: [],
-  visibility: 0,
-  visible_role_ids: []
+  visibility: 0
 })
 
 const editForm = reactive<any>({
   name: '',
   status: 'ready',
   tags: [],
-  visibility: 0,
-  visible_role_ids: []
+  visibility: 0
 })
 
 const uploadRules: FormRules = {
@@ -698,7 +700,7 @@ async function handleUpload() {
           uploadForm.type,
           uploadForm.name,
           uploadForm.tags || [],
-          Number(uploadForm.visibility)
+          uploadForm.visibility ?? 0
         )
       } else {
         const createData: any = {
@@ -709,7 +711,7 @@ async function handleUpload() {
           size: uploadForm.size || 0,
           format: uploadForm.format || '',
           tags: uploadForm.tags || [],
-          visibility: Number(uploadForm.visibility)
+          visibility: uploadForm.visibility ?? 0
         }
         await assetApi.create(createData)
       }
@@ -737,7 +739,6 @@ function resetUploadForm() {
   uploadForm.source_id = undefined
   uploadForm.tags = []
   uploadForm.visibility = 0
-  uploadForm.visible_role_ids = []
   selectedFile.value = null
   uploadFileList.value = []
   uploadRef.value?.clearFiles()
@@ -780,7 +781,6 @@ function handleDetail(asset: MediaAsset) {
   editForm.status = asset.status
   editForm.tags = asset.tags || []
   editForm.visibility = asset.visibility ?? 0
-  editForm.visible_role_ids = asset.visible_role_ids || []
   showDetailDrawer.value = true
 }
 
@@ -790,7 +790,6 @@ function resetEditForm() {
   editForm.status = currentAsset.value.status
   editForm.tags = currentAsset.value.tags || []
   editForm.visibility = currentAsset.value.visibility ?? 0
-  editForm.visible_role_ids = currentAsset.value.visible_role_ids || []
 }
 
 async function doUpdate(payload: any) {
@@ -821,7 +820,7 @@ async function saveAll() {
     name: editForm.name,
     status: editForm.status,
     tags: editForm.tags || [],
-    visibility: Number(editForm.visibility)
+    visibility: editForm.visibility ?? 0
   })
 }
 

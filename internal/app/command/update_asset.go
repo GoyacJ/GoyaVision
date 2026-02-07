@@ -41,6 +41,9 @@ func (h *UpdateAssetHandler) Handle(ctx context.Context, cmd dto.UpdateAssetComm
 		if cmd.Tags != nil {
 			asset.Tags = *cmd.Tags
 		}
+		if cmd.Visibility != nil {
+			asset.Visibility = *cmd.Visibility
+		}
 
 		return repos.Assets.Update(ctx, asset)
 	})

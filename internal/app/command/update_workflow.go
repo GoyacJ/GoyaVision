@@ -51,6 +51,9 @@ func (h *UpdateWorkflowHandler) Handle(ctx context.Context, cmd dto.UpdateWorkfl
 		if len(cmd.Tags) > 0 {
 			wf.Tags = cmd.Tags
 		}
+		if cmd.Visibility != nil {
+			wf.Visibility = *cmd.Visibility
+		}
 
 		if len(cmd.Nodes) > 0 {
 			if err := validateWorkflowConnections(ctx, repos, h.schemaValidator, cmd.Nodes, cmd.Edges); err != nil {

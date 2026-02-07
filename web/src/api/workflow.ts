@@ -56,6 +56,7 @@ export interface WorkflowCreateReq {
   trigger_type: 'manual' | 'schedule' | 'event'
   trigger_conf?: Record<string, any>
   tags?: string[]
+  visibility?: number
   nodes?: Omit<WorkflowNode, 'id' | 'workflow_id' | 'created_at' | 'updated_at'>[]
   edges?: Omit<WorkflowEdge, 'id' | 'workflow_id' | 'created_at' | 'updated_at'>[]
 }
@@ -67,6 +68,7 @@ export interface WorkflowUpdateReq {
   trigger_type?: 'manual' | 'schedule' | 'event'
   trigger_conf?: Record<string, any>
   tags?: string[]
+  visibility?: number
   nodes?: Omit<WorkflowNode, 'id' | 'workflow_id' | 'created_at' | 'updated_at'>[]
   edges?: Omit<WorkflowEdge, 'id' | 'workflow_id' | 'created_at' | 'updated_at'>[]
 }
