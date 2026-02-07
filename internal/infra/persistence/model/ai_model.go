@@ -8,8 +8,12 @@ import (
 )
 
 type AIModelModel struct {
-	ID          uuid.UUID      `gorm:"type:uuid;primaryKey"`
-	Name        string         `gorm:"type:varchar(100);not null"`
+	ID             uuid.UUID      `gorm:"type:uuid;primaryKey"`
+	TenantID       uuid.UUID      `gorm:"type:uuid;not null;index:idx_ai_models_tenant_id"`
+	OwnerID        uuid.UUID      `gorm:"type:uuid;index:idx_ai_models_owner_id"`
+	Visibility     int            `gorm:"default:0;index:idx_ai_models_visibility"`
+	VisibleRoleIDs datatypes.JSON `gorm:"type:jsonb"`
+	Name           string         `gorm:"type:varchar(100);not null"`
 	Description string         `gorm:"type:text"`
 	Provider    string         `gorm:"type:varchar(50);not null"`
 	Endpoint  string         `gorm:"type:varchar(255)"`

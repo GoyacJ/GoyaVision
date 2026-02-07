@@ -9,6 +9,7 @@ import (
 
 type ArtifactModel struct {
 	ID        uuid.UUID      `gorm:"type:uuid;primaryKey"`
+	TenantID  uuid.UUID      `gorm:"type:uuid;not null;index:idx_artifacts_tenant_id"`
 	TaskID    uuid.UUID      `gorm:"type:uuid;not null;index:idx_artifacts_task_id"`
 	Type      string         `gorm:"type:varchar(50);not null;index:idx_artifacts_type"`
 	AssetID   *uuid.UUID     `gorm:"type:uuid;index:idx_artifacts_asset_id"`

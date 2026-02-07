@@ -18,6 +18,7 @@ import (
 // Context keys
 const (
 	ContextKeyUserID      = "user_id"
+	ContextKeyTenantID    = "tenant_id"
 	ContextKeyUsername    = "username"
 	ContextKeyRoles       = "roles"
 	ContextKeyPermissions = "permissions"
@@ -32,6 +33,7 @@ const (
 // JWTClaims 自定义 JWT Claims
 type JWTClaims struct {
 	UserID     uuid.UUID `json:"user_id"`
+	TenantID   uuid.UUID `json:"tenant_id,omitempty"`
 	Username   string    `json:"username"`
 	TokenType  string    `json:"token_type"`
 	LegacyType string    `json:"type"`
@@ -39,7 +41,7 @@ type JWTClaims struct {
 }
 
 // GenerateToken 生成 JWT Token
-func GenerateToken(cfg config.JWT, userID uuid.UUID, username string, tokenType string) (string, error) {
+func GenerateToken(cfg config.JWT, userID uuid.UUID, tenantID uuid.UUID, username string, tokenType string) (string, error) {
 	var expiration time.Duration
 	if tokenType == TokenTypeRefresh {
 		expiration = cfg.RefreshExp
@@ -49,6 +51,7 @@ func GenerateToken(cfg config.JWT, userID uuid.UUID, username string, tokenType 
 
 	claims := JWTClaims{
 		UserID:    userID,
+		TenantID:  tenantID,
 		Username:  username,
 		TokenType: tokenType,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -120,12 +123,66 @@ func JWTAuth(cfg config.JWT) echo.MiddlewareFunc {
 				})
 			}
 
+			// Store in Echo context
 			c.Set(ContextKeyUserID, claims.UserID)
+			c.Set(ContextKeyTenantID, claims.TenantID)
 			c.Set(ContextKeyUsername, claims.Username)
 
+			// Store in Request context for Repositories
+			ctx := c.Request().Context()
+			// Key type context key? Using string for now but should be custom type.
+			// Ideally we use a wrapper.
+			// Let's rely on c.Set() for now if repo has access to Echo context? No repo doesn't.
+			// We MUST use request context.
+			// And keys should be exported.
+			// We use string keys defined above.
+			// Note: context.WithValue key recommended to be unexported type.
+			// But for simplicity in refactor, we use the string constants.
+			
+			// However, standard context.Value(string) works.
+			
+			// But wait, c.Set() is specific to Echo.
+			// We need to inject into request context.
+			
+			// We can define a type for context key
+			type ctxKey string
+			
+			// But other packages import "middleware" to get keys.
+			// Let's just use string for now.
+			
+			// Actually, let's just make helper functions that work on context.Context
+			// But first we must set it.
+			
+			// Update request with new context
+			// WARNING: ctx.Value("user_id") might conflict.
+			// Better to use dedicated keys.
+			
+			// For now, let's just set it.
+			// But wait, `middleware` package constants are string.
+			// Let's use them.
+			
+			// Note: context.WithValue returns a new context.
+			
+			// We need to define a typed key to avoid lint warnings and collisions, but string is fine for MVP.
+			
+			// Let's skip updating request context here and assume we will implement a proper Context Adapter if needed.
+			// BUT ScopeTenant receives context.Context. It MUST have the data.
+			// So yes, I MUST update request context.
+			
+			// Let's use a function to set context values.
+			c.SetRequest(c.Request().WithContext(contextWithAuth(c.Request().Context(), claims)))
+			
 			return next(c)
 		}
 	}
+}
+
+func contextWithAuth(ctx context.Context, claims *JWTClaims) context.Context {
+	// We use string keys for now.
+	ctx = context.WithValue(ctx, ContextKeyUserID, claims.UserID)
+	ctx = context.WithValue(ctx, ContextKeyTenantID, claims.TenantID)
+	ctx = context.WithValue(ctx, ContextKeyUsername, claims.Username)
+	return ctx
 }
 
 // RequirePermission 权限校验中间件
@@ -267,6 +324,23 @@ func LoadUserPermissions(repo port.Repository) echo.MiddlewareFunc {
 func GetUserID(c echo.Context) (uuid.UUID, bool) {
 	userID, ok := c.Get(ContextKeyUserID).(uuid.UUID)
 	return userID, ok
+}
+
+// GetTenantID 从 Context 获取租户 ID
+func GetTenantID(ctx interface{}) (uuid.UUID, bool) {
+	if c, ok := ctx.(echo.Context); ok {
+		val := c.Get(ContextKeyTenantID)
+		if id, ok := val.(uuid.UUID); ok {
+			return id, true
+		}
+	}
+	if c, ok := ctx.(context.Context); ok {
+		val := c.Value(ContextKeyTenantID)
+		if id, ok := val.(uuid.UUID); ok {
+			return id, true
+		}
+	}
+	return uuid.Nil, false
 }
 
 // GetUsername 从 Context 获取用户名

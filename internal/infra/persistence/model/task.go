@@ -8,9 +8,11 @@ import (
 )
 
 type TaskModel struct {
-	ID          uuid.UUID      `gorm:"type:uuid;primaryKey"`
-	WorkflowID  uuid.UUID      `gorm:"type:uuid;not null;index:idx_tasks_workflow_id"`
-	AssetID     *uuid.UUID     `gorm:"type:uuid;index:idx_tasks_asset_id"`
+	ID                uuid.UUID      `gorm:"type:uuid;primaryKey"`
+	TenantID          uuid.UUID      `gorm:"type:uuid;not null;index:idx_tasks_tenant_id"`
+	TriggeredByUserID *uuid.UUID     `gorm:"type:uuid;index:idx_tasks_triggered_by"`
+	WorkflowID        uuid.UUID      `gorm:"type:uuid;not null;index:idx_tasks_workflow_id"`
+	AssetID           *uuid.UUID     `gorm:"type:uuid;index:idx_tasks_asset_id"`
 	Status      string         `gorm:"type:varchar(20);not null;default:'pending';index:idx_tasks_status"`
 	Progress    int            `gorm:"not null;default:0"`
 	CurrentNode string         `gorm:"type:varchar(100)"`

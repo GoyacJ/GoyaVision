@@ -8,9 +8,13 @@ import (
 )
 
 type OperatorModel struct {
-	ID          uuid.UUID      `gorm:"type:uuid;primaryKey"`
-	Code        string         `gorm:"type:varchar(100);not null;uniqueIndex"`
-	Name        string         `gorm:"type:varchar(255);not null"`
+	ID             uuid.UUID      `gorm:"type:uuid;primaryKey"`
+	TenantID       uuid.UUID      `gorm:"type:uuid;not null;index:idx_operators_tenant_id"`
+	OwnerID        uuid.UUID      `gorm:"type:uuid;index:idx_operators_owner_id"`
+	Visibility     int            `gorm:"default:0;index:idx_operators_visibility"`
+	VisibleRoleIDs datatypes.JSON `gorm:"type:jsonb"`
+	Code           string         `gorm:"type:varchar(100);not null;uniqueIndex"`
+	Name           string         `gorm:"type:varchar(255);not null"`
 	Description string         `gorm:"type:text"`
 	Category    string         `gorm:"type:varchar(50);not null;index:idx_operators_category"`
 	Type        string         `gorm:"type:varchar(50);not null;index:idx_operators_type"`

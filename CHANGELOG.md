@@ -8,6 +8,11 @@
 ## [未发布]
 
 ### 新增
+- **多租户架构重构 (Phase 1 & 2)**：
+  - **基础设施**：新增 `Tenant` 实体与表结构，JWT 增强 `tenant_id` 载荷支持。
+  - **数据模型**：所有核心业务表 (`media_assets`, `operators`, `workflows` 等) 增加 `tenant_id` (租户隔离)、`owner_id` (所有权)、`visibility` (可见性) 字段。
+  - **持久层**：实现 GORM Scopes (`ScopeTenant`, `ScopeVisibility`) 用于统一过滤租户与权限数据。
+  - **设计文档**：新增 `docs/refactoring-multitenancy-design.md` 完整设计方案。
 - **前端响应式重构**：全面优化移动端适配。
   - **全局导航**：移动端自动切换为左侧抽屉式菜单（Hamburger Menu）。
   - **资产库**：移动端自适应为单栏布局，强制使用网格视图，优化筛选栏展示。

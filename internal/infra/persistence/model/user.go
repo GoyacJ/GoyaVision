@@ -16,6 +16,7 @@ type UserModel struct {
 	Phone     string      `gorm:"size:32"`
 	Avatar    string      `gorm:"size:256"`
 	Status    int         `gorm:"default:1"`
+	TenantID  *uuid.UUID  `gorm:"type:uuid;index:idx_users_tenant_id"`
 	CreatedAt  time.Time           `gorm:"autoCreateTime"`
 	UpdatedAt  time.Time           `gorm:"autoUpdateTime"`
 	Roles      []RoleModel         `gorm:"many2many:user_roles"`
