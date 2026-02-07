@@ -5,6 +5,7 @@ import (
 
 	"goyavision/internal/api/dto"
 	appdto "goyavision/internal/app/dto"
+	"goyavision/internal/domain/ai_model"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -61,14 +62,21 @@ func (h *aiModelHandler) Create(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
 	}
 
+	visibility := ai_model.VisibilityPrivate
+	if req.Visibility != nil {
+		visibility = ai_model.Visibility(*req.Visibility)
+	}
+
 	cmd := appdto.CreateAIModelCommand{
-		Name:        req.Name,
-		Description: req.Description,
-		Provider:    req.Provider,
-		Endpoint:    req.Endpoint,
-		APIKey:      req.APIKey,
-		ModelName:   req.ModelName,
-		Config:      req.Config,
+		Name:           req.Name,
+		Description:    req.Description,
+		Provider:       req.Provider,
+		Endpoint:       req.Endpoint,
+		APIKey:         req.APIKey,
+		ModelName:      req.ModelName,
+		Config:         req.Config,
+		Visibility:     visibility,
+		VisibleRoleIDs: req.VisibleRoleIDs,
 	}
 
 	model, err := h.h.CreateAIModel.Handle(c.Request().Context(), cmd)
@@ -107,15 +115,21 @@ func (h *aiModelHandler) Update(c echo.Context) error {
 	}
 
 	cmd := appdto.UpdateAIModelCommand{
-		ID:          id,
-		Name:        req.Name,
-		Description: req.Description,
-		Provider:    req.Provider,
-		Endpoint:    req.Endpoint,
-		APIKey:      req.APIKey,
-		ModelName:   req.ModelName,
-		Config:      req.Config,
-		Status:      req.Status,
+		ID:             id,
+		Name:           req.Name,
+		Description:    req.Description,
+		Provider:       req.Provider,
+		Endpoint:       req.Endpoint,
+		APIKey:         req.APIKey,
+		ModelName:      req.ModelName,
+		Config:         req.Config,
+		Status:         req.Status,
+		VisibleRoleIDs: req.VisibleRoleIDs,
+	}
+
+	if req.Visibility != nil {
+		v := ai_model.Visibility(*req.Visibility)
+		cmd.Visibility = &v
 	}
 
 	model, err := h.h.UpdateAIModel.Handle(c.Request().Context(), cmd)

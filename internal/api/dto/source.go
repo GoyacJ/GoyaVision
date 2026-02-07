@@ -17,33 +17,39 @@ type SourceListQuery struct {
 
 // SourceCreateReq 创建媒体源请求
 type SourceCreateReq struct {
-	Name     string `json:"name" validate:"required"`
-	Type     string `json:"type" validate:"required"`
-	URL      string `json:"url,omitempty"`
-	Protocol string `json:"protocol,omitempty"`
-	Enabled  bool   `json:"enabled,omitempty"`
+	Name           string   `json:"name" validate:"required"`
+	Type           string   `json:"type" validate:"required"`
+	URL            string   `json:"url,omitempty"`
+	Protocol       string   `json:"protocol,omitempty"`
+	Enabled        bool     `json:"enabled,omitempty"`
+	Visibility     *int     `json:"visibility,omitempty"`
+	VisibleRoleIDs []string `json:"visible_role_ids,omitempty"`
 }
 
 // SourceUpdateReq 更新媒体源请求
 type SourceUpdateReq struct {
-	Name     *string `json:"name,omitempty"`
-	URL      *string `json:"url,omitempty"`
-	Protocol *string `json:"protocol,omitempty"`
-	Enabled  *bool   `json:"enabled,omitempty"`
+	Name           *string  `json:"name,omitempty"`
+	URL            *string  `json:"url,omitempty"`
+	Protocol       *string  `json:"protocol,omitempty"`
+	Enabled        *bool    `json:"enabled,omitempty"`
+	Visibility     *int     `json:"visibility,omitempty"`
+	VisibleRoleIDs []string `json:"visible_role_ids,omitempty"`
 }
 
 // SourceResponse 媒体源响应
 type SourceResponse struct {
-	ID            uuid.UUID `json:"id"`
-	Name          string    `json:"name"`
-	PathName      string    `json:"path_name"`
-	Type          string    `json:"type"`
-	URL           string    `json:"url,omitempty"`
-	Protocol      string    `json:"protocol,omitempty"`
-	Enabled       bool      `json:"enabled"`
-	RecordEnabled bool      `json:"record_enabled"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	ID             uuid.UUID `json:"id"`
+	Name           string    `json:"name"`
+	PathName       string    `json:"path_name"`
+	Type           string    `json:"type"`
+	URL            string    `json:"url,omitempty"`
+	Protocol       string    `json:"protocol,omitempty"`
+	Enabled        bool      `json:"enabled"`
+	RecordEnabled  bool      `json:"record_enabled"`
+	Visibility     int       `json:"visibility"`
+	VisibleRoleIDs []string  `json:"visible_role_ids,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 // SourceListResponse 媒体源列表响应
@@ -68,16 +74,18 @@ func SourceToResponse(s *media.Source) *SourceResponse {
 		return nil
 	}
 	return &SourceResponse{
-		ID:            s.ID,
-		Name:          s.Name,
-		PathName:      s.PathName,
-		Type:          string(s.Type),
-		URL:           s.URL,
-		Protocol:      s.Protocol,
-		Enabled:       s.Enabled,
-		RecordEnabled: s.RecordEnabled,
-		CreatedAt:     s.CreatedAt,
-		UpdatedAt:     s.UpdatedAt,
+		ID:             s.ID,
+		Name:           s.Name,
+		PathName:       s.PathName,
+		Type:           string(s.Type),
+		URL:            s.URL,
+		Protocol:       s.Protocol,
+		Enabled:        s.Enabled,
+		RecordEnabled:  s.RecordEnabled,
+		Visibility:     int(s.Visibility),
+		VisibleRoleIDs: s.VisibleRoleIDs,
+		CreatedAt:      s.CreatedAt,
+		UpdatedAt:      s.UpdatedAt,
 	}
 }
 

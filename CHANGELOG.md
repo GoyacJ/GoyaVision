@@ -13,6 +13,8 @@
   - **数据模型**：所有核心业务表 (`media_assets`, `operators`, `workflows` 等) 增加 `tenant_id` (租户隔离)、`owner_id` (所有权)、`visibility` (可见性) 字段。
   - **持久层**：实现 GORM Scopes (`ScopeTenant`, `ScopeVisibility`) 用于统一过滤租户与权限数据。
   - **Repository改造**：全量升级 `MediaAsset`, `MediaSource`, `Operator`, `AIModel`, `Workflow`, `Task`, `File` Repositories，接入多租户与可见性过滤。
+  - **API适配**：更新所有核心资源（Asset, Source, Operator, Workflow, AIModel）的 DTO 和 Handler，支持前端传递可见性设置。
+  - **前端适配**：媒体资产与算子管理表单新增“可见范围”与“可见角色”配置项。
   - **设计文档**：新增 `docs/refactoring-multitenancy-design.md` 完整设计方案。
 - **前端响应式重构**：全面优化移动端适配。
   - **全局导航**：移动端自动切换为左侧抽屉式菜单（Hamburger Menu）。

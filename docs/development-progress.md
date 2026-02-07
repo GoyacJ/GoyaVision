@@ -46,8 +46,8 @@
 | **多租户** | | | |
 | 基础设施 | Tenant实体、JWT增强 | ✅ 已完成 | Phase 1 & 2 完成 |
 | 持久层改造 | GORM Scopes | ✅ 已完成 | ScopeTenant, ScopeVisibility 实现 |
-| 业务改造 | Service/API适配 | ⏸️ 待开始 | Phase 4 |
-| 前端适配 | 租户切换/管理 | ⏸️ 待开始 | Phase 5 |
+| 业务改造 | Service/API适配 | ✅ 已完成 | Phase 4: Asset, Source, Operator, Workflow, AIModel DTO & Handler 更新 |
+| 前端适配 | 可见性设置 | 🚧 进行中 | Phase 5: 资产与算子表单已适配可见性设置，其他表单待更新 |
 | **前端** | | | |
 | 媒体源页面 | 流管理、预览 | ✅ 已完成 | 独立页面 /sources，CRUD、预览 URL（含 push 时 push_url）、与设计文档对齐 |
 | 媒体资产页面 | 左右布局、类型/标签筛选、网格展示 | ✅ 已完成 | 支持 URL 地址与文件上传两种方式添加资产；资产类型 video/image/audio；来源类型 upload/generated/operator_output；类型与标签筛选实时生效（useTable 监听 extraParams）；流媒体接入功能已迁移至媒体源模块 |

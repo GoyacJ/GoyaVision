@@ -101,19 +101,26 @@ func (h *assetHandler) Create(c echo.Context) error {
 		status = media.AssetStatus(req.Status)
 	}
 
+	visibility := media.VisibilityPrivate
+	if req.Visibility != nil {
+		visibility = media.Visibility(*req.Visibility)
+	}
+
 	cmd := appdto.CreateAssetCommand{
-		Type:       media.AssetType(req.Type),
-		SourceType: media.AssetSourceType(req.SourceType),
-		SourceID:   req.SourceID,
-		ParentID:   req.ParentID,
-		Name:       req.Name,
-		Path:       req.Path,
-		Duration:   req.Duration,
-		Size:       req.Size,
-		Format:     req.Format,
-		Metadata:   req.Metadata,
-		Status:     status,
-		Tags:       req.Tags,
+		Type:           media.AssetType(req.Type),
+		SourceType:     media.AssetSourceType(req.SourceType),
+		SourceID:       req.SourceID,
+		ParentID:       req.ParentID,
+		Name:           req.Name,
+		Path:           req.Path,
+		Duration:       req.Duration,
+		Size:           req.Size,
+		Format:         req.Format,
+		Metadata:       req.Metadata,
+		Status:         status,
+		Tags:           req.Tags,
+		Visibility:     visibility,
+		VisibleRoleIDs: req.VisibleRoleIDs,
 	}
 
 	asset, err := h.h.CreateAsset.Handle(c.Request().Context(), cmd)
@@ -159,9 +166,15 @@ func (h *assetHandler) Update(c echo.Context) error {
 	}
 
 	cmd := appdto.UpdateAssetCommand{
-		ID:       id,
-		Name:     req.Name,
-		Metadata: req.Metadata,
+		ID:             id,
+		Name:           req.Name,
+		Metadata:       req.Metadata,
+		VisibleRoleIDs: req.VisibleRoleIDs,
+	}
+
+	if req.Visibility != nil {
+		v := media.Visibility(*req.Visibility)
+		cmd.Visibility = &v
 	}
 
 	if req.Tags != nil {

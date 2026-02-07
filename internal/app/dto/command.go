@@ -11,19 +11,23 @@ import (
 // Media Source Commands
 
 type CreateSourceCommand struct {
-	Name     string
-	Type     media.SourceType
-	URL      string
-	Protocol string
-	Enabled  bool
+	Name           string
+	Type           media.SourceType
+	URL            string
+	Protocol       string
+	Enabled        bool
+	Visibility     media.Visibility
+	VisibleRoleIDs []string
 }
 
 type UpdateSourceCommand struct {
-	ID       uuid.UUID
-	Name     *string
-	URL      *string
-	Protocol *string
-	Enabled  *bool
+	ID             uuid.UUID
+	Name           *string
+	URL            *string
+	Protocol       *string
+	Enabled        *bool
+	Visibility     *media.Visibility
+	VisibleRoleIDs []string
 }
 
 type DeleteSourceCommand struct {
@@ -33,26 +37,30 @@ type DeleteSourceCommand struct {
 // Media Asset Commands
 
 type CreateAssetCommand struct {
-	Type       media.AssetType
-	SourceType media.AssetSourceType
-	SourceID   *uuid.UUID
-	ParentID   *uuid.UUID
-	Name       string
-	Path       string
-	Duration   *float64
-	Size       int64
-	Format     string
-	Metadata   map[string]interface{}
-	Status     media.AssetStatus
-	Tags       []string
+	Type           media.AssetType
+	SourceType     media.AssetSourceType
+	SourceID       *uuid.UUID
+	ParentID       *uuid.UUID
+	Name           string
+	Path           string
+	Duration       *float64
+	Size           int64
+	Format         string
+	Metadata       map[string]interface{}
+	Status         media.AssetStatus
+	Tags           []string
+	Visibility     media.Visibility
+	VisibleRoleIDs []string
 }
 
 type UpdateAssetCommand struct {
-	ID       uuid.UUID
-	Name     *string
-	Status   *media.AssetStatus
-	Metadata map[string]interface{}
-	Tags     *[]string
+	ID             uuid.UUID
+	Name           *string
+	Status         *media.AssetStatus
+	Metadata       map[string]interface{}
+	Tags           *[]string
+	Visibility     *media.Visibility
+	VisibleRoleIDs []string
 }
 
 type DeleteAssetCommand struct {
@@ -101,24 +109,28 @@ type BindIdentityCommand struct {
 // Operator Commands
 
 type CreateOperatorCommand struct {
-	Code        string
-	Name        string
-	Description string
-	Category    operator.Category
-	Type        operator.Type
-	Origin      operator.Origin
-	ExecMode    operator.ExecMode
-	ExecConfig  *operator.ExecConfig
-	Status      operator.Status
-	Tags        []string
+	Code           string
+	Name           string
+	Description    string
+	Category       operator.Category
+	Type           operator.Type
+	Origin         operator.Origin
+	ExecMode       operator.ExecMode
+	ExecConfig     *operator.ExecConfig
+	Status         operator.Status
+	Tags           []string
+	Visibility     operator.Visibility
+	VisibleRoleIDs []string
 }
 
 type UpdateOperatorCommand struct {
-	ID          uuid.UUID
-	Name        *string
-	Description *string
-	Category    *operator.Category
-	Tags        []string
+	ID             uuid.UUID
+	Name           *string
+	Description    *string
+	Category       *operator.Category
+	Tags           []string
+	Visibility     *operator.Visibility
+	VisibleRoleIDs []string
 }
 
 type DeleteOperatorCommand struct {
@@ -229,27 +241,31 @@ type WorkflowEdgeInput struct {
 }
 
 type CreateWorkflowCommand struct {
-	Code        string
-	Name        string
-	Description string
-	Version     string
-	TriggerType workflow.TriggerType
-	TriggerConf map[string]interface{}
-	Status      workflow.Status
-	Tags        []string
-	Nodes       []WorkflowNodeInput
-	Edges       []WorkflowEdgeInput
+	Code           string
+	Name           string
+	Description    string
+	Version        string
+	TriggerType    workflow.TriggerType
+	TriggerConf    map[string]interface{}
+	Status         workflow.Status
+	Tags           []string
+	Nodes          []WorkflowNodeInput
+	Edges          []WorkflowEdgeInput
+	Visibility     workflow.Visibility
+	VisibleRoleIDs []string
 }
 
 type UpdateWorkflowCommand struct {
-	ID          uuid.UUID
-	Name        *string
-	Description *string
-	TriggerConf map[string]interface{}
-	Status      *workflow.Status
-	Tags        []string
-	Nodes       []WorkflowNodeInput
-	Edges       []WorkflowEdgeInput
+	ID             uuid.UUID
+	Name           *string
+	Description    *string
+	TriggerConf    map[string]interface{}
+	Status         *workflow.Status
+	Tags           []string
+	Nodes          []WorkflowNodeInput
+	Edges          []WorkflowEdgeInput
+	Visibility     *workflow.Visibility
+	VisibleRoleIDs []string
 }
 
 type DeleteWorkflowCommand struct {

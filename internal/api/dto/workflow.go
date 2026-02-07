@@ -27,21 +27,25 @@ type WorkflowCreateReq struct {
 	Version     string                 `json:"version,omitempty"`
 	TriggerType string                 `json:"trigger_type" validate:"required"`
 	TriggerConf map[string]interface{} `json:"trigger_conf,omitempty"`
-	Status      string                 `json:"status,omitempty"`
-	Tags        []string               `json:"tags,omitempty"`
-	Nodes       []WorkflowNodeInput    `json:"nodes,omitempty"`
-	Edges       []WorkflowEdgeInput    `json:"edges,omitempty"`
+	Status         string                 `json:"status,omitempty"`
+	Tags           []string               `json:"tags,omitempty"`
+	Nodes          []WorkflowNodeInput    `json:"nodes,omitempty"`
+	Edges          []WorkflowEdgeInput    `json:"edges,omitempty"`
+	Visibility     *int                   `json:"visibility,omitempty"`
+	VisibleRoleIDs []string               `json:"visible_role_ids,omitempty"`
 }
 
 // WorkflowUpdateReq 更新工作流请求
 type WorkflowUpdateReq struct {
-	Name        *string                `json:"name,omitempty"`
-	Description *string                `json:"description,omitempty"`
-	TriggerConf map[string]interface{} `json:"trigger_conf,omitempty"`
-	Status      *string                `json:"status,omitempty"`
-	Tags        []string               `json:"tags,omitempty"`
-	Nodes       []WorkflowNodeInput    `json:"nodes,omitempty"`
-	Edges       []WorkflowEdgeInput    `json:"edges,omitempty"`
+	Name           *string                `json:"name,omitempty"`
+	Description    *string                `json:"description,omitempty"`
+	TriggerConf    map[string]interface{} `json:"trigger_conf,omitempty"`
+	Status         *string                `json:"status,omitempty"`
+	Tags           []string               `json:"tags,omitempty"`
+	Nodes          []WorkflowNodeInput    `json:"nodes,omitempty"`
+	Edges          []WorkflowEdgeInput    `json:"edges,omitempty"`
+	Visibility     *int                   `json:"visibility,omitempty"`
+	VisibleRoleIDs []string               `json:"visible_role_ids,omitempty"`
 }
 
 // WorkflowNodeInput 工作流节点输入
@@ -68,11 +72,13 @@ type WorkflowResponse struct {
 	Description string                 `json:"description,omitempty"`
 	Version     string                 `json:"version"`
 	TriggerType string                 `json:"trigger_type"`
-	TriggerConf map[string]interface{} `json:"trigger_conf,omitempty"`
-	Status      string                 `json:"status"`
-	Tags        []string               `json:"tags,omitempty"`
-	CreatedAt   time.Time              `json:"created_at"`
-	UpdatedAt   time.Time              `json:"updated_at"`
+	TriggerConf    map[string]interface{} `json:"trigger_conf,omitempty"`
+	Status         string                 `json:"status"`
+	Tags           []string               `json:"tags,omitempty"`
+	Visibility     int                    `json:"visibility"`
+	VisibleRoleIDs []string               `json:"visible_role_ids,omitempty"`
+	CreatedAt      time.Time              `json:"created_at"`
+	UpdatedAt      time.Time              `json:"updated_at"`
 }
 
 // WorkflowWithNodesResponse 工作流及节点响应
@@ -83,13 +89,15 @@ type WorkflowWithNodesResponse struct {
 	Description string                 `json:"description,omitempty"`
 	Version     string                 `json:"version"`
 	TriggerType string                 `json:"trigger_type"`
-	TriggerConf map[string]interface{} `json:"trigger_conf,omitempty"`
-	Status      string                 `json:"status"`
-	Tags        []string               `json:"tags,omitempty"`
-	Nodes       []WorkflowNodeResponse `json:"nodes"`
-	Edges       []WorkflowEdgeResponse `json:"edges"`
-	CreatedAt   time.Time              `json:"created_at"`
-	UpdatedAt   time.Time              `json:"updated_at"`
+	TriggerConf    map[string]interface{} `json:"trigger_conf,omitempty"`
+	Status         string                 `json:"status"`
+	Tags           []string               `json:"tags,omitempty"`
+	Visibility     int                    `json:"visibility"`
+	VisibleRoleIDs []string               `json:"visible_role_ids,omitempty"`
+	Nodes          []WorkflowNodeResponse `json:"nodes"`
+	Edges          []WorkflowEdgeResponse `json:"edges"`
+	CreatedAt      time.Time              `json:"created_at"`
+	UpdatedAt      time.Time              `json:"updated_at"`
 }
 
 // WorkflowNodeResponse 工作流节点响应
@@ -140,12 +148,14 @@ func WorkflowToResponse(w *workflow.Workflow) *WorkflowResponse {
 		Name:        w.Name,
 		Description: w.Description,
 		Version:     w.Version,
-		TriggerType: string(w.TriggerType),
-		TriggerConf: triggerConf,
-		Status:      string(w.Status),
-		Tags:        tags,
-		CreatedAt:   w.CreatedAt,
-		UpdatedAt:   w.UpdatedAt,
+		TriggerType:    string(w.TriggerType),
+		TriggerConf:    triggerConf,
+		Status:         string(w.Status),
+		Tags:           tags,
+		Visibility:     int(w.Visibility),
+		VisibleRoleIDs: w.VisibleRoleIDs,
+		CreatedAt:      w.CreatedAt,
+		UpdatedAt:      w.UpdatedAt,
 	}
 }
 
@@ -214,14 +224,16 @@ func WorkflowToResponseWithNodes(w *workflow.Workflow) *WorkflowWithNodesRespons
 		Name:        w.Name,
 		Description: w.Description,
 		Version:     w.Version,
-		TriggerType: string(w.TriggerType),
-		TriggerConf: triggerConf,
-		Status:      string(w.Status),
-		Tags:        tags,
-		Nodes:       nodes,
-		Edges:       edges,
-		CreatedAt:   w.CreatedAt,
-		UpdatedAt:   w.UpdatedAt,
+		TriggerType:    string(w.TriggerType),
+		TriggerConf:    triggerConf,
+		Status:         string(w.Status),
+		Tags:           tags,
+		Visibility:     int(w.Visibility),
+		VisibleRoleIDs: w.VisibleRoleIDs,
+		Nodes:          nodes,
+		Edges:          edges,
+		CreatedAt:      w.CreatedAt,
+		UpdatedAt:      w.UpdatedAt,
 	}
 }
 

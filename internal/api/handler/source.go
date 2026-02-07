@@ -60,12 +60,19 @@ func (h *sourceHandler) Create(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
 	}
 
+	visibility := media.VisibilityPrivate
+	if req.Visibility != nil {
+		visibility = media.Visibility(*req.Visibility)
+	}
+
 	cmd := appdto.CreateSourceCommand{
-		Name:     req.Name,
-		Type:     media.SourceType(req.Type),
-		URL:      req.URL,
-		Protocol: req.Protocol,
-		Enabled:  req.Enabled,
+		Name:           req.Name,
+		Type:           media.SourceType(req.Type),
+		URL:            req.URL,
+		Protocol:       req.Protocol,
+		Enabled:        req.Enabled,
+		Visibility:     visibility,
+		VisibleRoleIDs: req.VisibleRoleIDs,
 	}
 
 	source, err := h.h.CreateSource.Handle(c.Request().Context(), cmd)
@@ -104,11 +111,17 @@ func (h *sourceHandler) Update(c echo.Context) error {
 	}
 
 	cmd := appdto.UpdateSourceCommand{
-		ID:       id,
-		Name:     req.Name,
-		URL:      req.URL,
-		Protocol: req.Protocol,
-		Enabled:  req.Enabled,
+		ID:             id,
+		Name:           req.Name,
+		URL:            req.URL,
+		Protocol:       req.Protocol,
+		Enabled:        req.Enabled,
+		VisibleRoleIDs: req.VisibleRoleIDs,
+	}
+
+	if req.Visibility != nil {
+		v := media.Visibility(*req.Visibility)
+		cmd.Visibility = &v
 	}
 
 	source, err := h.h.UpdateSource.Handle(c.Request().Context(), cmd)

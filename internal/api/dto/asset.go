@@ -34,36 +34,42 @@ type AssetCreateReq struct {
 	Duration   *float64               `json:"duration,omitempty"`
 	Size       int64                  `json:"size"`
 	Format     string                 `json:"format,omitempty"`
-	Metadata   map[string]interface{} `json:"metadata,omitempty"`
-	Status     string                 `json:"status,omitempty"`
-	Tags       []string               `json:"tags,omitempty"`
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+	Status         string                 `json:"status,omitempty"`
+	Tags           []string               `json:"tags,omitempty"`
+	Visibility     *int                   `json:"visibility,omitempty"`
+	VisibleRoleIDs []string               `json:"visible_role_ids,omitempty"`
 }
 
 // AssetUpdateReq 更新资产请求
 type AssetUpdateReq struct {
-	Name     *string                `json:"name,omitempty"`
-	Status   *string                `json:"status,omitempty"`
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
-	Tags     []string               `json:"tags,omitempty"`
+	Name           *string                `json:"name,omitempty"`
+	Status         *string                `json:"status,omitempty"`
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+	Tags           []string               `json:"tags,omitempty"`
+	Visibility     *int                   `json:"visibility,omitempty"`
+	VisibleRoleIDs []string               `json:"visible_role_ids,omitempty"`
 }
 
 // AssetResponse 资产响应
 type AssetResponse struct {
-	ID         uuid.UUID              `json:"id"`
-	Type       string                 `json:"type"`
-	SourceType string                 `json:"source_type"`
-	SourceID   *uuid.UUID             `json:"source_id,omitempty"`
-	ParentID   *uuid.UUID             `json:"parent_id,omitempty"`
-	Name       string                 `json:"name"`
-	Path       string                 `json:"path"`
-	Duration   *float64               `json:"duration,omitempty"`
-	Size       int64                  `json:"size"`
-	Format     string                 `json:"format,omitempty"`
-	Metadata   map[string]interface{} `json:"metadata,omitempty"`
-	Status     string                 `json:"status"`
-	Tags       []string               `json:"tags,omitempty"`
-	CreatedAt  time.Time              `json:"created_at"`
-	UpdatedAt  time.Time              `json:"updated_at"`
+	ID             uuid.UUID              `json:"id"`
+	Type           string                 `json:"type"`
+	SourceType     string                 `json:"source_type"`
+	SourceID       *uuid.UUID             `json:"source_id,omitempty"`
+	ParentID       *uuid.UUID             `json:"parent_id,omitempty"`
+	Name           string                 `json:"name"`
+	Path           string                 `json:"path"`
+	Duration       *float64               `json:"duration,omitempty"`
+	Size           int64                  `json:"size"`
+	Format         string                 `json:"format,omitempty"`
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+	Status         string                 `json:"status"`
+	Tags           []string               `json:"tags,omitempty"`
+	Visibility     int                    `json:"visibility"`
+	VisibleRoleIDs []string               `json:"visible_role_ids,omitempty"`
+	CreatedAt      time.Time              `json:"created_at"`
+	UpdatedAt      time.Time              `json:"updated_at"`
 }
 
 // AssetListResponse 资产列表响应
@@ -112,21 +118,23 @@ func AssetToResponse(a *media.Asset, minioEndpoint, minioBucket, minioPublicBase
 	}
 
 	return &AssetResponse{
-		ID:         a.ID,
-		Type:       string(a.Type),
-		SourceType: string(a.SourceType),
-		SourceID:   a.SourceID,
-		ParentID:   a.ParentID,
-		Name:       a.Name,
-		Path:       path,
-		Duration:   a.Duration,
-		Size:       a.Size,
-		Format:     a.Format,
-		Metadata:   metadata,
-		Status:     string(a.Status),
-		Tags:       tags,
-		CreatedAt:  a.CreatedAt,
-		UpdatedAt:  a.UpdatedAt,
+		ID:             a.ID,
+		Type:           string(a.Type),
+		SourceType:     string(a.SourceType),
+		SourceID:       a.SourceID,
+		ParentID:       a.ParentID,
+		Name:           a.Name,
+		Path:           path,
+		Duration:       a.Duration,
+		Size:           a.Size,
+		Format:         a.Format,
+		Metadata:       metadata,
+		Status:         string(a.Status),
+		Tags:           tags,
+		Visibility:     int(a.Visibility),
+		VisibleRoleIDs: a.VisibleRoleIDs,
+		CreatedAt:      a.CreatedAt,
+		UpdatedAt:      a.UpdatedAt,
 	}
 }
 

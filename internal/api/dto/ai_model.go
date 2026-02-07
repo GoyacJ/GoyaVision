@@ -13,19 +13,23 @@ type AIModelCreateReq struct {
 	Provider    string                 `json:"provider"`
 	Endpoint    string                 `json:"endpoint"`
 	APIKey      string                 `json:"api_key"`
-	ModelName   string                 `json:"model_name"`
-	Config      map[string]interface{} `json:"config"`
+	ModelName      string                 `json:"model_name"`
+	Config         map[string]interface{} `json:"config"`
+	Visibility     *int                   `json:"visibility,omitempty"`
+	VisibleRoleIDs []string               `json:"visible_role_ids,omitempty"`
 }
 
 type AIModelUpdateReq struct {
-	Name        *string                 `json:"name"`
-	Description *string                 `json:"description"`
-	Provider    *string                 `json:"provider"`
-	Endpoint    *string                 `json:"endpoint"`
-	APIKey      *string                 `json:"api_key"`
-	ModelName   *string                 `json:"model_name"`
-	Config      map[string]interface{}  `json:"config"`
-	Status      *string                 `json:"status"`
+	Name           *string                 `json:"name"`
+	Description    *string                 `json:"description"`
+	Provider       *string                 `json:"provider"`
+	Endpoint       *string                 `json:"endpoint"`
+	APIKey         *string                 `json:"api_key"`
+	ModelName      *string                 `json:"model_name"`
+	Config         map[string]interface{}  `json:"config"`
+	Status         *string                 `json:"status"`
+	Visibility     *int                    `json:"visibility,omitempty"`
+	VisibleRoleIDs []string                `json:"visible_role_ids,omitempty"`
 }
 
 type AIModelListQuery struct {
@@ -43,11 +47,13 @@ type AIModelResponse struct {
 	Provider    string                 `json:"provider"`
 	Endpoint    string                 `json:"endpoint"`
 	ModelName   string                 `json:"model_name"`
-	HasAPIKey   bool                   `json:"has_api_key"`
-	Config      map[string]interface{} `json:"config"`
-	Status      string                 `json:"status"`
-	CreatedAt   time.Time              `json:"created_at"`
-	UpdatedAt   time.Time              `json:"updated_at"`
+	HasAPIKey      bool                   `json:"has_api_key"`
+	Config         map[string]interface{} `json:"config"`
+	Status         string                 `json:"status"`
+	Visibility     int                    `json:"visibility"`
+	VisibleRoleIDs []string               `json:"visible_role_ids,omitempty"`
+	CreatedAt      time.Time              `json:"created_at"`
+	UpdatedAt      time.Time              `json:"updated_at"`
 }
 
 type AIModelListResponse struct {
@@ -67,12 +73,14 @@ func AIModelToResponse(m *ai_model.AIModel) *AIModelResponse {
 		Description: m.Description,
 		Provider:    string(m.Provider),
 		Endpoint:    m.Endpoint,
-		ModelName:   m.ModelName,
-		HasAPIKey:   m.APIKey != "",
-		Config:      m.Config,
-		Status:      string(m.Status),
-		CreatedAt:   m.CreatedAt,
-		UpdatedAt:   m.UpdatedAt,
+		ModelName:      m.ModelName,
+		HasAPIKey:      m.APIKey != "",
+		Config:         m.Config,
+		Status:         string(m.Status),
+		Visibility:     int(m.Visibility),
+		VisibleRoleIDs: m.VisibleRoleIDs,
+		CreatedAt:      m.CreatedAt,
+		UpdatedAt:      m.UpdatedAt,
 	}
 }
 

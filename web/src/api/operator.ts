@@ -33,6 +33,8 @@ export interface Operator {
   status: OperatorStatus
   is_builtin: boolean
   tags?: string[]
+  visibility?: number
+  visible_role_ids?: string[]
   created_at: string
   updated_at: string
 }
@@ -68,6 +70,8 @@ export interface OperatorCreateReq {
   status?: OperatorStatus
   is_builtin?: boolean
   tags?: string[]
+  visibility?: number
+  visible_role_ids?: string[]
 }
 
 export interface OperatorUpdateReq {
@@ -75,6 +79,8 @@ export interface OperatorUpdateReq {
   description?: string
   category?: OperatorCategory
   tags?: string[]
+  visibility?: number
+  visible_role_ids?: string[]
 }
 
 export interface OperatorListResponse {

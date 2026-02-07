@@ -38,17 +38,21 @@ type OperatorCreateReq struct {
 	InputSchema map[string]interface{} `json:"input_schema,omitempty"` // Deprecated: 兼容字段，建议改用版本 API
 	OutputSpec  map[string]interface{} `json:"output_spec,omitempty"`  // Deprecated: 兼容字段，建议改用版本 API
 	Config      map[string]interface{} `json:"config,omitempty"`       // Deprecated: 兼容字段，建议改用版本 API
-	Status      string                 `json:"status,omitempty"`
-	IsBuiltin   bool                   `json:"is_builtin,omitempty"` // Deprecated: 兼容字段，建议改用 origin
-	Tags        []string               `json:"tags,omitempty"`
+	Status         string                 `json:"status,omitempty"`
+	IsBuiltin      bool                   `json:"is_builtin,omitempty"` // Deprecated: 兼容字段，建议改用 origin
+	Tags           []string               `json:"tags,omitempty"`
+	Visibility     *int                   `json:"visibility,omitempty"`
+	VisibleRoleIDs []string               `json:"visible_role_ids,omitempty"`
 }
 
 // OperatorUpdateReq 更新算子请求
 type OperatorUpdateReq struct {
-	Name        *string  `json:"name,omitempty"`
-	Description *string  `json:"description,omitempty"`
-	Category    *string  `json:"category,omitempty"`
-	Tags        []string `json:"tags,omitempty"`
+	Name           *string  `json:"name,omitempty"`
+	Description    *string  `json:"description,omitempty"`
+	Category       *string  `json:"category,omitempty"`
+	Tags           []string `json:"tags,omitempty"`
+	Visibility     *int     `json:"visibility,omitempty"`
+	VisibleRoleIDs []string `json:"visible_role_ids,omitempty"`
 }
 
 type TestOperatorReq struct {
@@ -350,6 +354,8 @@ type OperatorResponse struct {
 	Status          string                   `json:"status"`
 	IsBuiltin       bool                     `json:"is_builtin"` // Deprecated: 兼容字段，建议使用 origin
 	Tags            []string                 `json:"tags,omitempty"`
+	Visibility      int                      `json:"visibility"`
+	VisibleRoleIDs  []string                 `json:"visible_role_ids,omitempty"`
 	CreatedAt       time.Time                `json:"created_at"`
 	UpdatedAt       time.Time                `json:"updated_at"`
 }
@@ -420,6 +426,8 @@ func OperatorToResponse(o *operator.Operator) *OperatorResponse {
 		Status:          string(o.Status),
 		IsBuiltin:       o.Origin == operator.OriginBuiltin,
 		Tags:            tags,
+		Visibility:      int(o.Visibility),
+		VisibleRoleIDs:  o.VisibleRoleIDs,
 		CreatedAt:       o.CreatedAt,
 		UpdatedAt:       o.UpdatedAt,
 	}

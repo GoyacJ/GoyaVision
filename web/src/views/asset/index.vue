@@ -443,6 +443,7 @@ import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type UploadFile, type UploadFiles } from 'element-plus'
 import { Upload, VideoCamera, Picture, Headset, Refresh, FolderOpened, Grid, List } from '@element-plus/icons-vue'
 import { assetApi, type MediaAsset, type AssetCreateReq, type AssetUpdateReq } from '@/api/asset'
+import { roleApi } from '@/api/role'
 import { useTable, useAsyncData } from '@/composables'
 import { useBreakpoint } from '@/composables/useBreakpoint'
 import GvContainer from '@/components/layout/GvContainer/index.vue'
@@ -477,6 +478,7 @@ const selectedFile = ref<UploadFile | null>(null)
 const viewMode = ref<'grid' | 'list'>('grid')
 const showImagePreview = ref(false)
 const showVideoPreview = ref(false)
+const roleOptions = ref<{ label: string; value: string }[]>([])
 
 const { isMobile } = useBreakpoint()
 
@@ -533,6 +535,23 @@ const {
 
 const tags = computed(() => tagsData.value?.data.tags || [])
 
+// 加载角色列表
+const loadRoles = async () => {
+  try {
+    const res = await roleApi.list()
+    roleOptions.value = (res.data || []).map((r: any) => ({ label: r.name, value: r.id }))
+  } catch (e) {
+    console.error('Failed to load roles', e)
+  }
+}
+loadRoles()
+
+const visibilityOptions = [
+  { label: '私有', value: 0 },
+  { label: '角色可见', value: 1 },
+  { label: '公开', value: 2 }
+]
+
 const uploadForm = reactive<AssetCreateReq>({
   type: 'video',
   source_type: 'upload',
@@ -541,13 +560,17 @@ const uploadForm = reactive<AssetCreateReq>({
   size: 0,
   format: '',
   source_id: undefined,
-  tags: []
+  tags: [],
+  visibility: 0,
+  visible_role_ids: []
 })
 
 const editForm = reactive<AssetUpdateReq>({
   name: '',
   status: 'ready',
-  tags: []
+  tags: [],
+  visibility: 0,
+  visible_role_ids: []
 })
 
 const uploadRules: FormRules = {

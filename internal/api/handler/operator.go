@@ -117,16 +117,23 @@ func (h *operatorHandler) Create(c echo.Context) error {
 		status = operator.Status(req.Status)
 	}
 
+	visibility := operator.VisibilityPrivate
+	if req.Visibility != nil {
+		visibility = operator.Visibility(*req.Visibility)
+	}
+
 	cmd := appdto.CreateOperatorCommand{
-		Code:        req.Code,
-		Name:        req.Name,
-		Description: req.Description,
-		Category:    operator.Category(req.Category),
-		Type:        operator.Type(req.Type),
-		Origin:      operator.Origin(req.Origin),
-		ExecMode:    operator.ExecMode(req.ExecMode),
-		Status:      status,
-		Tags:        req.Tags,
+		Code:           req.Code,
+		Name:           req.Name,
+		Description:    req.Description,
+		Category:       operator.Category(req.Category),
+		Type:           operator.Type(req.Type),
+		Origin:         operator.Origin(req.Origin),
+		ExecMode:       operator.ExecMode(req.ExecMode),
+		Status:         status,
+		Tags:           req.Tags,
+		Visibility:     visibility,
+		VisibleRoleIDs: req.VisibleRoleIDs,
 	}
 
 	if len(req.ExecConfig) > 0 {
@@ -174,10 +181,16 @@ func (h *operatorHandler) Update(c echo.Context) error {
 	}
 
 	cmd := appdto.UpdateOperatorCommand{
-		ID:          id,
-		Name:        req.Name,
-		Description: req.Description,
-		Tags:        req.Tags,
+		ID:             id,
+		Name:           req.Name,
+		Description:    req.Description,
+		Tags:           req.Tags,
+		VisibleRoleIDs: req.VisibleRoleIDs,
+	}
+
+	if req.Visibility != nil {
+		v := operator.Visibility(*req.Visibility)
+		cmd.Visibility = &v
 	}
 
 	if req.Category != nil {

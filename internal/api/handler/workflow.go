@@ -101,17 +101,24 @@ func (h *workflowHandler) Create(c echo.Context) error {
 		}
 	}
 
+	visibility := workflow.VisibilityPrivate
+	if req.Visibility != nil {
+		visibility = workflow.Visibility(*req.Visibility)
+	}
+
 	cmd := appdto.CreateWorkflowCommand{
-		Code:        req.Code,
-		Name:        req.Name,
-		Description: req.Description,
-		Version:     req.Version,
-		TriggerType: workflow.TriggerType(req.TriggerType),
-		TriggerConf: req.TriggerConf,
-		Status:      status,
-		Tags:        req.Tags,
-		Nodes:       nodes,
-		Edges:       edges,
+		Code:           req.Code,
+		Name:           req.Name,
+		Description:    req.Description,
+		Version:        req.Version,
+		TriggerType:    workflow.TriggerType(req.TriggerType),
+		TriggerConf:    req.TriggerConf,
+		Status:         status,
+		Tags:           req.Tags,
+		Nodes:          nodes,
+		Edges:          edges,
+		Visibility:     visibility,
+		VisibleRoleIDs: req.VisibleRoleIDs,
 	}
 
 	wf, err := h.h.CreateWorkflow.Handle(c.Request().Context(), cmd)
@@ -179,13 +186,19 @@ func (h *workflowHandler) Update(c echo.Context) error {
 	}
 
 	cmd := appdto.UpdateWorkflowCommand{
-		ID:          id,
-		Name:        req.Name,
-		Description: req.Description,
-		TriggerConf: req.TriggerConf,
-		Tags:        req.Tags,
-		Nodes:       nodes,
-		Edges:       edges,
+		ID:             id,
+		Name:           req.Name,
+		Description:    req.Description,
+		TriggerConf:    req.TriggerConf,
+		Tags:           req.Tags,
+		Nodes:          nodes,
+		Edges:          edges,
+		VisibleRoleIDs: req.VisibleRoleIDs,
+	}
+
+	if req.Visibility != nil {
+		v := workflow.Visibility(*req.Visibility)
+		cmd.Visibility = &v
 	}
 
 	if req.Status != nil {

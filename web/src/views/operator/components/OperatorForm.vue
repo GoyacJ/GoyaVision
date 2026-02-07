@@ -29,12 +29,38 @@
       />
     </div>
 
+    <div class="grid grid-cols-2 gap-4">
+      <GvSelect
+        v-model="form.visibility"
+        label="可见范围"
+        :options="visibilityOptions"
+        class="w-full"
+      />
+      <div v-if="form.visibility === 1">
+        <label class="block text-sm font-medium text-text-secondary mb-1">可见角色</label>
+        <el-select
+          v-model="form.visible_role_ids"
+          multiple
+          placeholder="请选择可见角色"
+          class="w-full"
+        >
+          <el-option
+            v-for="role in roleOptions"
+            :key="role.value"
+            :label="role.label"
+            :value="role.value"
+          />
+        </el-select>
+      </div>
+    </div>
+
     <ExecConfigForm v-model="form.exec_config" :exec-mode="form.exec_mode" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { reactive, watch } from 'vue'
+import { ref, reactive, watch } from 'vue'
+import { roleApi } from '@/api/role'
 import ExecConfigForm from './ExecConfigForm.vue'
 import GvInput from '@/components/base/GvInput/index.vue'
 import GvSelect from '@/components/base/GvSelect/index.vue'
@@ -48,6 +74,8 @@ type OperatorFormModel = {
   origin: 'custom' | 'builtin' | 'marketplace' | 'mcp'
   exec_mode: 'http' | 'cli' | 'mcp' | 'ai_model'
   exec_config?: Record<string, any>
+  visibility?: number
+  visible_role_ids?: string[]
 }
 
 const props = defineProps<{
@@ -68,8 +96,27 @@ const form = reactive<OperatorFormModel>({
   type: '',
   origin: 'custom',
   exec_mode: 'http',
-  exec_config: {}
+  exec_config: {},
+  visibility: 0,
+  visible_role_ids: []
 })
+
+const roleOptions = ref<{ label: string; value: string }[]>([])
+const loadRoles = async () => {
+  try {
+    const res = await roleApi.list()
+    roleOptions.value = (res.data || []).map((r: any) => ({ label: r.name, value: r.id }))
+  } catch (e) {
+    console.error('Failed to load roles', e)
+  }
+}
+loadRoles()
+
+const visibilityOptions = [
+  { label: '私有', value: 0 },
+  { label: '角色可见', value: 1 },
+  { label: '公开', value: 2 }
+]
 
 const categoryOptions = [
   { label: '分析', value: 'analysis' },

@@ -14,6 +14,8 @@ export interface MediaAsset {
   metadata?: Record<string, any>
   status: 'pending' | 'ready' | 'processing' | 'error'
   tags?: string[]
+  visibility?: number
+  visible_role_ids?: string[]
   created_at: string
   updated_at: string
 }
@@ -42,6 +44,8 @@ export interface AssetCreateReq {
   format?: string
   metadata?: Record<string, any>
   tags?: string[]
+  visibility?: number
+  visible_role_ids?: string[]
 }
 
 export interface AssetUpdateReq {
@@ -49,6 +53,8 @@ export interface AssetUpdateReq {
   metadata?: Record<string, any>
   status?: 'pending' | 'ready' | 'processing' | 'error'
   tags?: string[]
+  visibility?: number
+  visible_role_ids?: string[]
 }
 
 export interface AssetListResponse {
