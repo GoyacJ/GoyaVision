@@ -631,6 +631,7 @@
 
 | 日期 | 版本 | 变更内容 |
 |------|------|----------|
+| 2026-02-08 | V1.0 | **文件管理页 500 修复**：修复系统管理-文件管理页打开报错 `column "visibility" does not exist`。原因：文件列表查询使用 `ScopeTenant`，该 scope 会附加 `visibility` 条件，但 `files` 表此前无该列。已为 `FileModel` 增加 `Visibility` 字段（默认 0），并在 `cmd/init/main.go` 中为已有 `files` 表增加兼容性迁移（`ALTER TABLE files ADD COLUMN IF NOT EXISTS visibility ...`）。 |
 | 2026-02-08 | V1.0 | **可见性参数传递修复**：修复所有涉及页面可见性设置参数传递失效的问题。改进了 `GvSelect` 基础组件的 `v-model` 绑定逻辑（改用 computed getter/setter 模式），并统一前端 visibility 字段为 Number 类型，彻底解决类型冲突导致的绑定失效。 |
 | 2026-02-08 | V1.0 | **前端响应式重构**：全面优化移动端体验。实现全局抽屉导航、资产页响应式布局（单栏/网格强制）、表格组件水平滚动适配及分页器简化。 |
 | 2026-02-07 | V1.0 | **AI 模型执行与 OAuth 认证集成**：新增 `AIModelExecutor` 支持 AI 算子执行（OpenAI/Anthropic/Ollama）；新增 OAuth 登录与账号绑定功能（`UserIdentity`）；实现角色自动分配机制（`AutoAssignConfig`）。 |

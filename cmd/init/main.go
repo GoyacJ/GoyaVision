@@ -159,6 +159,15 @@ func createTables(db *gorm.DB) error {
 		}
 	}
 
+	if migrator.HasTable(&model.FileModel{}) && !migrator.HasColumn(&model.FileModel{}, "Visibility") {
+		log.Println("  检查并补充 files 表 visibility 列...")
+		if err := db.Exec("ALTER TABLE files ADD COLUMN IF NOT EXISTS visibility int NOT NULL DEFAULT 0").Error; err != nil {
+			log.Printf("    ⚠️ 添加 visibility 列失败: %v", err)
+		} else {
+			log.Println("    ✓ 已添加 files.visibility 列")
+		}
+	}
+
 	log.Println("✅ 数据库表结构创建完成")
 	return nil
 }

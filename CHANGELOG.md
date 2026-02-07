@@ -342,6 +342,7 @@
 - **清理重构遗留文件**：删除未使用的 `operator/index-refactored.vue`、`operator/index-old.vue`、`workflow/index-refactored.vue`、`workflow/index-old.vue`，消除构建时的循环依赖警告
 
 ### 修复
+- **文件管理页 500 错误**：修复系统管理-文件管理页打开时报 `column "visibility" does not exist` 的问题。文件列表使用 `ScopeTenant` 会查询 `visibility` 列，但 `files` 表此前未包含该列。已为 `FileModel` 增加 `Visibility` 字段（默认 0），并在 `cmd/init/main.go` 中为已有数据库增加 `files.visibility` 列的兼容性迁移。
 - **编辑保存后 visibility 无法变更**：修复编辑或保存后 visibility 响应与数据库一直为 0 的问题；应用层 Update 命令（Asset、Source、Operator、AIModel、Workflow）未将 `cmd.Visibility` 写回实体，已补全写回逻辑。
 - **可见性参数传递修复**：修复所有涉及页面（资产、媒体源、算子、工作流、AI模型）可见性设置下拉框参数传递始终为 0 的问题。统一前端 visibility 字段为 Number 类型，消除与 options 的类型冲突。
 - **OAuth 登录 401 错误修复**：修复点击 GitHub/微信登录时直接访问后端 API 导致 401 的问题。新增 `GET /api/v1/auth/oauth/login` 公开端点用于 OAuth 跳转，实现完整 Authorization Code 流程。

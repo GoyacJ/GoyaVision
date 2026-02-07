@@ -20,6 +20,7 @@ type FileModel struct {
 	Status       string         `gorm:"type:varchar(20);not null;default:'completed';index:idx_files_status"`
 	Hash         string         `gorm:"type:varchar(64);index:idx_files_hash"`
 	UploaderID   *uuid.UUID     `gorm:"type:uuid;index:idx_files_uploader"`
+	Visibility   int            `gorm:"default:0;index:idx_files_visibility"`
 	Metadata     datatypes.JSON `gorm:"type:jsonb"`
 	CreatedAt    time.Time      `gorm:"autoCreateTime;index:idx_files_created_at"`
 	UpdatedAt    time.Time      `gorm:"autoUpdateTime"`
