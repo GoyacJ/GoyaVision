@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"goyavision/internal/api/dto"
+	authmiddleware "goyavision/internal/api/middleware"
 	appdto "goyavision/internal/app/dto"
 	"goyavision/internal/domain/ai_model"
 
@@ -67,6 +68,15 @@ func (h *aiModelHandler) Create(c echo.Context) error {
 		visibility = ai_model.Visibility(*req.Visibility)
 	}
 
+	visibleRoleIDs := req.VisibleRoleIDs
+	if visibility == ai_model.VisibilityRole && len(visibleRoleIDs) == 0 {
+		if ids, ok := c.Get(authmiddleware.ContextKeyRoleIDs).([]uuid.UUID); ok {
+			for _, id := range ids {
+				visibleRoleIDs = append(visibleRoleIDs, id.String())
+			}
+		}
+	}
+
 	cmd := appdto.CreateAIModelCommand{
 		Name:           req.Name,
 		Description:    req.Description,
@@ -76,7 +86,7 @@ func (h *aiModelHandler) Create(c echo.Context) error {
 		ModelName:      req.ModelName,
 		Config:         req.Config,
 		Visibility:     visibility,
-		VisibleRoleIDs: req.VisibleRoleIDs,
+		VisibleRoleIDs: visibleRoleIDs,
 	}
 
 	model, err := h.h.CreateAIModel.Handle(c.Request().Context(), cmd)

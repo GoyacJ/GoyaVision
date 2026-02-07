@@ -179,7 +179,12 @@ func (h *LoginOAuthHandler) Handle(ctx context.Context, cmd dto.LoginOAuthComman
 	}
 
 	// Generate Tokens
-	tokens, err := h.tokenService.GenerateTokenPair(user.ID, user.Username)
+	tenantID := uuid.Nil
+	if user.TenantID != nil {
+		tenantID = *user.TenantID
+	}
+
+	tokens, err := h.tokenService.GenerateTokenPair(user.ID, tenantID, user.Username)
 	if err != nil {
 		return nil, apperr.Internal("generate token pair", err)
 	}

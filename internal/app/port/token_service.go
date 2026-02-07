@@ -17,7 +17,7 @@ import (
 //   - infra/auth/jwt.go (golang-jwt/jwt 实现)
 type TokenService interface {
 	// GenerateTokenPair 生成 Token 对（Access + Refresh）
-	GenerateTokenPair(userID uuid.UUID, username string) (*TokenPair, error)
+	GenerateTokenPair(userID uuid.UUID, tenantID uuid.UUID, username string) (*TokenPair, error)
 
 	// ValidateAccessToken 验证 Access Token
 	// 返回：Claims、是否过期、错误
@@ -41,6 +41,7 @@ type TokenPair struct {
 // TokenClaims Token 声明
 type TokenClaims struct {
 	UserID    uuid.UUID
+	TenantID  uuid.UUID
 	Username  string
 	IssuedAt  time.Time
 	ExpiresAt time.Time

@@ -142,6 +142,9 @@
             :options="triggerTypeOptions"
           />
         </el-form-item>
+        <el-form-item label="可见范围" prop="visibility">
+          <GvSelect v-model="createForm.visibility" :options="visibilityOptions" placeholder="请选择可见范围" />
+        </el-form-item>
       </el-form>
     </GvModal>
 
@@ -222,6 +225,13 @@ const showTriggerDialog = ref(false)
 const currentWorkflow = ref<Workflow | null>(null)
 const createFormRef = ref<FormInstance>()
 
+const visibilityOptions = [
+  { label: '私有', value: 0 },
+  { label: '角色可见', value: 1 },
+  { label: '公开', value: 2 }
+]
+
+
 const searchKeyword = ref('')
 
 const filters = ref({
@@ -257,11 +267,13 @@ const {
   }
 )
 
-const createForm = reactive<WorkflowCreateReq>({
+const createForm = reactive<any>({
   code: '',
   name: '',
   description: '',
-  trigger_type: 'manual'
+  trigger_type: 'manual',
+  visibility: 0,
+  visible_role_ids: []
 })
 
 const triggerForm = reactive({
@@ -326,7 +338,8 @@ async function handleCreate() {
     if (!valid) return
     creating.value = true
     try {
-      await workflowApi.create(createForm)
+      const data = { ...createForm, visibility: Number(createForm.visibility) }
+      await workflowApi.create(data)
       ElMessage.success('创建成功')
       showCreateDialog.value = false
       refreshTable()

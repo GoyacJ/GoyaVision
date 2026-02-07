@@ -95,13 +95,14 @@ func (t *Task) Duration() float64 {
 }
 
 type TaskFilter struct {
-	WorkflowID *uuid.UUID
-	AssetID    *uuid.UUID
-	Status     *TaskStatus
-	From       *time.Time
-	To         *time.Time
-	Limit      int
-	Offset     int
+	WorkflowID        *uuid.UUID
+	AssetID           *uuid.UUID
+	TriggeredByUserID *uuid.UUID
+	Status            *TaskStatus
+	From              *time.Time
+	To                *time.Time
+	Limit             int
+	Offset            int
 }
 
 type TaskStats struct {

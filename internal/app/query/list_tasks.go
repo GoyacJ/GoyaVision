@@ -21,13 +21,14 @@ func (h *ListTasksHandler) Handle(ctx context.Context, query dto.ListTasksQuery)
 	query.Pagination.Normalize()
 
 	filter := workflow.TaskFilter{
-		WorkflowID: query.WorkflowID,
-		AssetID:    query.AssetID,
-		Status:     query.Status,
-		From:       query.From,
-		To:         query.To,
-		Limit:      query.Pagination.Limit,
-		Offset:     query.Pagination.Offset,
+		WorkflowID:        query.WorkflowID,
+		AssetID:           query.AssetID,
+		Status:            query.Status,
+		TriggeredByUserID: query.TriggeredByUserID,
+		From:              query.From,
+		To:                query.To,
+		Limit:             query.Pagination.Limit,
+		Offset:            query.Pagination.Offset,
 	}
 
 	var items []*workflow.Task

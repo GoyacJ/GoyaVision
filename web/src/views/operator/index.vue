@@ -321,7 +321,8 @@ const operatorFormModel = reactive<OperatorCreateReq>({
   type: '',
   origin: 'custom',
   exec_mode: 'http',
-  exec_config: {}
+  exec_config: {},
+  visibility: 0
 })
 
 // 计算筛选参数
@@ -449,7 +450,8 @@ function resetOperatorForm() {
     type: '',
     origin: 'custom',
     exec_mode: 'http',
-    exec_config: {}
+    exec_config: {},
+    visibility: 0
   })
 }
 
@@ -496,7 +498,8 @@ function handleEdit(row: Operator) {
     type: row.type,
     origin: row.origin || (row.is_builtin ? 'builtin' : 'custom'),
     exec_mode: row.exec_mode || row.active_version?.exec_mode || 'http',
-    exec_config: row.active_version?.exec_config || {}
+    exec_config: row.active_version?.exec_config || {},
+    visibility: row.visibility ?? 0
   })
   showEditDialog.value = true
 }

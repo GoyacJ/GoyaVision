@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"goyavision/internal/api/dto"
+	authmiddleware "goyavision/internal/api/middleware"
 	appdto "goyavision/internal/app/dto"
 	"goyavision/internal/domain/operator"
 
@@ -122,6 +123,15 @@ func (h *operatorHandler) Create(c echo.Context) error {
 		visibility = operator.Visibility(*req.Visibility)
 	}
 
+	visibleRoleIDs := req.VisibleRoleIDs
+	if visibility == operator.VisibilityRole && len(visibleRoleIDs) == 0 {
+		if ids, ok := c.Get(authmiddleware.ContextKeyRoleIDs).([]uuid.UUID); ok {
+			for _, id := range ids {
+				visibleRoleIDs = append(visibleRoleIDs, id.String())
+			}
+		}
+	}
+
 	cmd := appdto.CreateOperatorCommand{
 		Code:           req.Code,
 		Name:           req.Name,
@@ -133,7 +143,7 @@ func (h *operatorHandler) Create(c echo.Context) error {
 		Status:         status,
 		Tags:           req.Tags,
 		Visibility:     visibility,
-		VisibleRoleIDs: req.VisibleRoleIDs,
+		VisibleRoleIDs: visibleRoleIDs,
 	}
 
 	if len(req.ExecConfig) > 0 {

@@ -77,7 +77,7 @@ func (r *UserRepo) Update(ctx context.Context, u *identity.User) error {
 }
 
 func (r *UserRepo) Delete(ctx context.Context, id uuid.UUID) error {
-	if err := r.db.WithContext(ctx).Exec("DELETE FROM user_roles WHERE user_id = ?", id).Error; err != nil {
+	if err := r.db.WithContext(ctx).Exec("DELETE FROM user_roles WHERE user_model_id = ?", id).Error; err != nil {
 		return err
 	}
 	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&model.UserModel{}).Error
@@ -159,13 +159,13 @@ func (r *RoleRepo) Update(ctx context.Context, role *identity.Role) error {
 }
 
 func (r *RoleRepo) Delete(ctx context.Context, id uuid.UUID) error {
-	if err := r.db.WithContext(ctx).Exec("DELETE FROM role_permissions WHERE role_id = ?", id).Error; err != nil {
+	if err := r.db.WithContext(ctx).Exec("DELETE FROM role_permissions WHERE role_model_id = ?", id).Error; err != nil {
 		return err
 	}
-	if err := r.db.WithContext(ctx).Exec("DELETE FROM role_menus WHERE role_id = ?", id).Error; err != nil {
+	if err := r.db.WithContext(ctx).Exec("DELETE FROM role_menus WHERE role_model_id = ?", id).Error; err != nil {
 		return err
 	}
-	if err := r.db.WithContext(ctx).Exec("DELETE FROM user_roles WHERE role_id = ?", id).Error; err != nil {
+	if err := r.db.WithContext(ctx).Exec("DELETE FROM user_roles WHERE role_model_id = ?", id).Error; err != nil {
 		return err
 	}
 	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&model.RoleModel{}).Error
@@ -261,7 +261,7 @@ func (r *PermissionRepo) Update(ctx context.Context, p *identity.Permission) err
 }
 
 func (r *PermissionRepo) Delete(ctx context.Context, id uuid.UUID) error {
-	if err := r.db.WithContext(ctx).Exec("DELETE FROM role_permissions WHERE permission_id = ?", id).Error; err != nil {
+	if err := r.db.WithContext(ctx).Exec("DELETE FROM role_permissions WHERE permission_model_id = ?", id).Error; err != nil {
 		return err
 	}
 	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&model.PermissionModel{}).Error
@@ -274,8 +274,8 @@ func (r *PermissionRepo) GetByRoleIDs(ctx context.Context, roleIDs []uuid.UUID) 
 	var models []*model.PermissionModel
 	err := r.db.WithContext(ctx).
 		Distinct().
-		Joins("JOIN role_permissions ON role_permissions.permission_id = permissions.id").
-		Where("role_permissions.role_id IN ?", roleIDs).
+		Joins("JOIN role_permissions ON role_permissions.permission_model_id = permissions.id").
+		Where("role_permissions.role_model_id IN ?", roleIDs).
 		Find(&models).Error
 	if err != nil {
 		return nil, err
@@ -341,7 +341,7 @@ func (r *MenuRepo) Update(ctx context.Context, menu *identity.Menu) error {
 }
 
 func (r *MenuRepo) Delete(ctx context.Context, id uuid.UUID) error {
-	if err := r.db.WithContext(ctx).Exec("DELETE FROM role_menus WHERE menu_id = ?", id).Error; err != nil {
+	if err := r.db.WithContext(ctx).Exec("DELETE FROM role_menus WHERE menu_model_id = ?", id).Error; err != nil {
 		return err
 	}
 	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&model.MenuModel{}).Error
@@ -354,8 +354,8 @@ func (r *MenuRepo) GetByRoleIDs(ctx context.Context, roleIDs []uuid.UUID) ([]*id
 	var models []*model.MenuModel
 	err := r.db.WithContext(ctx).
 		Distinct().
-		Joins("JOIN role_menus ON role_menus.menu_id = menus.id").
-		Where("role_menus.role_id IN ?", roleIDs).
+		Joins("JOIN role_menus ON role_menus.menu_model_id = menus.id").
+		Where("role_menus.role_model_id IN ?", roleIDs).
 		Where("menus.status = ?", 1). // 只返回启用的菜单
 		Order("menus.sort, menus.created_at").
 		Find(&models).Error

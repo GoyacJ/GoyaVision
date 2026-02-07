@@ -13,6 +13,7 @@ const (
 
 type User struct {
 	ID        uuid.UUID
+	TenantID  *uuid.UUID
 	Username  string
 	Password  string
 	Nickname  string

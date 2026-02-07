@@ -75,6 +75,7 @@ func AutoMigrate(db *gorm.DB) error {
 		return ErrDBNotConfigured
 	}
 	return db.AutoMigrate(
+		&model.TenantModel{},
 		&model.UserModel{},
 		&model.RoleModel{},
 		&model.PermissionModel{},

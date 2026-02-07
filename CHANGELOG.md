@@ -337,6 +337,7 @@
 - **清理重构遗留文件**：删除未使用的 `operator/index-refactored.vue`、`operator/index-old.vue`、`workflow/index-refactored.vue`、`workflow/index-old.vue`，消除构建时的循环依赖警告
 
 ### 修复
+- **可见性参数传递修复**：修复所有涉及页面（资产、媒体源、算子、工作流、AI模型）可见性设置下拉框参数传递始终为 0 的问题。统一前端 visibility 字段为 Number 类型，消除与 options 的类型冲突。
 - **OAuth 登录 401 错误修复**：修复点击 GitHub/微信登录时直接访问后端 API 导致 401 的问题。新增 `GET /api/v1/auth/oauth/login` 公开端点用于 OAuth 跳转，实现完整 Authorization Code 流程。
 - **超级管理员菜单可见性修复**：修复超级管理员在 `/auth/profile` 接口获取菜单时包含禁用状态菜单的问题，确保前端导航栏正确隐藏被禁用的菜单。
 - **MediaMTX recordPath 校验失败**：所有 `recordPath` 配置添加 `%f`（微秒）占位符，满足最新版 MediaMTX 必需格式元素要求；`AddPath` 时携带完整的 `recordPath`/`recordFormat`/`recordSegmentDuration`，避免空值触发 MediaMTX 校验错误

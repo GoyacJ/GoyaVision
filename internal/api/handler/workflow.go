@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"goyavision/internal/api/dto"
+	authmiddleware "goyavision/internal/api/middleware"
 	appdto "goyavision/internal/app/dto"
 	"goyavision/internal/domain/workflow"
 
@@ -106,6 +107,15 @@ func (h *workflowHandler) Create(c echo.Context) error {
 		visibility = workflow.Visibility(*req.Visibility)
 	}
 
+	visibleRoleIDs := req.VisibleRoleIDs
+	if visibility == workflow.VisibilityRole && len(visibleRoleIDs) == 0 {
+		if ids, ok := c.Get(authmiddleware.ContextKeyRoleIDs).([]uuid.UUID); ok {
+			for _, id := range ids {
+				visibleRoleIDs = append(visibleRoleIDs, id.String())
+			}
+		}
+	}
+
 	cmd := appdto.CreateWorkflowCommand{
 		Code:           req.Code,
 		Name:           req.Name,
@@ -118,7 +128,7 @@ func (h *workflowHandler) Create(c echo.Context) error {
 		Nodes:          nodes,
 		Edges:          edges,
 		Visibility:     visibility,
-		VisibleRoleIDs: req.VisibleRoleIDs,
+		VisibleRoleIDs: visibleRoleIDs,
 	}
 
 	wf, err := h.h.CreateWorkflow.Handle(c.Request().Context(), cmd)

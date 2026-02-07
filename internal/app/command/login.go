@@ -51,7 +51,12 @@ func (h *LoginHandler) Handle(ctx context.Context, cmd dto.LoginCommand) (*dto.L
 		return nil, apperr.New(apperr.CodeForbidden, "user is disabled")
 	}
 
-	tokens, err := h.tokenService.GenerateTokenPair(user.ID, user.Username)
+	tenantID := uuid.Nil
+	if user.TenantID != nil {
+		tenantID = *user.TenantID
+	}
+
+	tokens, err := h.tokenService.GenerateTokenPair(user.ID, tenantID, user.Username)
 	if err != nil {
 		return nil, apperr.Internal("generate token pair", err)
 	}

@@ -29,30 +29,12 @@
       />
     </div>
 
-    <div class="grid grid-cols-2 gap-4">
-      <GvSelect
-        v-model="form.visibility"
-        label="可见范围"
-        :options="visibilityOptions"
-        class="w-full"
-      />
-      <div v-if="form.visibility === 1">
-        <label class="block text-sm font-medium text-text-secondary mb-1">可见角色</label>
-        <el-select
-          v-model="form.visible_role_ids"
-          multiple
-          placeholder="请选择可见角色"
-          class="w-full"
-        >
-          <el-option
-            v-for="role in roleOptions"
-            :key="role.value"
-            :label="role.label"
-            :value="role.value"
-          />
-        </el-select>
-      </div>
-    </div>
+    <GvSelect
+      v-model="form.visibility"
+      label="可见范围"
+      :options="visibilityOptions"
+      class="w-full"
+    />
 
     <ExecConfigForm v-model="form.exec_config" :exec-mode="form.exec_mode" />
   </div>
@@ -60,7 +42,6 @@
 
 <script setup lang="ts">
 import { ref, reactive, watch } from 'vue'
-import { roleApi } from '@/api/role'
 import ExecConfigForm from './ExecConfigForm.vue'
 import GvInput from '@/components/base/GvInput/index.vue'
 import GvSelect from '@/components/base/GvSelect/index.vue'
@@ -88,7 +69,7 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
-const form = reactive<OperatorFormModel>({
+const form = reactive<any>({
   code: '',
   name: '',
   description: '',
@@ -101,16 +82,6 @@ const form = reactive<OperatorFormModel>({
   visible_role_ids: []
 })
 
-const roleOptions = ref<{ label: string; value: string }[]>([])
-const loadRoles = async () => {
-  try {
-    const res = await roleApi.list()
-    roleOptions.value = (res.data || []).map((r: any) => ({ label: r.name, value: r.id }))
-  } catch (e) {
-    console.error('Failed to load roles', e)
-  }
-}
-loadRoles()
 
 const visibilityOptions = [
   { label: '私有', value: 0 },
@@ -144,12 +115,16 @@ watch(
   (value) => {
     if (!value) return
     Object.assign(form, value)
+    if (value.visibility !== undefined) {
+      form.visibility = value.visibility
+    }
   },
   { immediate: true, deep: true }
 )
 
 const submit = () => {
-  emit('submit', form)
+  const payload = { ...form, visibility: Number(form.visibility) }
+  emit('submit', payload)
 }
 
 defineExpose({

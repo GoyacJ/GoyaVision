@@ -106,6 +106,16 @@ func (h *assetHandler) Create(c echo.Context) error {
 		visibility = media.Visibility(*req.Visibility)
 	}
 
+	visibleRoleIDs := req.VisibleRoleIDs
+	if visibility == media.VisibilityRole && len(visibleRoleIDs) == 0 {
+		// 自动填充为当前用户的角色
+		if ids, ok := c.Get(authmiddleware.ContextKeyRoleIDs).([]uuid.UUID); ok {
+			for _, id := range ids {
+				visibleRoleIDs = append(visibleRoleIDs, id.String())
+			}
+		}
+	}
+
 	cmd := appdto.CreateAssetCommand{
 		Type:           media.AssetType(req.Type),
 		SourceType:     media.AssetSourceType(req.SourceType),
@@ -120,7 +130,7 @@ func (h *assetHandler) Create(c echo.Context) error {
 		Status:         status,
 		Tags:           req.Tags,
 		Visibility:     visibility,
-		VisibleRoleIDs: req.VisibleRoleIDs,
+		VisibleRoleIDs: visibleRoleIDs,
 	}
 
 	asset, err := h.h.CreateAsset.Handle(c.Request().Context(), cmd)

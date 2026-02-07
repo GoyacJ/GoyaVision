@@ -12,6 +12,7 @@ import (
 func UserToModel(u *identity.User) *model.UserModel {
 	m := &model.UserModel{
 		ID:        u.ID,
+		TenantID:  u.TenantID,
 		Username:  u.Username,
 		Password:  u.Password,
 		Nickname:  u.Nickname,
@@ -33,6 +34,7 @@ func UserToModel(u *identity.User) *model.UserModel {
 func UserToDomain(m *model.UserModel) *identity.User {
 	u := &identity.User{
 		ID:        m.ID,
+		TenantID:  m.TenantID,
 		Username:  m.Username,
 		Password:  m.Password,
 		Nickname:  m.Nickname,

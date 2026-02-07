@@ -158,6 +158,7 @@ func main() {
 		mcpClient,
 		mediaGateway,
 		tokenService,
+		db,
 		cfg,
 		mtxCli,
 		minioClient,

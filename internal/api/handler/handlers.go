@@ -12,6 +12,8 @@ import (
 	infraauth "goyavision/internal/infra/auth"
 	"goyavision/internal/port"
 	"goyavision/pkg/storage"
+
+	"gorm.io/gorm"
 )
 
 type Handlers struct {
@@ -89,6 +91,7 @@ type Handlers struct {
 	MtxCli                   *mediamtx.Client
 	MinIOClient              *storage.MinIOClient
 	WorkflowScheduler        *app.WorkflowScheduler
+	DB                       *gorm.DB
 	Repo                     port.Repository      // For middleware and non-migrated handlers
 	TokenService             appport.TokenService // For auth handlers
 	AuthProviderFactory      appport.AuthProviderFactory
@@ -108,6 +111,7 @@ func NewHandlers(
 	mcpRegistry port.MCPRegistry,
 	mediaGateway appport.MediaGateway,
 	tokenService appport.TokenService,
+	db *gorm.DB,
 	cfg *config.Config,
 	mtxCli *mediamtx.Client,
 	minioClient *storage.MinIOClient,
@@ -207,6 +211,7 @@ func NewHandlers(
 		MtxCli:                   mtxCli,
 		MinIOClient:              minioClient,
 		WorkflowScheduler:        workflowScheduler,
+		DB:                       db,
 		Repo:                     repo,
 		TokenService:             tokenService,
 		AuthProviderFactory:      authProviderFactory,

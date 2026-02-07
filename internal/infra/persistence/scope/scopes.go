@@ -14,10 +14,10 @@ func ScopeTenant(ctx context.Context) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
 		tenantID, ok := middleware.GetTenantID(ctx)
 		if ok && tenantID != uuid.Nil {
-			return db.Where("tenant_id = ?", tenantID)
+			// 允许本租户数据 OR 全局公开数据 (visibility = 2)
+			// 使用这种形式确保 GORM 正确处理括号
+			return db.Where(db.Where("tenant_id = ?", tenantID).Or("visibility = ?", 2))
 		}
-		// If no tenant in context (e.g. system task), skip filter or handle accordingly.
-		// For now, if no tenant, we don't filter (dangerous? maybe. But necessary for background jobs).
 		return db
 	}
 }
@@ -28,13 +28,11 @@ func ScopeVisibility(ctx context.Context) func(db *gorm.DB) *gorm.DB {
 		userID := ctx.Value(middleware.ContextKeyUserID)
 
 		if userID == nil {
-			// No user context, return Public only.
-			return db.Where("visibility = 2") // Public only
+			return db.Where("visibility = ?", 2)
 		}
 
 		uid := userID.(uuid.UUID)
 		
-		// Get Role IDs from context
 		var roleIDs []string
 		if val := ctx.Value(middleware.ContextKeyRoleIDs); val != nil {
 			if ids, ok := val.([]uuid.UUID); ok {
@@ -44,15 +42,15 @@ func ScopeVisibility(ctx context.Context) func(db *gorm.DB) *gorm.DB {
 			}
 		}
 
-		// Owner OR Public OR (Role AND Role Match)
-		// Note: We cast jsonb to text array for containment check, or use jsonb_exists_any if we format roles as string array
-		// But simpler is: EXISTS (SELECT 1 FROM jsonb_array_elements_text(visible_role_ids) WHERE value IN (?))
+		// (Owner OR Public OR RoleMatch)
+		q := db.Where("owner_id = ?", uid).Or("visibility = ?", 2)
 		
 		if len(roleIDs) > 0 {
-			return db.Where("owner_id = ? OR visibility = 2 OR (visibility = 1 AND EXISTS (SELECT 1 FROM jsonb_array_elements_text(visible_role_ids) WHERE value IN ?))", uid, roleIDs)
+			// 修复子查询别名问题：EXISTS (SELECT 1 FROM jsonb_array_elements_text(visible_role_ids) as r WHERE r IN ?)
+			q = q.Or("visibility = 1 AND EXISTS (SELECT 1 FROM jsonb_array_elements_text(visible_role_ids) as r WHERE r IN ?)", roleIDs)
 		}
 
-		return db.Where("owner_id = ? OR visibility = 2", uid)
+		return db.Where(q)
 	}
 }
 

@@ -13,6 +13,7 @@ import (
 	"goyavision/pkg/storage"
 
 	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 	"github.com/labstack/echo/v4/middleware"
 )
 
@@ -23,6 +24,7 @@ func NewHandlers(
 	mcpRegistry portrepo.MCPRegistry,
 	mediaGateway port.MediaGateway,
 	tokenService port.TokenService,
+	db *gorm.DB,
 	cfg *config.Config,
 	mtxCli *mediamtx.Client,
 	minioClient *storage.MinIOClient,
@@ -36,6 +38,7 @@ func NewHandlers(
 		mcpRegistry,
 		mediaGateway,
 		tokenService,
+		db,
 		cfg,
 		mtxCli,
 		minioClient,
@@ -72,6 +75,7 @@ func RegisterRouter(e *echo.Echo, h *handler.Handlers, webFS fs.FS) {
 	handler.RegisterUser(admin, h)
 	handler.RegisterRole(admin, h)
 	handler.RegisterMenu(admin, h)
+	handler.RegisterTenant(admin, h)
 
 	RegisterStatic(e, webFS)
 }

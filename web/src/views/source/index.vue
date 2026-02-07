@@ -115,6 +115,9 @@
         <el-form-item label="启用" prop="enabled">
           <el-switch v-model="createForm.enabled" />
         </el-form-item>
+        <el-form-item label="可见范围" prop="visibility">
+          <GvSelect v-model="createForm.visibility" :options="visibilityOptions" placeholder="请选择可见范围" />
+        </el-form-item>
       </el-form>
     </GvModal>
 
@@ -134,6 +137,9 @@
         </el-form-item>
         <el-form-item label="启用" prop="enabled">
           <el-switch v-model="editForm.enabled" />
+        </el-form-item>
+        <el-form-item label="可见范围" prop="visibility">
+          <GvSelect v-model="editForm.visibility" :options="visibilityOptions" placeholder="请选择可见范围" />
         </el-form-item>
       </el-form>
     </GvModal>
@@ -219,6 +225,7 @@ import GvButton from '@/components/base/GvButton/index.vue'
 import GvSpace from '@/components/layout/GvSpace/index.vue'
 import GvTag from '@/components/base/GvTag/index.vue'
 import GvInput from '@/components/base/GvInput/index.vue'
+import GvSelect from '@/components/base/GvSelect/index.vue'
 import PageHeader from '@/components/business/PageHeader/index.vue'
 import SearchBar from '@/components/business/SearchBar/index.vue'
 import { ErrorState, EmptyState } from '@/components/common'
@@ -237,6 +244,11 @@ const creating = ref(false)
 const updating = ref(false)
 const createFormRef = ref<FormInstance>()
 const editFormRef = ref<FormInstance>()
+const visibilityOptions = [
+  { label: '私有', value: '0' },
+  { label: '角色可见', value: '1' },
+  { label: '公开', value: '2' }
+]
 
 // 使用 useTable 管理媒体源列表
 const {
@@ -271,17 +283,28 @@ const paginationConfig = computed(() => ({
   total: pagination.total
 }))
 
-const createForm = reactive<SourceCreateReq & { url?: string }>({
+const visibilityOptions = [
+  { label: '私有', value: 0 },
+  { label: '角色可见', value: 1 },
+  { label: '公开', value: 2 }
+]
+
+// 使用 useTable 管理媒体源列表
+const createForm = reactive<any>({
   name: '',
   type: 'pull',
   url: '',
-  enabled: true
+  enabled: true,
+  visibility: 0,
+  visible_role_ids: []
 })
 
-const editForm = reactive({
+const editForm = reactive<any>({
   name: '',
   url: '',
-  enabled: true
+  enabled: true,
+  visibility: 0,
+  visible_role_ids: []
 })
 
 const columns = [
@@ -334,7 +357,9 @@ async function handleCreate() {
         name: createForm.name,
         type: createForm.type,
         url: createForm.type === 'pull' ? createForm.url : undefined,
-        enabled: createForm.enabled
+        enabled: createForm.enabled,
+        visibility: Number(createForm.visibility),
+        visible_role_ids: createForm.visible_role_ids
       })
       ElMessage.success('创建成功')
       showCreateDialog.value = false
@@ -342,6 +367,8 @@ async function handleCreate() {
       createForm.type = 'pull'
       createForm.url = ''
       createForm.enabled = true
+      createForm.visibility = 0
+      createForm.visible_role_ids = []
       refreshTable()
     } catch (e: any) {
       ElMessage.error(e.response?.data?.message || '创建失败')
@@ -394,6 +421,8 @@ function handleEdit(row: MediaSource) {
   editForm.name = row.name
   editForm.url = row.url ?? ''
   editForm.enabled = row.enabled
+  editForm.visibility = row.visibility ?? 0
+  editForm.visible_role_ids = row.visible_role_ids || []
   showEditDialog.value = true
 }
 
@@ -406,7 +435,9 @@ async function handleUpdate() {
       await sourceApi.update(currentSource.value!.id, {
         name: editForm.name,
         url: currentSource.value!.type === 'pull' ? editForm.url : undefined,
-        enabled: editForm.enabled
+        enabled: editForm.enabled,
+        visibility: Number(editForm.visibility),
+        visible_role_ids: editForm.visible_role_ids
       })
       ElMessage.success('更新成功')
       showEditDialog.value = false

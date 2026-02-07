@@ -92,7 +92,7 @@ export const assetApi = {
   },
 
   // 文件上传
-  upload(file: File, type: string, name?: string, tags?: string[]) {
+  upload(file: File, type: string, name?: string, tags?: string[], visibility?: number) {
     const formData = new FormData()
     formData.append('file', file)
     formData.append('type', type)
@@ -101,6 +101,9 @@ export const assetApi = {
     }
     if (tags && tags.length > 0) {
       formData.append('tags', JSON.stringify(tags))
+    }
+    if (visibility !== undefined) {
+      formData.append('visibility', String(visibility))
     }
 
     return apiClient.post<MediaAsset>('/upload', formData, {

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"goyavision/internal/api/dto"
+	authmiddleware "goyavision/internal/api/middleware"
 	appdto "goyavision/internal/app/dto"
 	"goyavision/internal/domain/media"
 
@@ -65,6 +66,15 @@ func (h *sourceHandler) Create(c echo.Context) error {
 		visibility = media.Visibility(*req.Visibility)
 	}
 
+	visibleRoleIDs := req.VisibleRoleIDs
+	if visibility == media.VisibilityRole && len(visibleRoleIDs) == 0 {
+		if ids, ok := c.Get(authmiddleware.ContextKeyRoleIDs).([]uuid.UUID); ok {
+			for _, id := range ids {
+				visibleRoleIDs = append(visibleRoleIDs, id.String())
+			}
+		}
+	}
+
 	cmd := appdto.CreateSourceCommand{
 		Name:           req.Name,
 		Type:           media.SourceType(req.Type),
@@ -72,7 +82,7 @@ func (h *sourceHandler) Create(c echo.Context) error {
 		Protocol:       req.Protocol,
 		Enabled:        req.Enabled,
 		Visibility:     visibility,
-		VisibleRoleIDs: req.VisibleRoleIDs,
+		VisibleRoleIDs: visibleRoleIDs,
 	}
 
 	source, err := h.h.CreateSource.Handle(c.Request().Context(), cmd)

@@ -66,6 +66,9 @@ func (r *TaskRepo) List(ctx context.Context, filter workflow.TaskFilter) ([]*wor
 	if filter.Status != nil {
 		q = q.Where("status = ?", string(*filter.Status))
 	}
+	if filter.TriggeredByUserID != nil {
+		q = q.Where("triggered_by_user_id = ?", *filter.TriggeredByUserID)
+	}
 	if filter.From != nil {
 		q = q.Where("created_at >= ?", *filter.From)
 	}

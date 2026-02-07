@@ -142,6 +142,13 @@
           :options="statusOptions"
           class="w-full"
         />
+
+        <GvSelect
+          v-model="form.visibility"
+          label="可见范围"
+          :options="visibilityOptions"
+          class="w-full"
+        />
       </div>
     </GvModal>
   </GvContainer>
@@ -177,7 +184,14 @@ const editId = ref('')
 const editHasApiKey = ref(false)
 const testingId = ref('')
 
-const form = reactive({
+const visibilityOptions = [
+  { label: '私有', value: 0 },
+  { label: '角色可见', value: 1 },
+  { label: '公开', value: 2 }
+]
+
+
+const form = reactive<any>({
   name: '',
   description: '',
   provider: 'openai',
@@ -185,7 +199,9 @@ const form = reactive({
   api_key: '',
   model_name: '',
   config: {},
-  status: 'active'
+  status: 'active',
+  visibility: 0,
+  visible_role_ids: []
 })
 
 const {
@@ -245,7 +261,7 @@ const paginationConfig = computed(() => ({
 const handlePageChange = goToPage
 const handleSizeChange = changePageSize
 
-function getProviderColor(provider: string) {
+function getProviderColor(provider: string): any {
   const map: Record<string, string> = {
     openai: 'success',
     anthropic: 'warning',
@@ -271,6 +287,8 @@ function resetForm() {
   form.model_name = ''
   form.config = {}
   form.status = 'active'
+  form.visibility = 0
+  form.visible_role_ids = []
 }
 
 function openCreateDialog() {
@@ -293,6 +311,8 @@ function handleEdit(row: AIModel) {
   form.model_name = row.model_name
   form.config = row.config || {}
   form.status = row.status
+  form.visibility = row.visibility ?? 0
+  form.visible_role_ids = row.visible_role_ids || []
   showDialog.value = true
 }
 
@@ -326,7 +346,9 @@ async function handleSubmit() {
       provider: form.provider,
       endpoint: form.endpoint,
       model_name: form.model_name,
-      config: form.config
+      config: form.config,
+      visibility: Number(form.visibility),
+      visible_role_ids: form.visible_role_ids
     }
     if (form.api_key) {
       data.api_key = form.api_key

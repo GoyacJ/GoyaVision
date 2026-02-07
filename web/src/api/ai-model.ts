@@ -10,6 +10,8 @@ export interface AIModel {
   has_api_key: boolean
   config: Record<string, any>
   status: 'active' | 'disabled'
+  visibility?: number
+  visible_role_ids?: string[]
   created_at: string
   updated_at: string
 }
@@ -22,6 +24,8 @@ export interface AIModelCreateReq {
   api_key: string
   model_name: string
   config: Record<string, any>
+  visibility?: number
+  visible_role_ids?: string[]
 }
 
 export interface AIModelUpdateReq {
@@ -33,6 +37,8 @@ export interface AIModelUpdateReq {
   model_name?: string
   config?: Record<string, any>
   status?: string
+  visibility?: number
+  visible_role_ids?: string[]
 }
 
 export interface AIModelListQuery {

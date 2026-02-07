@@ -57,10 +57,11 @@ func main() {
 
 	log.Println("\n📊 初始化计划:")
 	log.Println("1. 创建数据库表结构")
-	log.Println("2. 初始化权限数据")
-	log.Println("3. 初始化菜单数据")
-	log.Println("4. 初始化角色数据（超级管理员）")
-	log.Println("5. 初始化管理员用户")
+	log.Println("2. 初始化租户数据")
+	log.Println("3. 初始化权限数据")
+	log.Println("4. 初始化菜单数据")
+	log.Println("5. 初始化角色数据（超级管理员）")
+	log.Println("6. 初始化管理员用户")
 
 	if !confirm("\n是否继续？") && !*dryRun {
 		log.Println("已取消")
@@ -71,6 +72,10 @@ func main() {
 
 	if err := createTables(db); err != nil {
 		log.Fatalf("创建数据库表失败: %v", err)
+	}
+
+	if err := initTenants(ctx, db); err != nil {
+		log.Fatalf("初始化租户失败: %v", err)
 	}
 
 	if err := initPermissions(ctx, db); err != nil {
@@ -105,6 +110,17 @@ func createTables(db *gorm.DB) error {
 	}
 
 	log.Println("  创建 V1.0 表结构...")
+	// 显式先迁移租户表，确保后续初始化可用
+	if err := db.AutoMigrate(&model.TenantModel{}); err != nil {
+		return fmt.Errorf("迁移租户表失败: %w", err)
+	}
+	// 再次验证表是否存在，处理某些环境下异步或缓存问题
+	if !db.Migrator().HasTable("tenants") {
+		log.Println("  ⚠️  警告：AutoMigrate 未能创建 tenants 表，尝试显式创建...")
+		if err := db.Migrator().CreateTable(&model.TenantModel{}); err != nil {
+			return fmt.Errorf("显式创建租户表失败: %w", err)
+		}
+	}
 	if err := persistence.AutoMigrate(db); err != nil {
 		return fmt.Errorf("AutoMigrate 失败: %w", err)
 	}
@@ -147,7 +163,50 @@ func createTables(db *gorm.DB) error {
 	return nil
 }
 
+func initTenants(ctx context.Context, db *gorm.DB) error {
+	log.Println("\n[2/6] 初始化租户数据")
+
+	if *dryRun {
+		log.Println("  （模拟运行，跳过实际初始化）")
+		return nil
+	}
+
+	tenantID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	var existing model.TenantModel
+	err := db.WithContext(ctx).Where("code = ?", "default").First(&existing).Error
+
+	if err == nil {
+		if *force {
+			log.Println("  更新默认租户...")
+			existing.Name = "默认租户"
+			existing.Status = 1
+			if err := db.WithContext(ctx).Save(&existing).Error; err != nil {
+				return fmt.Errorf("更新租户失败: %w", err)
+			}
+			log.Println("  ✓ 已更新默认租户")
+		} else {
+			log.Println("  ⊙ 默认租户已存在，跳过创建")
+		}
+	} else {
+		log.Println("  创建默认租户...")
+		tenant := &model.TenantModel{
+			ID:     tenantID,
+			Name:   "默认租户",
+			Code:   "default",
+			Status: 1,
+		}
+		if err := db.WithContext(ctx).Create(tenant).Error; err != nil {
+			return fmt.Errorf("创建租户失败: %w", err)
+		}
+		log.Println("  ✓ 已创建默认租户")
+	}
+
+	log.Println("✅ 租户数据初始化完成")
+	return nil
+}
+
 func initPermissions(ctx context.Context, db *gorm.DB) error {
+	log.Println("\n[3/6] 初始化权限数据")
 	log.Println("\n[2/5] 初始化权限数据")
 
 	if *dryRun {
@@ -237,6 +296,10 @@ func initPermissions(ctx context.Context, db *gorm.DB) error {
 		{"file:update", "更新文件", "PUT", "/api/v1/files/*", ""},
 		{"file:delete", "删除文件", "DELETE", "/api/v1/files/*", ""},
 		{"file:download", "下载文件", "GET", "/api/v1/files/*/download", ""},
+		{"tenant:list", "查看租户列表", "GET", "/api/v1/tenants", ""},
+		{"tenant:create", "创建租户", "POST", "/api/v1/tenants", ""},
+		{"tenant:update", "更新租户", "PUT", "/api/v1/tenants/*", ""},
+		{"tenant:delete", "删除租户", "DELETE", "/api/v1/tenants/*", ""},
 	}
 
 	addedPerms := 0
@@ -286,7 +349,7 @@ func initPermissions(ctx context.Context, db *gorm.DB) error {
 }
 
 func initMenus(ctx context.Context, db *gorm.DB) error {
-	log.Println("\n[3/5] 初始化菜单数据")
+	log.Println("\n[4/6] 初始化菜单数据")
 
 	if *dryRun {
 		log.Println("  （模拟运行，跳过实际初始化）")
@@ -329,6 +392,7 @@ func initMenus(ctx context.Context, db *gorm.DB) error {
 		{uuid.MustParse("00000000-0000-0000-0000-000000000003"), ptrUUID("00000000-0000-0000-0000-000000000001"), "system:role", "角色管理", 2, "/system/role", "UserFilled", "system/role/index", "role:list", 2, true},
 		{uuid.MustParse("00000000-0000-0000-0000-000000000004"), ptrUUID("00000000-0000-0000-0000-000000000001"), "system:menu", "菜单管理", 2, "/system/menu", "Menu", "system/menu/index", "menu:list", 3, true},
 		{uuid.MustParse("00000000-0000-0000-0000-000000000005"), ptrUUID("00000000-0000-0000-0000-000000000001"), "system:file", "文件管理", 2, "/system/file", "Document", "system/file/index", "file:list", 4, true},
+		{uuid.MustParse("00000000-0000-0000-0000-000000000006"), ptrUUID("00000000-0000-0000-0000-000000000001"), "system:tenant", "租户管理", 2, "/system/tenant", "OfficeBuilding", "system/tenant/index", "tenant:list", 5, true},
 	}
 
 	addedMenus := 0
@@ -389,7 +453,7 @@ func initMenus(ctx context.Context, db *gorm.DB) error {
 }
 
 func initRoles(ctx context.Context, db *gorm.DB) error {
-	log.Println("\n[4/5] 初始化角色数据")
+	log.Println("\n[5/6] 初始化角色数据")
 
 	if *dryRun {
 		log.Println("  （模拟运行，跳过实际初始化）")
@@ -555,13 +619,14 @@ func initRoles(ctx context.Context, db *gorm.DB) error {
 }
 
 func initAdminUser(ctx context.Context, db *gorm.DB) error {
-	log.Println("\n[5/5] 初始化管理员用户")
+	log.Println("\n[6/6] 初始化管理员用户")
 
 	if *dryRun {
 		log.Println("  （模拟运行，跳过实际初始化）")
 		return nil
 	}
 
+	tenantID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
 	userID := uuid.MustParse("00000000-0000-0000-0000-000000000200")
 	var existingUser model.UserModel
 	err := db.WithContext(ctx).Where("username = ?", "admin").First(&existingUser).Error
@@ -576,6 +641,7 @@ func initAdminUser(ctx context.Context, db *gorm.DB) error {
 			existingUser.Password = string(hashedPassword)
 			existingUser.Nickname = "管理员"
 			existingUser.Status = int(identity.UserStatusEnabled)
+			existingUser.TenantID = &tenantID
 			if err := db.WithContext(ctx).Save(&existingUser).Error; err != nil {
 				return fmt.Errorf("更新用户失败: %w", err)
 			}
@@ -607,6 +673,7 @@ func initAdminUser(ctx context.Context, db *gorm.DB) error {
 		Password: string(hashedPassword),
 		Nickname: "管理员",
 		Status:   int(identity.UserStatusEnabled),
+		TenantID: &tenantID,
 	}
 
 	if err := db.WithContext(ctx).Create(user).Error; err != nil {

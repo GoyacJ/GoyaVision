@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"strconv"
 
 	"goyavision/config"
 	"goyavision/internal/api/dto"
@@ -65,6 +66,24 @@ func (h *uploadHandler) Upload(c echo.Context) error {
 		}
 	}
 
+	// 处理可见性
+	visibility := media.VisibilityPrivate
+	if vStr := c.FormValue("visibility"); vStr != "" {
+		if v, err := strconv.Atoi(vStr); err == nil {
+			visibility = media.Visibility(v)
+		}
+	}
+
+	var visibleRoleIDs []string
+	if visibility == media.VisibilityRole {
+		// 自动填充当前用户的角色
+		if ids, ok := c.Get(middleware.ContextKeyRoleIDs).([]uuid.UUID); ok {
+			for _, id := range ids {
+				visibleRoleIDs = append(visibleRoleIDs, id.String())
+			}
+		}
+	}
+
 	src, err := file.Open()
 	if err != nil {
 		return c.JSON(500, dto.ErrorResponse{
@@ -97,14 +116,16 @@ func (h *uploadHandler) Upload(c echo.Context) error {
 	}
 
 	cmd := appdto.CreateAssetCommand{
-		Type:       media.AssetType(assetType),
-		SourceType: media.AssetSourceUpload,
-		Name:       name,
-		Path:       uploadedFile.Path,
-		Size:       file.Size,
-		Format:     format,
-		Status:     media.AssetStatusReady,
-		Tags:       tags,
+		Type:           media.AssetType(assetType),
+		SourceType:     media.AssetSourceUpload,
+		Name:           name,
+		Path:           uploadedFile.Path,
+		Size:           file.Size,
+		Format:         format,
+		Status:         media.AssetStatusReady,
+		Tags:           tags,
+		Visibility:     visibility,
+		VisibleRoleIDs: visibleRoleIDs,
 	}
 
 	asset, err := h.h.CreateAsset.Handle(c.Request().Context(), cmd)

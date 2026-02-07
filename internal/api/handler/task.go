@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"goyavision/internal/api/dto"
+	authmiddleware "goyavision/internal/api/middleware"
 	appdto "goyavision/internal/app/dto"
 	"goyavision/internal/domain/media"
 	"goyavision/internal/domain/workflow"
@@ -59,6 +60,23 @@ func (h *taskHandler) List(c echo.Context) error {
 	if query.To != nil {
 		t := time.Unix(*query.To, 0)
 		q.To = &t
+	}
+
+	// 权限过滤：非超级管理员只能查看自己触发的任务
+	userID, _ := authmiddleware.GetUserID(c)
+	roles := c.Get(authmiddleware.ContextKeyRoles)
+	isSuperAdmin := false
+	if roleList, ok := roles.([]string); ok {
+		for _, r := range roleList {
+			if r == "super_admin" {
+				isSuperAdmin = true
+				break
+			}
+		}
+	}
+
+	if !isSuperAdmin {
+		q.TriggeredByUserID = &userID
 	}
 
 	result, err := h.h.ListTasks.Handle(c.Request().Context(), q)

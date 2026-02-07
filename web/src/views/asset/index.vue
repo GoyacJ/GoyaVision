@@ -167,7 +167,12 @@
               {{ row.duration ? formatDuration(row.duration) : '-' }}
             </template>
             <template #status="{ row }">
-              <StatusBadge :status="mapStatus(row.status)" />
+              <div class="flex flex-col gap-1">
+                <StatusBadge :status="mapStatus(row.status)" />
+                <GvTag v-if="row.visibility !== undefined" :color="row.visibility === 2 ? 'success' : (row.visibility === 1 ? 'warning' : 'neutral')" size="xs" variant="tonal">
+                  {{ row.visibility === 2 ? '公开' : (row.visibility === 1 ? '角色' : '私有') }}
+                </GvTag>
+              </div>
             </template>
             <template #tags="{ row }">
               <GvSpace v-if="row.tags && row.tags.length > 0" size="xs" wrap>
@@ -270,6 +275,9 @@
                   :value="tag"
                 />
               </el-select>
+            </el-form-item>
+            <el-form-item label="可见范围" prop="visibility">
+              <GvSelect v-model="uploadForm.visibility" :options="visibilityOptions" placeholder="请选择可见范围" />
             </el-form-item>
           </el-form>
         </GvModal>
@@ -377,6 +385,13 @@
                 </template>
                 <StatusBadge v-else :status="mapStatus(currentAsset.status)" />
               </div>
+              <div class="info-item">
+                <span class="info-label">可见范围</span>
+                <template v-if="canEditPermission">
+                  <GvSelect v-model="editForm.visibility" :options="visibilityOptions" />
+                </template>
+                <span v-else class="info-value">{{ visibilityOptions.find(o => o.value === currentAsset.visibility)?.label || '私有' }}</span>
+              </div>
               <div class="info-item info-item--full">
                 <span class="info-label">标签</span>
                 <template v-if="canEditPermission">
@@ -478,8 +493,6 @@ const selectedFile = ref<UploadFile | null>(null)
 const viewMode = ref<'grid' | 'list'>('grid')
 const showImagePreview = ref(false)
 const showVideoPreview = ref(false)
-const roleOptions = ref<{ label: string; value: string }[]>([])
-
 const { isMobile } = useBreakpoint()
 
 watch(isMobile, (val) => {
@@ -535,24 +548,13 @@ const {
 
 const tags = computed(() => tagsData.value?.data.tags || [])
 
-// 加载角色列表
-const loadRoles = async () => {
-  try {
-    const res = await roleApi.list()
-    roleOptions.value = (res.data || []).map((r: any) => ({ label: r.name, value: r.id }))
-  } catch (e) {
-    console.error('Failed to load roles', e)
-  }
-}
-loadRoles()
-
 const visibilityOptions = [
   { label: '私有', value: 0 },
   { label: '角色可见', value: 1 },
   { label: '公开', value: 2 }
 ]
 
-const uploadForm = reactive<AssetCreateReq>({
+const uploadForm = reactive<any>({
   type: 'video',
   source_type: 'upload',
   name: '',
@@ -565,7 +567,7 @@ const uploadForm = reactive<AssetCreateReq>({
   visible_role_ids: []
 })
 
-const editForm = reactive<AssetUpdateReq>({
+const editForm = reactive<any>({
   name: '',
   status: 'ready',
   tags: [],
@@ -695,17 +697,19 @@ async function handleUpload() {
           selectedFile.value.raw,
           uploadForm.type,
           uploadForm.name,
-          uploadForm.tags || []
+          uploadForm.tags || [],
+          Number(uploadForm.visibility)
         )
       } else {
-        const createData = {
+        const createData: any = {
           type: uploadForm.type,
           source_type: uploadForm.source_type,
           name: uploadForm.name,
           path: uploadForm.path,
           size: uploadForm.size || 0,
           format: uploadForm.format || '',
-          tags: uploadForm.tags || []
+          tags: uploadForm.tags || [],
+          visibility: Number(uploadForm.visibility)
         }
         await assetApi.create(createData)
       }
@@ -732,6 +736,8 @@ function resetUploadForm() {
   uploadForm.format = ''
   uploadForm.source_id = undefined
   uploadForm.tags = []
+  uploadForm.visibility = 0
+  uploadForm.visible_role_ids = []
   selectedFile.value = null
   uploadFileList.value = []
   uploadRef.value?.clearFiles()
@@ -773,6 +779,8 @@ function handleDetail(asset: MediaAsset) {
   editForm.name = asset.name
   editForm.status = asset.status
   editForm.tags = asset.tags || []
+  editForm.visibility = asset.visibility ?? 0
+  editForm.visible_role_ids = asset.visible_role_ids || []
   showDetailDrawer.value = true
 }
 
@@ -781,9 +789,11 @@ function resetEditForm() {
   editForm.name = currentAsset.value.name
   editForm.status = currentAsset.value.status
   editForm.tags = currentAsset.value.tags || []
+  editForm.visibility = currentAsset.value.visibility ?? 0
+  editForm.visible_role_ids = currentAsset.value.visible_role_ids || []
 }
 
-async function doUpdate(payload: AssetUpdateReq) {
+async function doUpdate(payload: any) {
   if (!currentAsset.value) return
 
   savingSection.value = 'all'
@@ -810,7 +820,8 @@ async function saveAll() {
   await doUpdate({
     name: editForm.name,
     status: editForm.status,
-    tags: editForm.tags || []
+    tags: editForm.tags || [],
+    visibility: Number(editForm.visibility)
   })
 }
 

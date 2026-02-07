@@ -23,6 +23,7 @@ type JWTService struct {
 // customClaims JWT 自定义声明
 type customClaims struct {
 	UserID    string `json:"user_id"`
+	TenantID  string `json:"tenant_id,omitempty"`
 	Username  string `json:"username"`
 	TokenType string `json:"token_type"` // "access" or "refresh"
 	jwt.RegisteredClaims
@@ -52,7 +53,7 @@ func NewJWTService(cfg *config.JWT) (*JWTService, error) {
 }
 
 // GenerateTokenPair 生成 Token 对（Access + Refresh）
-func (s *JWTService) GenerateTokenPair(userID uuid.UUID, username string) (*port.TokenPair, error) {
+func (s *JWTService) GenerateTokenPair(userID uuid.UUID, tenantID uuid.UUID, username string) (*port.TokenPair, error) {
 	if userID == uuid.Nil {
 		return nil, apperr.InvalidInput("user ID is required")
 	}
@@ -64,12 +65,12 @@ func (s *JWTService) GenerateTokenPair(userID uuid.UUID, username string) (*port
 	accessExpiresAt := now.Add(s.accessTokenTTL)
 	refreshExpiresAt := now.Add(s.refreshTokenTTL)
 
-	accessToken, err := s.generateToken(userID, username, "access", accessExpiresAt)
+	accessToken, err := s.generateToken(userID, tenantID, username, "access", accessExpiresAt)
 	if err != nil {
 		return nil, apperr.Wrap(err, apperr.CodeInternal, "failed to generate access token")
 	}
 
-	refreshToken, err := s.generateToken(userID, username, "refresh", refreshExpiresAt)
+	refreshToken, err := s.generateToken(userID, tenantID, username, "refresh", refreshExpiresAt)
 	if err != nil {
 		return nil, apperr.Wrap(err, apperr.CodeInternal, "failed to generate refresh token")
 	}
@@ -106,15 +107,16 @@ func (s *JWTService) RefreshTokenPair(refreshToken string) (*port.TokenPair, err
 		return nil, apperr.New(apperr.CodeTokenInvalid, "invalid refresh token")
 	}
 
-	return s.GenerateTokenPair(claims.UserID, claims.Username)
+	return s.GenerateTokenPair(claims.UserID, claims.TenantID, claims.Username)
 }
 
 // generateToken 生成 JWT token
-func (s *JWTService) generateToken(userID uuid.UUID, username, tokenType string, expiresAt time.Time) (string, error) {
+func (s *JWTService) generateToken(userID uuid.UUID, tenantID uuid.UUID, username, tokenType string, expiresAt time.Time) (string, error) {
 	now := time.Now()
 
 	claims := &customClaims{
 		UserID:    userID.String(),
+		TenantID:  tenantID.String(),
 		Username:  username,
 		TokenType: tokenType,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -169,6 +171,11 @@ func (s *JWTService) validateToken(tokenString, expectedType string) (*port.Toke
 		return nil, false, apperr.Wrap(err, apperr.CodeTokenInvalid, "invalid user ID in token")
 	}
 
+	var tenantID uuid.UUID
+	if claims.TenantID != "" && claims.TenantID != uuid.Nil.String() {
+		tenantID, _ = uuid.Parse(claims.TenantID)
+	}
+
 	isExpired := false
 	if claims.ExpiresAt != nil && claims.ExpiresAt.Before(time.Now()) {
 		isExpired = true
@@ -176,6 +183,7 @@ func (s *JWTService) validateToken(tokenString, expectedType string) (*port.Toke
 
 	return &port.TokenClaims{
 		UserID:    userID,
+		TenantID:  tenantID,
 		Username:  claims.Username,
 		IssuedAt:  claims.IssuedAt.Time,
 		ExpiresAt: claims.ExpiresAt.Time,

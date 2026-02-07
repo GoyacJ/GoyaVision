@@ -176,12 +176,13 @@ type GetTaskWithRelationsQuery struct {
 }
 
 type ListTasksQuery struct {
-	WorkflowID *uuid.UUID
-	AssetID    *uuid.UUID
-	Status     *workflow.TaskStatus
-	From       *time.Time
-	To         *time.Time
-	Pagination Pagination
+	WorkflowID        *uuid.UUID
+	AssetID           *uuid.UUID
+	Status            *workflow.TaskStatus
+	TriggeredByUserID *uuid.UUID
+	From              *time.Time
+	To                *time.Time
+	Pagination        Pagination
 }
 
 type GetTaskStatsQuery struct {
