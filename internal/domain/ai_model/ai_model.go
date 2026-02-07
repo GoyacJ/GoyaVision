@@ -15,6 +15,10 @@ const (
 	ProviderOllama    Provider = "ollama"
 	ProviderLocal     Provider = "local"
 	ProviderCustom    Provider = "custom"
+	ProviderQwen      Provider = "qwen"
+	ProviderDoubao    Provider = "doubao"
+	ProviderZhipu     Provider = "zhipu"
+	ProviderVLLM      Provider = "vllm"
 )
 
 type Status string
@@ -70,7 +74,8 @@ func (m *AIModel) Validate() error {
 		return fmt.Errorf("name is required")
 	}
 	switch m.Provider {
-	case ProviderOpenAI, ProviderAnthropic, ProviderOllama, ProviderLocal, ProviderCustom:
+	case ProviderOpenAI, ProviderAnthropic, ProviderOllama, ProviderLocal, ProviderCustom,
+		ProviderQwen, ProviderDoubao, ProviderZhipu, ProviderVLLM:
 	default:
 		return fmt.Errorf("invalid provider: %s", m.Provider)
 	}

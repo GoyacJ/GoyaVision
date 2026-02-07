@@ -33,6 +33,10 @@ func NewAIModelExecutor(repo port.Repository, crypto appport.CryptoService) *AIM
 			ai_model.ProviderOllama:    NewOllamaProvider(),
 			ai_model.ProviderLocal:     openai,
 			ai_model.ProviderCustom:    openai,
+			ai_model.ProviderQwen:      NewQwenProvider(),
+			ai_model.ProviderDoubao:    NewDoubaoProvider(),
+			ai_model.ProviderZhipu:     NewZhipuProvider(),
+			ai_model.ProviderVLLM:      NewVLLMProvider(),
 		},
 	}
 }

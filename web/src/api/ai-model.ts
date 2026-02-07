@@ -4,7 +4,7 @@ export interface AIModel {
   id: string
   name: string
   description: string
-  provider: 'openai' | 'anthropic' | 'ollama' | 'local' | 'custom'
+  provider: 'openai' | 'anthropic' | 'ollama' | 'local' | 'custom' | 'qwen' | 'doubao' | 'zhipu' | 'vllm'
   endpoint: string
   model_name: string
   has_api_key: boolean

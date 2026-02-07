@@ -48,6 +48,14 @@ func (h *TestAIModelHandler) Handle(ctx context.Context, cmd dto.TestAIModelComm
 		provider = engine.NewAnthropicProvider()
 	case ai_model.ProviderOllama:
 		provider = engine.NewOllamaProvider()
+	case ai_model.ProviderQwen:
+		provider = engine.NewQwenProvider()
+	case ai_model.ProviderDoubao:
+		provider = engine.NewDoubaoProvider()
+	case ai_model.ProviderZhipu:
+		provider = engine.NewZhipuProvider()
+	case ai_model.ProviderVLLM:
+		provider = engine.NewVLLMProvider()
 	default:
 		return &dto.TestAIModelResult{
 			Success: false,

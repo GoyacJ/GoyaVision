@@ -29,9 +29,10 @@ func (h *CreateAIModelHandler) Handle(ctx context.Context, cmd dto.CreateAIModel
 
 	provider := ai_model.Provider(cmd.Provider)
 	switch provider {
-	case ai_model.ProviderOpenAI, ai_model.ProviderAnthropic, ai_model.ProviderOllama, ai_model.ProviderLocal, ai_model.ProviderCustom:
+	case ai_model.ProviderOpenAI, ai_model.ProviderAnthropic, ai_model.ProviderOllama, ai_model.ProviderLocal, ai_model.ProviderCustom,
+		ai_model.ProviderQwen, ai_model.ProviderDoubao, ai_model.ProviderZhipu, ai_model.ProviderVLLM:
 	default:
-		return nil, apperr.InvalidInput(fmt.Sprintf("invalid provider: %s, allowed values: openai|anthropic|ollama|local|custom", cmd.Provider))
+		return nil, apperr.InvalidInput(fmt.Sprintf("invalid provider: %s, allowed values: openai|anthropic|ollama|local|custom|qwen|doubao|zhipu|vllm", cmd.Provider))
 	}
 
 	var result *ai_model.AIModel

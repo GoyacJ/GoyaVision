@@ -8,6 +8,11 @@
 ## [未发布]
 
 ### 新增
+- **AI 模型厂商扩展**：新增千问(Qwen)、豆包(Doubao)、智谱(Zhipu)、vLLM 四种提供商支持。
+  - 领域层：`ProviderQwen`、`ProviderDoubao`、`ProviderZhipu`、`ProviderVLLM` 常量及校验。
+  - 创建/测试：CreateAIModel、TestAIModel 支持上述 provider；测试连接时按厂商选择对应 HTTP 客户端。
+  - 执行器：`AIModelExecutor` 与 `OpenAICompatProvider` 支持可配置 chat/health API 路径，Qwen/Doubao/Zhipu 使用 `/chat/completions`、`/models`，vLLM 使用 `/v1/chat/completions`、`/v1/models`。
+  - 前端：`AIModel.provider` 类型与 AI 模型管理页提供商选项已包含 qwen、doubao、zhipu、vllm。
 - **多租户架构重构 (Phase 1 & 2)**：
   - **基础设施**：新增 `Tenant` 实体与表结构，JWT 增强 `tenant_id` 载荷支持。
   - **数据模型**：所有核心业务表 (`media_assets`, `operators`, `workflows` 等) 增加 `tenant_id` (租户隔离)、`owner_id` (所有权)、`visibility` (可见性) 字段。

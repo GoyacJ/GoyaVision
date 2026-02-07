@@ -13,15 +13,40 @@ import (
 	"goyavision/internal/domain/ai_model"
 )
 
-// OpenAIProvider handles OpenAI-compatible APIs (also covers local/custom providers).
-type OpenAIProvider struct {
-	client *http.Client
+// OpenAICompatProvider handles OpenAI-compatible APIs.
+// Covers OpenAI, Qwen (DashScope), Doubao (Volcano Engine), Zhipu (GLM), vLLM, and local/custom providers.
+type OpenAICompatProvider struct {
+	chatPath   string
+	healthPath string
+	client     *http.Client
 }
 
-func NewOpenAIProvider() *OpenAIProvider {
-	return &OpenAIProvider{
-		client: &http.Client{Timeout: 5 * time.Minute},
+func NewOpenAICompatProvider(chatPath, healthPath string, timeout time.Duration) *OpenAICompatProvider {
+	return &OpenAICompatProvider{
+		chatPath:   chatPath,
+		healthPath: healthPath,
+		client:     &http.Client{Timeout: timeout},
 	}
+}
+
+func NewOpenAIProvider() *OpenAICompatProvider {
+	return NewOpenAICompatProvider("/v1/chat/completions", "/v1/models", 5*time.Minute)
+}
+
+func NewQwenProvider() *OpenAICompatProvider {
+	return NewOpenAICompatProvider("/chat/completions", "/models", 5*time.Minute)
+}
+
+func NewDoubaoProvider() *OpenAICompatProvider {
+	return NewOpenAICompatProvider("/chat/completions", "/models", 5*time.Minute)
+}
+
+func NewZhipuProvider() *OpenAICompatProvider {
+	return NewOpenAICompatProvider("/chat/completions", "/models", 5*time.Minute)
+}
+
+func NewVLLMProvider() *OpenAICompatProvider {
+	return NewOpenAICompatProvider("/v1/chat/completions", "/v1/models", 10*time.Minute)
 }
 
 type openAIRequest struct {
@@ -49,8 +74,8 @@ type openAIResponse struct {
 	Model string `json:"model"`
 }
 
-func (p *OpenAIProvider) Chat(ctx context.Context, model *ai_model.AIModel, req *ChatRequest) (*ChatResponse, error) {
-	endpoint := strings.TrimRight(model.Endpoint, "/") + "/v1/chat/completions"
+func (p *OpenAICompatProvider) Chat(ctx context.Context, model *ai_model.AIModel, req *ChatRequest) (*ChatResponse, error) {
+	endpoint := strings.TrimRight(model.Endpoint, "/") + p.chatPath
 
 	body := openAIRequest{
 		Model:       model.ModelName,
@@ -108,8 +133,8 @@ func (p *OpenAIProvider) Chat(ctx context.Context, model *ai_model.AIModel, req 
 	}, nil
 }
 
-func (p *OpenAIProvider) HealthCheck(ctx context.Context, model *ai_model.AIModel) error {
-	endpoint := strings.TrimRight(model.Endpoint, "/") + "/v1/models"
+func (p *OpenAICompatProvider) HealthCheck(ctx context.Context, model *ai_model.AIModel) error {
+	endpoint := strings.TrimRight(model.Endpoint, "/") + p.healthPath
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {

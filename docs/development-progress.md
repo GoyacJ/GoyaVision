@@ -26,8 +26,8 @@
 | 存储配置 | 存储路径配置、访问基址 | ✅ 已完成 | 支持本地存储及 MinIO 公网访问基址配置 |
 | **算子中心** | | | |
 | 算子管理 | CRUD、分类、关联 AI 模型 | ✅ 已完成 | 包含 Operator、OperatorVersion 等 |
-| AI 模型管理 | CRUD、连接配置 | ✅ 已完成 | 支持 OpenAI/Anthropic/Local 等模型配置 |
-| AI 模型执行 | 模型调用、Vision支持 | ✅ 已完成 | 实现 AIModelExecutor，支持 OpenAI/Anthropic/Ollama，支持 Vision 输入 |
+| AI 模型管理 | CRUD、连接配置 | ✅ 已完成 | 支持 OpenAI/Anthropic/Ollama/Local/Custom 及千问(Qwen)、豆包(Doubao)、智谱(Zhipu)、vLLM；前端提供商选项与类型已同步 |
+| AI 模型执行 | 模型调用、Vision支持 | ✅ 已完成 | 实现 AIModelExecutor，支持 OpenAI/Anthropic/Ollama 及 Qwen/Doubao/Zhipu/vLLM（OpenAI 兼容 API 路径可配置）；支持 Vision 输入 |
 | MCP 市场 | 浏览、同步、安装 | ✅ 已完成 | 集成 MCP 工具生态 |
 | 内置算子 | 抽帧、目标检测 | ✅ 部分完成 | 已有抽帧和推理，需要重构为算子 |
 | **任务中心** | | | |
