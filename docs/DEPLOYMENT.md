@@ -45,6 +45,16 @@ make build-all
 go build -o bin/goyavision ./cmd/server
 ```
 
+### Docker 构建
+
+```bash
+docker-compose build
+```
+或
+```bash
+make docker-build
+```
+
 ## 数据库准备
 
 ### PostgreSQL 安装
@@ -122,6 +132,14 @@ go run ./cmd/server
 
 ```bash
 ./bin/goyavision
+```
+
+### Docker 运行
+
+使用 Docker Compose 启动所有服务（包含数据库、MediaMTX、MinIO）：
+
+```bash
+docker-compose up -d
 ```
 
 ### 后台运行（Linux）

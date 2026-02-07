@@ -1,4 +1,4 @@
-.PHONY: build build-web build-all clean
+.PHONY: build build-web build-all clean docker-build
 
 build-web:
 	cd web && pnpm install && pnpm run build
@@ -10,3 +10,6 @@ build-all: build-web build
 
 clean:
 	rm -rf web/dist web/node_modules bin
+
+docker-build:
+	docker-compose build
