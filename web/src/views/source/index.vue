@@ -283,12 +283,6 @@ const paginationConfig = computed(() => ({
   total: pagination.total
 }))
 
-const visibilityOptions = [
-  { label: '私有', value: 0 },
-  { label: '角色可见', value: 1 },
-  { label: '公开', value: 2 }
-]
-
 // 使用 useTable 管理媒体源列表
 const createForm = reactive<any>({
   name: '',

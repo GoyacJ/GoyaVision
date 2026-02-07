@@ -8,7 +8,7 @@
     
     <!-- 选择器 -->
     <el-select
-      :model-value="modelValue"
+      v-model="internalValue"
       :class="selectClasses"
       :size="size"
       :placeholder="placeholder"
@@ -26,8 +26,6 @@
       :no-data-text="noDataText"
       :no-match-text="noMatchText"
       :popper-class="cn('gv-select-dropdown', popperClass)"
-      @update:model-value="handleUpdate"
-      @change="handleChange"
       @visible-change="handleVisibleChange"
       @remove-tag="handleRemoveTag"
       @clear="handleClear"
@@ -93,6 +91,14 @@ const props = withDefaults(defineProps<SelectProps>(), {
 
 const emit = defineEmits<SelectEmits>()
 
+const internalValue = computed({
+  get: () => props.modelValue,
+  set: (val) => {
+    emit('update:modelValue', val)
+    emit('change', val)
+  }
+})
+
 // 容器类名
 const containerClasses = computed(() => {
   return cn('gv-select', 'w-full', 'relative')
@@ -143,16 +149,6 @@ const statusIconClasses = computed(() => {
   
   return cn(base, colorClass, topClass)
 })
-
-// 更新事件
-const handleUpdate = (value: string | number | Array<string | number> | undefined) => {
-  emit('update:modelValue', value)
-}
-
-// 变化事件
-const handleChange = (value: string | number | Array<string | number> | undefined) => {
-  emit('change', value)
-}
 
 // 下拉框显示/隐藏
 const handleVisibleChange = (visible: boolean) => {
