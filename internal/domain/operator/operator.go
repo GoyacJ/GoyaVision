@@ -64,9 +64,21 @@ const (
 	OriginMCP         Origin = "mcp"
 )
 
+type Visibility int
+
+const (
+	VisibilityPrivate Visibility = 0
+	VisibilityRole    Visibility = 1
+	VisibilityPublic  Visibility = 2
+)
+
 type Operator struct {
-	ID          uuid.UUID
-	Code        string
+	ID             uuid.UUID
+	TenantID       uuid.UUID
+	OwnerID        uuid.UUID
+	Visibility     Visibility
+	VisibleRoleIDs []string
+	Code           string
 	Name        string
 	Description string
 	Category    Category

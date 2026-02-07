@@ -17,10 +17,12 @@ const (
 )
 
 type Task struct {
-	ID          uuid.UUID
-	WorkflowID  uuid.UUID
-	AssetID     *uuid.UUID
-	Status      TaskStatus
+	ID                uuid.UUID
+	TenantID          uuid.UUID
+	TriggeredByUserID *uuid.UUID
+	WorkflowID        uuid.UUID
+	AssetID           *uuid.UUID
+	Status            TaskStatus
 	Progress    int
 	CurrentNode string
 	InputParams map[string]interface{}

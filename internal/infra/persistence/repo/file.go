@@ -6,6 +6,7 @@ import (
 	"goyavision/internal/domain/storage"
 	"goyavision/internal/infra/persistence/mapper"
 	"goyavision/internal/infra/persistence/model"
+	"goyavision/internal/infra/persistence/scope"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -23,13 +24,15 @@ func (r *FileRepo) Create(ctx context.Context, f *storage.File) error {
 	if f.ID == uuid.Nil {
 		f.ID = uuid.New()
 	}
+	tenantID, _ := scope.GetContextInfo(ctx)
 	m := mapper.FileToModel(f)
+	m.TenantID = tenantID
 	return r.db.WithContext(ctx).Create(m).Error
 }
 
 func (r *FileRepo) Get(ctx context.Context, id uuid.UUID) (*storage.File, error) {
 	var m model.FileModel
-	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&m).Error; err != nil {
+	if err := r.db.WithContext(ctx).Scopes(scope.ScopeTenant(ctx)).Where("id = ?", id).First(&m).Error; err != nil {
 		return nil, err
 	}
 	return mapper.FileToDomain(&m), nil
@@ -37,7 +40,7 @@ func (r *FileRepo) Get(ctx context.Context, id uuid.UUID) (*storage.File, error)
 
 func (r *FileRepo) GetByPath(ctx context.Context, path string) (*storage.File, error) {
 	var m model.FileModel
-	if err := r.db.WithContext(ctx).Where("path = ?", path).First(&m).Error; err != nil {
+	if err := r.db.WithContext(ctx).Scopes(scope.ScopeTenant(ctx)).Where("path = ?", path).First(&m).Error; err != nil {
 		return nil, err
 	}
 	return mapper.FileToDomain(&m), nil
@@ -45,14 +48,14 @@ func (r *FileRepo) GetByPath(ctx context.Context, path string) (*storage.File, e
 
 func (r *FileRepo) GetByHash(ctx context.Context, hash string) (*storage.File, error) {
 	var m model.FileModel
-	if err := r.db.WithContext(ctx).Where("hash = ?", hash).First(&m).Error; err != nil {
+	if err := r.db.WithContext(ctx).Scopes(scope.ScopeTenant(ctx)).Where("hash = ?", hash).First(&m).Error; err != nil {
 		return nil, err
 	}
 	return mapper.FileToDomain(&m), nil
 }
 
 func (r *FileRepo) List(ctx context.Context, filter storage.FileFilter) ([]*storage.File, int64, error) {
-	q := r.db.WithContext(ctx).Model(&model.FileModel{})
+	q := r.db.WithContext(ctx).Model(&model.FileModel{}).Scopes(scope.ScopeTenant(ctx))
 
 	if filter.Type != nil {
 		q = q.Where("type = ?", string(*filter.Type))
@@ -92,9 +95,9 @@ func (r *FileRepo) List(ctx context.Context, filter storage.FileFilter) ([]*stor
 
 func (r *FileRepo) Update(ctx context.Context, f *storage.File) error {
 	m := mapper.FileToModel(f)
-	return r.db.WithContext(ctx).Save(m).Error
+	return r.db.WithContext(ctx).Scopes(scope.ScopeTenant(ctx)).Where("id = ?", f.ID).Updates(m).Error
 }
 
 func (r *FileRepo) Delete(ctx context.Context, id uuid.UUID) error {
-	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&model.FileModel{}).Error
+	return r.db.WithContext(ctx).Scopes(scope.ScopeTenant(ctx)).Where("id = ?", id).Delete(&model.FileModel{}).Error
 }

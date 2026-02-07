@@ -9,6 +9,7 @@ import (
 
 type FileModel struct {
 	ID           uuid.UUID      `gorm:"type:uuid;primaryKey"`
+	TenantID     uuid.UUID      `gorm:"type:uuid;not null;index:idx_files_tenant_id"`
 	Name         string         `gorm:"type:varchar(255);not null;index:idx_files_name"`
 	OriginalName string         `gorm:"type:varchar(255);not null"`
 	Path         string         `gorm:"type:varchar(1024);not null;index:idx_files_path"`

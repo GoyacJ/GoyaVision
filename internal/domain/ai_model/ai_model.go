@@ -24,10 +24,22 @@ const (
 	StatusDisabled Status = "disabled"
 )
 
+type Visibility int
+
+const (
+	VisibilityPrivate Visibility = 0
+	VisibilityRole    Visibility = 1
+	VisibilityPublic  Visibility = 2
+)
+
 type AIModel struct {
-	ID          uuid.UUID
-	Name        string
-	Description string
+	ID             uuid.UUID
+	TenantID       uuid.UUID
+	OwnerID        uuid.UUID
+	Visibility     Visibility
+	VisibleRoleIDs []string
+	Name           string
+	Description    string
 	Provider    Provider
 	Endpoint    string
 	APIKey      string

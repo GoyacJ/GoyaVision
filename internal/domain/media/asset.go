@@ -30,10 +30,22 @@ const (
 	AssetStatusFailed  AssetStatus = "failed"
 )
 
+type Visibility int
+
+const (
+	VisibilityPrivate Visibility = 0
+	VisibilityRole    Visibility = 1
+	VisibilityPublic  Visibility = 2
+)
+
 type Asset struct {
-	ID         uuid.UUID
-	Type       AssetType
-	SourceType AssetSourceType
+	ID             uuid.UUID
+	TenantID       uuid.UUID
+	OwnerID        uuid.UUID
+	Visibility     Visibility
+	VisibleRoleIDs []string
+	Type           AssetType
+	SourceType     AssetSourceType
 	SourceID   *uuid.UUID
 	ParentID   *uuid.UUID
 	Name       string

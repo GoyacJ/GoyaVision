@@ -7,6 +7,7 @@ import (
 	"goyavision/internal/domain/operator"
 	"goyavision/internal/infra/persistence/mapper"
 	"goyavision/internal/infra/persistence/model"
+	"goyavision/internal/infra/persistence/scope"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -24,13 +25,17 @@ func (r *OperatorRepo) Create(ctx context.Context, o *operator.Operator) error {
 	if o.ID == uuid.Nil {
 		o.ID = uuid.New()
 	}
+	tenantID, userID := scope.GetContextInfo(ctx)
 	m := mapper.OperatorToModel(o)
+	m.TenantID = tenantID
+	m.OwnerID = userID
+
 	return r.db.WithContext(ctx).Create(m).Error
 }
 
 func (r *OperatorRepo) Get(ctx context.Context, id uuid.UUID) (*operator.Operator, error) {
 	var m model.OperatorModel
-	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&m).Error; err != nil {
+	if err := r.db.WithContext(ctx).Scopes(scope.ScopeTenant(ctx), scope.ScopeVisibility(ctx)).Where("id = ?", id).First(&m).Error; err != nil {
 		return nil, err
 	}
 	return mapper.OperatorToDomain(&m), nil
@@ -39,6 +44,7 @@ func (r *OperatorRepo) Get(ctx context.Context, id uuid.UUID) (*operator.Operato
 func (r *OperatorRepo) GetWithActiveVersion(ctx context.Context, id uuid.UUID) (*operator.Operator, error) {
 	var m model.OperatorModel
 	if err := r.db.WithContext(ctx).
+		Scopes(scope.ScopeTenant(ctx), scope.ScopeVisibility(ctx)).
 		Preload("ActiveVersion").
 		Where("id = ?", id).
 		First(&m).Error; err != nil {
@@ -49,14 +55,14 @@ func (r *OperatorRepo) GetWithActiveVersion(ctx context.Context, id uuid.UUID) (
 
 func (r *OperatorRepo) GetByCode(ctx context.Context, code string) (*operator.Operator, error) {
 	var m model.OperatorModel
-	if err := r.db.WithContext(ctx).Where("code = ?", code).First(&m).Error; err != nil {
+	if err := r.db.WithContext(ctx).Scopes(scope.ScopeTenant(ctx), scope.ScopeVisibility(ctx)).Where("code = ?", code).First(&m).Error; err != nil {
 		return nil, err
 	}
 	return mapper.OperatorToDomain(&m), nil
 }
 
 func (r *OperatorRepo) List(ctx context.Context, filter operator.Filter) ([]*operator.Operator, int64, error) {
-	q := r.db.WithContext(ctx).Model(&model.OperatorModel{})
+	q := r.db.WithContext(ctx).Model(&model.OperatorModel{}).Scopes(scope.ScopeTenant(ctx), scope.ScopeVisibility(ctx))
 
 	if filter.Category != nil {
 		q = q.Where("operators.category = ?", string(*filter.Category))
@@ -106,16 +112,19 @@ func (r *OperatorRepo) List(ctx context.Context, filter operator.Filter) ([]*ope
 
 func (r *OperatorRepo) Update(ctx context.Context, o *operator.Operator) error {
 	m := mapper.OperatorToModel(o)
-	return r.db.WithContext(ctx).Save(m).Error
+	return r.db.WithContext(ctx).Scopes(scope.ScopeTenant(ctx)).Where("id = ?", o.ID).Updates(m).Error
 }
 
 func (r *OperatorRepo) Delete(ctx context.Context, id uuid.UUID) error {
-	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&model.OperatorModel{}).Error
+	return r.db.WithContext(ctx).Scopes(scope.ScopeTenant(ctx)).Where("id = ?", id).Delete(&model.OperatorModel{}).Error
 }
 
 func (r *OperatorRepo) ListPublished(ctx context.Context) ([]*operator.Operator, error) {
 	var models []*model.OperatorModel
-	if err := r.db.WithContext(ctx).Where("status = ?", string(operator.StatusPublished)).Order("created_at DESC").Find(&models).Error; err != nil {
+	// Published operators might be public or shared.
+	// But usually we still respect tenant.
+	// Visibility check should apply.
+	if err := r.db.WithContext(ctx).Scopes(scope.ScopeTenant(ctx), scope.ScopeVisibility(ctx)).Where("status = ?", string(operator.StatusPublished)).Order("created_at DESC").Find(&models).Error; err != nil {
 		return nil, err
 	}
 	result := make([]*operator.Operator, len(models))
@@ -127,7 +136,7 @@ func (r *OperatorRepo) ListPublished(ctx context.Context) ([]*operator.Operator,
 
 func (r *OperatorRepo) ListByCategory(ctx context.Context, category operator.Category) ([]*operator.Operator, error) {
 	var models []*model.OperatorModel
-	if err := r.db.WithContext(ctx).Where("category = ?", string(category)).Order("created_at DESC").Find(&models).Error; err != nil {
+	if err := r.db.WithContext(ctx).Scopes(scope.ScopeTenant(ctx), scope.ScopeVisibility(ctx)).Where("category = ?", string(category)).Order("created_at DESC").Find(&models).Error; err != nil {
 		return nil, err
 	}
 	result := make([]*operator.Operator, len(models))

@@ -7,6 +7,7 @@ import (
 	"goyavision/internal/domain/workflow"
 	"goyavision/internal/infra/persistence/mapper"
 	"goyavision/internal/infra/persistence/model"
+	"goyavision/internal/infra/persistence/scope"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -24,13 +25,17 @@ func (r *WorkflowRepo) Create(ctx context.Context, w *workflow.Workflow) error {
 	if w.ID == uuid.Nil {
 		w.ID = uuid.New()
 	}
+	tenantID, userID := scope.GetContextInfo(ctx)
 	m := mapper.WorkflowToModel(w)
+	m.TenantID = tenantID
+	m.OwnerID = userID
+
 	return r.db.WithContext(ctx).Create(m).Error
 }
 
 func (r *WorkflowRepo) Get(ctx context.Context, id uuid.UUID) (*workflow.Workflow, error) {
 	var m model.WorkflowModel
-	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&m).Error; err != nil {
+	if err := r.db.WithContext(ctx).Scopes(scope.ScopeTenant(ctx), scope.ScopeVisibility(ctx)).Where("id = ?", id).First(&m).Error; err != nil {
 		return nil, err
 	}
 	return mapper.WorkflowToDomain(&m), nil
@@ -38,7 +43,7 @@ func (r *WorkflowRepo) Get(ctx context.Context, id uuid.UUID) (*workflow.Workflo
 
 func (r *WorkflowRepo) GetByCode(ctx context.Context, code string) (*workflow.Workflow, error) {
 	var m model.WorkflowModel
-	if err := r.db.WithContext(ctx).Where("code = ?", code).First(&m).Error; err != nil {
+	if err := r.db.WithContext(ctx).Scopes(scope.ScopeTenant(ctx), scope.ScopeVisibility(ctx)).Where("code = ?", code).First(&m).Error; err != nil {
 		return nil, err
 	}
 	return mapper.WorkflowToDomain(&m), nil
@@ -47,6 +52,7 @@ func (r *WorkflowRepo) GetByCode(ctx context.Context, code string) (*workflow.Wo
 func (r *WorkflowRepo) GetWithNodes(ctx context.Context, id uuid.UUID) (*workflow.Workflow, error) {
 	var m model.WorkflowModel
 	if err := r.db.WithContext(ctx).
+		Scopes(scope.ScopeTenant(ctx), scope.ScopeVisibility(ctx)).
 		Preload("Nodes.Operator").
 		Preload("Edges").
 		Where("id = ?", id).
@@ -57,7 +63,7 @@ func (r *WorkflowRepo) GetWithNodes(ctx context.Context, id uuid.UUID) (*workflo
 }
 
 func (r *WorkflowRepo) List(ctx context.Context, filter workflow.Filter) ([]*workflow.Workflow, int64, error) {
-	q := r.db.WithContext(ctx).Model(&model.WorkflowModel{})
+	q := r.db.WithContext(ctx).Model(&model.WorkflowModel{}).Scopes(scope.ScopeTenant(ctx), scope.ScopeVisibility(ctx))
 
 	if filter.Status != nil {
 		q = q.Where("status = ?", string(*filter.Status))
@@ -93,16 +99,17 @@ func (r *WorkflowRepo) List(ctx context.Context, filter workflow.Filter) ([]*wor
 
 func (r *WorkflowRepo) Update(ctx context.Context, w *workflow.Workflow) error {
 	m := mapper.WorkflowToModel(w)
-	return r.db.WithContext(ctx).Save(m).Error
+	return r.db.WithContext(ctx).Scopes(scope.ScopeTenant(ctx)).Where("id = ?", w.ID).Updates(m).Error
 }
 
 func (r *WorkflowRepo) Delete(ctx context.Context, id uuid.UUID) error {
-	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&model.WorkflowModel{}).Error
+	return r.db.WithContext(ctx).Scopes(scope.ScopeTenant(ctx)).Where("id = ?", id).Delete(&model.WorkflowModel{}).Error
 }
 
 func (r *WorkflowRepo) ListEnabled(ctx context.Context) ([]*workflow.Workflow, error) {
 	var models []*model.WorkflowModel
 	if err := r.db.WithContext(ctx).
+		Scopes(scope.ScopeTenant(ctx), scope.ScopeVisibility(ctx)).
 		Preload("Nodes.Operator").
 		Preload("Edges").
 		Where("status = ?", "enabled").

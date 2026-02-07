@@ -6,6 +6,7 @@ import (
 	"goyavision/internal/domain/ai_model"
 	"goyavision/internal/infra/persistence/mapper"
 	"goyavision/internal/infra/persistence/model"
+	"goyavision/internal/infra/persistence/scope"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -23,13 +24,17 @@ func (r *AIModelRepo) Create(ctx context.Context, d *ai_model.AIModel) error {
 	if d.ID == uuid.Nil {
 		d.ID = uuid.New()
 	}
+	tenantID, userID := scope.GetContextInfo(ctx)
 	m := mapper.AIModelToModel(d)
+	m.TenantID = tenantID
+	m.OwnerID = userID
+
 	return r.db.WithContext(ctx).Create(m).Error
 }
 
 func (r *AIModelRepo) Get(ctx context.Context, id uuid.UUID) (*ai_model.AIModel, error) {
 	var m model.AIModelModel
-	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&m).Error; err != nil {
+	if err := r.db.WithContext(ctx).Scopes(scope.ScopeTenant(ctx), scope.ScopeVisibility(ctx)).Where("id = ?", id).First(&m).Error; err != nil {
 		return nil, err
 	}
 	return mapper.AIModelToDomain(&m), nil
@@ -37,15 +42,15 @@ func (r *AIModelRepo) Get(ctx context.Context, id uuid.UUID) (*ai_model.AIModel,
 
 func (r *AIModelRepo) Update(ctx context.Context, d *ai_model.AIModel) error {
 	m := mapper.AIModelToModel(d)
-	return r.db.WithContext(ctx).Save(m).Error
+	return r.db.WithContext(ctx).Scopes(scope.ScopeTenant(ctx)).Where("id = ?", d.ID).Updates(m).Error
 }
 
 func (r *AIModelRepo) Delete(ctx context.Context, id uuid.UUID) error {
-	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&model.AIModelModel{}).Error
+	return r.db.WithContext(ctx).Scopes(scope.ScopeTenant(ctx)).Where("id = ?", id).Delete(&model.AIModelModel{}).Error
 }
 
 func (r *AIModelRepo) List(ctx context.Context, filter ai_model.Filter) ([]*ai_model.AIModel, int64, error) {
-	q := r.db.WithContext(ctx).Model(&model.AIModelModel{})
+	q := r.db.WithContext(ctx).Model(&model.AIModelModel{}).Scopes(scope.ScopeTenant(ctx), scope.ScopeVisibility(ctx))
 
 	if filter.Keyword != "" {
 		k := "%" + filter.Keyword + "%"

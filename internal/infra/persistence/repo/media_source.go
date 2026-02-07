@@ -6,6 +6,7 @@ import (
 	"goyavision/internal/domain/media"
 	"goyavision/internal/infra/persistence/mapper"
 	"goyavision/internal/infra/persistence/model"
+	"goyavision/internal/infra/persistence/scope"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -23,13 +24,17 @@ func (r *MediaSourceRepo) Create(ctx context.Context, s *media.Source) error {
 	if s.ID == uuid.Nil {
 		s.ID = uuid.New()
 	}
+	tenantID, userID := scope.GetContextInfo(ctx)
 	m := mapper.SourceToModel(s)
+	m.TenantID = tenantID
+	m.OwnerID = userID
+
 	return r.db.WithContext(ctx).Create(m).Error
 }
 
 func (r *MediaSourceRepo) Get(ctx context.Context, id uuid.UUID) (*media.Source, error) {
 	var m model.MediaSourceModel
-	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&m).Error; err != nil {
+	if err := r.db.WithContext(ctx).Scopes(scope.ScopeTenant(ctx), scope.ScopeVisibility(ctx)).Where("id = ?", id).First(&m).Error; err != nil {
 		return nil, err
 	}
 	return mapper.SourceToDomain(&m), nil
@@ -37,14 +42,14 @@ func (r *MediaSourceRepo) Get(ctx context.Context, id uuid.UUID) (*media.Source,
 
 func (r *MediaSourceRepo) GetByPathName(ctx context.Context, pathName string) (*media.Source, error) {
 	var m model.MediaSourceModel
-	if err := r.db.WithContext(ctx).Where("path_name = ?", pathName).First(&m).Error; err != nil {
+	if err := r.db.WithContext(ctx).Scopes(scope.ScopeTenant(ctx), scope.ScopeVisibility(ctx)).Where("path_name = ?", pathName).First(&m).Error; err != nil {
 		return nil, err
 	}
 	return mapper.SourceToDomain(&m), nil
 }
 
 func (r *MediaSourceRepo) List(ctx context.Context, filter media.SourceFilter) ([]*media.Source, int64, error) {
-	q := r.db.WithContext(ctx).Model(&model.MediaSourceModel{})
+	q := r.db.WithContext(ctx).Model(&model.MediaSourceModel{}).Scopes(scope.ScopeTenant(ctx), scope.ScopeVisibility(ctx))
 	if filter.Type != nil {
 		q = q.Where("type = ?", string(*filter.Type))
 	}
@@ -71,9 +76,9 @@ func (r *MediaSourceRepo) List(ctx context.Context, filter media.SourceFilter) (
 
 func (r *MediaSourceRepo) Update(ctx context.Context, s *media.Source) error {
 	m := mapper.SourceToModel(s)
-	return r.db.WithContext(ctx).Save(m).Error
+	return r.db.WithContext(ctx).Scopes(scope.ScopeTenant(ctx)).Where("id = ?", s.ID).Updates(m).Error
 }
 
 func (r *MediaSourceRepo) Delete(ctx context.Context, id uuid.UUID) error {
-	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&model.MediaSourceModel{}).Error
+	return r.db.WithContext(ctx).Scopes(scope.ScopeTenant(ctx)).Where("id = ?", id).Delete(&model.MediaSourceModel{}).Error
 }

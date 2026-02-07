@@ -10,9 +10,12 @@ import (
 )
 
 func SourceToModel(s *media.Source) *model.MediaSourceModel {
-	return &model.MediaSourceModel{
-		ID:            s.ID,
-		Name:          s.Name,
+	m := &model.MediaSourceModel{
+		ID:             s.ID,
+		TenantID:       s.TenantID,
+		OwnerID:        s.OwnerID,
+		Visibility:     int(s.Visibility),
+		Name:           s.Name,
 		PathName:      s.PathName,
 		Type:          string(s.Type),
 		URL:           s.URL,
@@ -22,12 +25,20 @@ func SourceToModel(s *media.Source) *model.MediaSourceModel {
 		CreatedAt:     s.CreatedAt,
 		UpdatedAt:     s.UpdatedAt,
 	}
+	if s.VisibleRoleIDs != nil {
+		data, _ := json.Marshal(s.VisibleRoleIDs)
+		m.VisibleRoleIDs = datatypes.JSON(data)
+	}
+	return m
 }
 
 func SourceToDomain(m *model.MediaSourceModel) *media.Source {
-	return &media.Source{
-		ID:            m.ID,
-		Name:          m.Name,
+	s := &media.Source{
+		ID:             m.ID,
+		TenantID:       m.TenantID,
+		OwnerID:        m.OwnerID,
+		Visibility:     media.Visibility(m.Visibility),
+		Name:           m.Name,
 		PathName:      m.PathName,
 		Type:          media.SourceType(m.Type),
 		URL:           m.URL,
@@ -37,11 +48,18 @@ func SourceToDomain(m *model.MediaSourceModel) *media.Source {
 		CreatedAt:     m.CreatedAt,
 		UpdatedAt:     m.UpdatedAt,
 	}
+	if m.VisibleRoleIDs != nil {
+		_ = json.Unmarshal(m.VisibleRoleIDs, &s.VisibleRoleIDs)
+	}
+	return s
 }
 
 func AssetToModel(a *media.Asset) *model.MediaAssetModel {
 	m := &model.MediaAssetModel{
 		ID:         a.ID,
+		TenantID:   a.TenantID,
+		OwnerID:    a.OwnerID,
+		Visibility: int(a.Visibility),
 		Type:       string(a.Type),
 		SourceType: string(a.SourceType),
 		SourceID:   a.SourceID,
@@ -63,12 +81,19 @@ func AssetToModel(a *media.Asset) *model.MediaAssetModel {
 		data, _ := json.Marshal(a.Tags)
 		m.Tags = datatypes.JSON(data)
 	}
+	if a.VisibleRoleIDs != nil {
+		data, _ := json.Marshal(a.VisibleRoleIDs)
+		m.VisibleRoleIDs = datatypes.JSON(data)
+	}
 	return m
 }
 
 func AssetToDomain(m *model.MediaAssetModel) *media.Asset {
 	a := &media.Asset{
 		ID:         m.ID,
+		TenantID:   m.TenantID,
+		OwnerID:    m.OwnerID,
+		Visibility: media.Visibility(m.Visibility),
 		Type:       media.AssetType(m.Type),
 		SourceType: media.AssetSourceType(m.SourceType),
 		SourceID:   m.SourceID,
@@ -87,6 +112,9 @@ func AssetToDomain(m *model.MediaAssetModel) *media.Asset {
 	}
 	if m.Tags != nil {
 		_ = json.Unmarshal(m.Tags, &a.Tags)
+	}
+	if m.VisibleRoleIDs != nil {
+		_ = json.Unmarshal(m.VisibleRoleIDs, &a.VisibleRoleIDs)
 	}
 	return a
 }

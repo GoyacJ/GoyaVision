@@ -17,6 +17,7 @@ const (
 
 type Artifact struct {
 	ID        uuid.UUID
+	TenantID  uuid.UUID
 	TaskID    uuid.UUID
 	Type      ArtifactType
 	AssetID   *uuid.UUID

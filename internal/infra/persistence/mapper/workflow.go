@@ -11,9 +11,12 @@ import (
 
 func WorkflowToModel(w *workflow.Workflow) *model.WorkflowModel {
 	m := &model.WorkflowModel{
-		ID:          w.ID,
-		Code:        w.Code,
-		Name:        w.Name,
+		ID:             w.ID,
+		TenantID:       w.TenantID,
+		OwnerID:        w.OwnerID,
+		Visibility:     int(w.Visibility),
+		Code:           w.Code,
+		Name:           w.Name,
 		Description: w.Description,
 		Version:     w.Version,
 		TriggerType: string(w.TriggerType),
@@ -29,6 +32,10 @@ func WorkflowToModel(w *workflow.Workflow) *model.WorkflowModel {
 		data, _ := json.Marshal(w.Tags)
 		m.Tags = datatypes.JSON(data)
 	}
+	if w.VisibleRoleIDs != nil {
+		data, _ := json.Marshal(w.VisibleRoleIDs)
+		m.VisibleRoleIDs = datatypes.JSON(data)
+	}
 	for _, n := range w.Nodes {
 		m.Nodes = append(m.Nodes, *NodeToModel(&n))
 	}
@@ -40,9 +47,12 @@ func WorkflowToModel(w *workflow.Workflow) *model.WorkflowModel {
 
 func WorkflowToDomain(m *model.WorkflowModel) *workflow.Workflow {
 	w := &workflow.Workflow{
-		ID:          m.ID,
-		Code:        m.Code,
-		Name:        m.Name,
+		ID:             m.ID,
+		TenantID:       m.TenantID,
+		OwnerID:        m.OwnerID,
+		Visibility:     workflow.Visibility(m.Visibility),
+		Code:           m.Code,
+		Name:           m.Name,
 		Description: m.Description,
 		Version:     m.Version,
 		TriggerType: workflow.TriggerType(m.TriggerType),
@@ -58,6 +68,9 @@ func WorkflowToDomain(m *model.WorkflowModel) *workflow.Workflow {
 	}
 	if m.Tags != nil {
 		_ = json.Unmarshal(m.Tags, &w.Tags)
+	}
+	if m.VisibleRoleIDs != nil {
+		_ = json.Unmarshal(m.VisibleRoleIDs, &w.VisibleRoleIDs)
 	}
 	for _, n := range m.Nodes {
 		w.Nodes = append(w.Nodes, *NodeToDomain(&n))
@@ -150,9 +163,11 @@ func EdgeToDomain(m *model.WorkflowEdgeModel) *workflow.Edge {
 
 func TaskToModel(t *workflow.Task) *model.TaskModel {
 	m := &model.TaskModel{
-		ID:          t.ID,
-		WorkflowID:  t.WorkflowID,
-		AssetID:     t.AssetID,
+		ID:                t.ID,
+		TenantID:          t.TenantID,
+		TriggeredByUserID: t.TriggeredByUserID,
+		WorkflowID:        t.WorkflowID,
+		AssetID:           t.AssetID,
 		Status:      string(t.Status),
 		Progress:    t.Progress,
 		CurrentNode: t.CurrentNode,
@@ -171,9 +186,11 @@ func TaskToModel(t *workflow.Task) *model.TaskModel {
 
 func TaskToDomain(m *model.TaskModel) *workflow.Task {
 	t := &workflow.Task{
-		ID:          m.ID,
-		WorkflowID:  m.WorkflowID,
-		AssetID:     m.AssetID,
+		ID:                m.ID,
+		TenantID:          m.TenantID,
+		TriggeredByUserID: m.TriggeredByUserID,
+		WorkflowID:        m.WorkflowID,
+		AssetID:           m.AssetID,
 		Status:      workflow.TaskStatus(m.Status),
 		Progress:    m.Progress,
 		CurrentNode: m.CurrentNode,
@@ -192,6 +209,7 @@ func TaskToDomain(m *model.TaskModel) *workflow.Task {
 func ArtifactToModel(a *workflow.Artifact) *model.ArtifactModel {
 	m := &model.ArtifactModel{
 		ID:        a.ID,
+		TenantID:  a.TenantID,
 		TaskID:    a.TaskID,
 		Type:      string(a.Type),
 		AssetID:   a.AssetID,
@@ -208,6 +226,7 @@ func ArtifactToModel(a *workflow.Artifact) *model.ArtifactModel {
 func ArtifactToDomain(m *model.ArtifactModel) *workflow.Artifact {
 	a := &workflow.Artifact{
 		ID:        m.ID,
+		TenantID:  m.TenantID,
 		TaskID:    m.TaskID,
 		Type:      workflow.ArtifactType(m.Type),
 		AssetID:   m.AssetID,

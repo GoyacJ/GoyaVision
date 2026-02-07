@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strings"
@@ -20,7 +21,8 @@ const (
 	ContextKeyUserID      = "user_id"
 	ContextKeyTenantID    = "tenant_id"
 	ContextKeyUsername    = "username"
-	ContextKeyRoles       = "roles"
+	ContextKeyRoles       = "roles" // Role Codes
+	ContextKeyRoleIDs     = "role_ids" // Role IDs (UUIDs)
 	ContextKeyPermissions = "permissions"
 )
 
@@ -129,9 +131,6 @@ func JWTAuth(cfg config.JWT) echo.MiddlewareFunc {
 			c.Set(ContextKeyUsername, claims.Username)
 
 			// Store in Request context for Repositories
-			ctx := c.Request().Context()
-			// Key type context key? Using string for now but should be custom type.
-			// Ideally we use a wrapper.
 			// Let's rely on c.Set() for now if repo has access to Echo context? No repo doesn't.
 			// We MUST use request context.
 			// And keys should be exported.
@@ -313,7 +312,13 @@ func LoadUserPermissions(repo port.Repository) echo.MiddlewareFunc {
 			}
 
 			c.Set(ContextKeyRoles, roleCodes)
+			c.Set(ContextKeyRoleIDs, roleIDs)
 			c.Set(ContextKeyPermissions, permissionCodes)
+
+			// Update Request Context with RoleIDs
+			ctx := c.Request().Context()
+			ctx = context.WithValue(ctx, ContextKeyRoleIDs, roleIDs)
+			c.SetRequest(c.Request().WithContext(ctx))
 
 			return next(c)
 		}

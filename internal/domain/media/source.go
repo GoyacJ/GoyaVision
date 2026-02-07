@@ -16,9 +16,13 @@ const (
 )
 
 type Source struct {
-	ID            uuid.UUID
-	Name          string
-	PathName      string
+	ID             uuid.UUID
+	TenantID       uuid.UUID
+	OwnerID        uuid.UUID
+	Visibility     Visibility
+	VisibleRoleIDs []string
+	Name           string
+	PathName       string
 	Type          SourceType
 	URL           string
 	Protocol      string

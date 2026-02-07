@@ -11,9 +11,12 @@ import (
 
 func OperatorToModel(o *operator.Operator) *model.OperatorModel {
 	m := &model.OperatorModel{
-		ID:          o.ID,
-		Code:        o.Code,
-		Name:        o.Name,
+		ID:             o.ID,
+		TenantID:       o.TenantID,
+		OwnerID:        o.OwnerID,
+		Visibility:     int(o.Visibility),
+		Code:           o.Code,
+		Name:           o.Name,
 		Description: o.Description,
 		Category:    string(o.Category),
 		Type:        string(o.Type),
@@ -27,14 +30,21 @@ func OperatorToModel(o *operator.Operator) *model.OperatorModel {
 		data, _ := json.Marshal(o.Tags)
 		m.Tags = datatypes.JSON(data)
 	}
+	if o.VisibleRoleIDs != nil {
+		data, _ := json.Marshal(o.VisibleRoleIDs)
+		m.VisibleRoleIDs = datatypes.JSON(data)
+	}
 	return m
 }
 
 func OperatorToDomain(m *model.OperatorModel) *operator.Operator {
 	o := &operator.Operator{
-		ID:          m.ID,
-		Code:        m.Code,
-		Name:        m.Name,
+		ID:             m.ID,
+		TenantID:       m.TenantID,
+		OwnerID:        m.OwnerID,
+		Visibility:     operator.Visibility(m.Visibility),
+		Code:           m.Code,
+		Name:           m.Name,
 		Description: m.Description,
 		Category:    operator.Category(m.Category),
 		Type:        operator.Type(m.Type),
@@ -46,6 +56,9 @@ func OperatorToDomain(m *model.OperatorModel) *operator.Operator {
 	}
 	if m.Tags != nil {
 		_ = json.Unmarshal(m.Tags, &o.Tags)
+	}
+	if m.VisibleRoleIDs != nil {
+		_ = json.Unmarshal(m.VisibleRoleIDs, &o.VisibleRoleIDs)
 	}
 	if o.Origin == "" {
 		o.Origin = operator.OriginCustom

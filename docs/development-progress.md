@@ -46,7 +46,7 @@
 | **多租户** | | | |
 | 基础设施 | Tenant实体、JWT增强 | ✅ 已完成 | Phase 1 & 2 完成 |
 | 持久层改造 | GORM Scopes | ✅ 已完成 | ScopeTenant, ScopeVisibility 实现 |
-| 业务改造 | Service/API适配 | ⏸️ 待开始 | Phase 3 & 4 |
+| 业务改造 | Service/API适配 | ⏸️ 待开始 | Phase 4 |
 | 前端适配 | 租户切换/管理 | ⏸️ 待开始 | Phase 5 |
 | **前端** | | | |
 | 媒体源页面 | 流管理、预览 | ✅ 已完成 | 独立页面 /sources，CRUD、预览 URL（含 push 时 push_url）、与设计文档对齐 |

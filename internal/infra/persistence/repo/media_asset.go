@@ -7,6 +7,7 @@ import (
 	"goyavision/internal/domain/media"
 	"goyavision/internal/infra/persistence/mapper"
 	"goyavision/internal/infra/persistence/model"
+	"goyavision/internal/infra/persistence/scope"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -24,20 +25,24 @@ func (r *MediaAssetRepo) Create(ctx context.Context, a *media.Asset) error {
 	if a.ID == uuid.Nil {
 		a.ID = uuid.New()
 	}
+	tenantID, userID := scope.GetContextInfo(ctx)
 	m := mapper.AssetToModel(a)
+	m.TenantID = tenantID
+	m.OwnerID = userID
+
 	return r.db.WithContext(ctx).Create(m).Error
 }
 
 func (r *MediaAssetRepo) Get(ctx context.Context, id uuid.UUID) (*media.Asset, error) {
 	var m model.MediaAssetModel
-	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&m).Error; err != nil {
+	if err := r.db.WithContext(ctx).Scopes(scope.ScopeTenant(ctx), scope.ScopeVisibility(ctx)).Where("id = ?", id).First(&m).Error; err != nil {
 		return nil, err
 	}
 	return mapper.AssetToDomain(&m), nil
 }
 
 func (r *MediaAssetRepo) List(ctx context.Context, filter media.AssetFilter) ([]*media.Asset, int64, error) {
-	q := r.db.WithContext(ctx).Model(&model.MediaAssetModel{})
+	q := r.db.WithContext(ctx).Model(&model.MediaAssetModel{}).Scopes(scope.ScopeTenant(ctx), scope.ScopeVisibility(ctx))
 
 	if filter.Type != nil {
 		q = q.Where("type = ?", string(*filter.Type))
@@ -84,11 +89,12 @@ func (r *MediaAssetRepo) List(ctx context.Context, filter media.AssetFilter) ([]
 
 func (r *MediaAssetRepo) Update(ctx context.Context, a *media.Asset) error {
 	m := mapper.AssetToModel(a)
-	return r.db.WithContext(ctx).Save(m).Error
+	// Ensure tenant scope for safety
+	return r.db.WithContext(ctx).Scopes(scope.ScopeTenant(ctx)).Where("id = ?", a.ID).Updates(m).Error
 }
 
 func (r *MediaAssetRepo) Delete(ctx context.Context, id uuid.UUID) error {
-	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&model.MediaAssetModel{}).Error
+	return r.db.WithContext(ctx).Scopes(scope.ScopeTenant(ctx)).Where("id = ?", id).Delete(&model.MediaAssetModel{}).Error
 }
 
 func (r *MediaAssetRepo) ListBySource(ctx context.Context, sourceID uuid.UUID) ([]*media.Asset, error) {

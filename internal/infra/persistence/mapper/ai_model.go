@@ -11,8 +11,11 @@ import (
 
 func AIModelToModel(d *ai_model.AIModel) *model.AIModelModel {
 	m := &model.AIModelModel{
-		ID:          d.ID,
-		Name:        d.Name,
+		ID:             d.ID,
+		TenantID:       d.TenantID,
+		OwnerID:        d.OwnerID,
+		Visibility:     int(d.Visibility),
+		Name:           d.Name,
 		Description: d.Description,
 		Provider:    string(d.Provider),
 		Endpoint:  d.Endpoint,
@@ -26,13 +29,20 @@ func AIModelToModel(d *ai_model.AIModel) *model.AIModelModel {
 		b, _ := json.Marshal(d.Config)
 		m.Config = datatypes.JSON(b)
 	}
+	if d.VisibleRoleIDs != nil {
+		data, _ := json.Marshal(d.VisibleRoleIDs)
+		m.VisibleRoleIDs = datatypes.JSON(data)
+	}
 	return m
 }
 
 func AIModelToDomain(m *model.AIModelModel) *ai_model.AIModel {
 	d := &ai_model.AIModel{
-		ID:          m.ID,
-		Name:        m.Name,
+		ID:             m.ID,
+		TenantID:       m.TenantID,
+		OwnerID:        m.OwnerID,
+		Visibility:     ai_model.Visibility(m.Visibility),
+		Name:           m.Name,
 		Description: m.Description,
 		Provider:    ai_model.Provider(m.Provider),
 		Endpoint:  m.Endpoint,
@@ -44,6 +54,9 @@ func AIModelToDomain(m *model.AIModelModel) *ai_model.AIModel {
 	}
 	if m.Config != nil {
 		_ = json.Unmarshal(m.Config, &d.Config)
+	}
+	if m.VisibleRoleIDs != nil {
+		_ = json.Unmarshal(m.VisibleRoleIDs, &d.VisibleRoleIDs)
 	}
 	return d
 }

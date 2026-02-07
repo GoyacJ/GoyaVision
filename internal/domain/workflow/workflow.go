@@ -25,10 +25,22 @@ const (
 	TriggerTypeAssetDone TriggerType = "asset_done"
 )
 
+type Visibility int
+
+const (
+	VisibilityPrivate Visibility = 0
+	VisibilityRole    Visibility = 1
+	VisibilityPublic  Visibility = 2
+)
+
 type Workflow struct {
-	ID          uuid.UUID
-	Code        string
-	Name        string
+	ID             uuid.UUID
+	TenantID       uuid.UUID
+	OwnerID        uuid.UUID
+	Visibility     Visibility
+	VisibleRoleIDs []string
+	Code           string
+	Name           string
 	Description string
 	Version     string
 	TriggerType TriggerType
