@@ -105,6 +105,7 @@ type MinIO struct {
 	SecretKey  string
 	BucketName string
 	UseSSL     bool
+	PublicBase string
 }
 
 func (s Server) Addr() string {
@@ -180,6 +181,7 @@ func Load() (*Config, error) {
 			SecretKey:  v.GetString("minio.secret_key"),
 			BucketName: v.GetString("minio.bucket_name"),
 			UseSSL:     v.GetBool("minio.use_ssl"),
+			PublicBase: v.GetString("minio.public_base"),
 		},
 	}
 	if cfg.Server.Port == 0 {

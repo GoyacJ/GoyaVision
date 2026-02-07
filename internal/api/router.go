@@ -66,6 +66,7 @@ func RegisterRouter(e *echo.Echo, h *handler.Handlers, webFS fs.FS) {
 	handler.RegisterWorkflow(api, h)
 	handler.RegisterTask(api, h)
 	handler.RegisterArtifact(api, h)
+	handler.RegisterAIModel(api, h)
 
 	admin := api.Group("")
 	handler.RegisterUser(admin, h)

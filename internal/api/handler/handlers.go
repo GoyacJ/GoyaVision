@@ -34,6 +34,11 @@ type Handlers struct {
 	TestOperator             *command.TestOperatorHandler
 	InstallMCPOperator       *command.InstallMCPOperatorHandler
 	SyncMCPTemplates         *command.SyncMCPTemplatesHandler
+	CreateAIModel            *command.CreateAIModelHandler
+	UpdateAIModel            *command.UpdateAIModelHandler
+	DeleteAIModel            *command.DeleteAIModelHandler
+	ListAIModels             *query.ListAIModelsHandler
+	GetAIModel               *query.GetAIModelHandler
 	CreateWorkflow           *command.CreateWorkflowHandler
 	UpdateWorkflow           *command.UpdateWorkflowHandler
 	DeleteWorkflow           *command.DeleteWorkflowHandler
@@ -133,6 +138,11 @@ func NewHandlers(
 		TestOperator:             command.NewTestOperatorHandler(uow, executorRegistry),
 		InstallMCPOperator:       command.NewInstallMCPOperatorHandler(uow, mcpClient),
 		SyncMCPTemplates:         command.NewSyncMCPTemplatesHandler(uow, mcpClient),
+		CreateAIModel:            command.NewCreateAIModelHandler(uow),
+		UpdateAIModel:            command.NewUpdateAIModelHandler(uow),
+		DeleteAIModel:            command.NewDeleteAIModelHandler(uow),
+		ListAIModels:             query.NewListAIModelsHandler(repo),
+		GetAIModel:               query.NewGetAIModelHandler(repo),
 		CreateWorkflow:           command.NewCreateWorkflowHandler(uow, schemaValidator),
 		UpdateWorkflow:           command.NewUpdateWorkflowHandler(uow, schemaValidator),
 		DeleteWorkflow:           command.NewDeleteWorkflowHandler(uow),

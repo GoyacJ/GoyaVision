@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"goyavision/internal/domain/ai_model"
 	"goyavision/internal/domain/identity"
 	"goyavision/internal/domain/media"
 	"goyavision/internal/domain/operator"
@@ -38,7 +39,8 @@ type repository struct {
 	tasks     *repo.TaskRepo
 	artifacts *repo.ArtifactRepo
 
-	files *repo.FileRepo
+	files    *repo.FileRepo
+	aiModels *repo.AIModelRepo
 }
 
 func NewRepository(db *gorm.DB) *repository {
@@ -55,6 +57,7 @@ func NewRepository(db *gorm.DB) *repository {
 		tasks:       repo.NewTaskRepo(db),
 		artifacts:   repo.NewArtifactRepo(db),
 		files:       repo.NewFileRepo(db),
+		aiModels:    repo.NewAIModelRepo(db),
 	}
 }
 
@@ -86,6 +89,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&model.TaskModel{},
 		&model.ArtifactModel{},
 		&model.FileModel{},
+		&model.AIModelModel{},
 	)
 }
 
@@ -716,4 +720,40 @@ func (r *repository) GetFileByHash(ctx context.Context, hash string) (*storage.F
 		return nil, err
 	}
 	return r.files.GetByHash(ctx, hash)
+}
+
+// AIModel methods
+func (r *repository) CreateAIModel(ctx context.Context, d *ai_model.AIModel) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.aiModels.Create(ctx, d)
+}
+
+func (r *repository) GetAIModel(ctx context.Context, id uuid.UUID) (*ai_model.AIModel, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	return r.aiModels.Get(ctx, id)
+}
+
+func (r *repository) UpdateAIModel(ctx context.Context, d *ai_model.AIModel) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.aiModels.Update(ctx, d)
+}
+
+func (r *repository) DeleteAIModel(ctx context.Context, id uuid.UUID) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.aiModels.Delete(ctx, id)
+}
+
+func (r *repository) ListAIModels(ctx context.Context, filter ai_model.Filter) ([]*ai_model.AIModel, int64, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, 0, err
+	}
+	return r.aiModels.List(ctx, filter)
 }

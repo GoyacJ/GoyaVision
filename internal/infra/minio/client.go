@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/minio/minio-go/v7"
@@ -21,6 +22,7 @@ type Client struct {
 	bucketName string
 	endpoint   string
 	useSSL     bool
+	publicBase string
 }
 
 // NewClient 创建 MinIO 客户端实例
@@ -51,6 +53,7 @@ func NewClient(cfg *config.MinIO) (*Client, error) {
 		bucketName: cfg.BucketName,
 		endpoint:   cfg.Endpoint,
 		useSSL:     cfg.UseSSL,
+		publicBase: cfg.PublicBase,
 	}
 
 	if err := client.ensureBucket(context.Background()); err != nil {
@@ -228,6 +231,12 @@ func (c *Client) GetMetadata(ctx context.Context, bucket, objectName string) (*p
 
 // buildObjectURL 构建对象访问 URL
 func (c *Client) buildObjectURL(bucket, objectName string) string {
+	if c.publicBase != "" {
+		// 如果配置了 PublicBase，直接使用（去除末尾斜杠以避免双斜杠）
+		base := strings.TrimRight(c.publicBase, "/")
+		return fmt.Sprintf("%s/%s/%s", base, bucket, url.PathEscape(objectName))
+	}
+
 	scheme := "http"
 	if c.useSSL {
 		scheme = "https"

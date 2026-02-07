@@ -113,6 +113,7 @@ export GOYAVISION_MEDIAMTX_API_ADDRESS="http://localhost:9997"
 export GOYAVISION_MINIO_ENDPOINT="localhost:9000"
 export GOYAVISION_MEDIAMTX_RECORD_PATH="./data/recordings/%path/%Y-%m-%d_%H-%M-%S"
 export GOYAVISION_MINIO_USE_SSL=false
+export GOYAVISION_MINIO_PUBLIC_BASE="https://vision.ysmjjsy.com/minio"
 ```
 
 生产环境建议使用 `.env`（参考 `configs/.env.example`），并在配置文件中引用环境变量占位符（如 `config.prod.yaml`）。

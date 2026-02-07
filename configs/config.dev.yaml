@@ -48,6 +48,7 @@ minio:
   secret_key: "minioadmin"
   bucket_name: "goyavision"
   use_ssl: false
+  public_base: ""
 
 mcp:
   servers:

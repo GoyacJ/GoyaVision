@@ -46,6 +46,7 @@ minio:
   secret_key: "${GOYAVISION_MINIO_SECRET_KEY}"
   bucket_name: "${GOYAVISION_MINIO_BUCKET_NAME}"
   use_ssl: ${GOYAVISION_MINIO_USE_SSL}
+  public_base: "${GOYAVISION_MINIO_PUBLIC_BASE}"
 
 mcp:
   servers:

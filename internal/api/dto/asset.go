@@ -75,8 +75,9 @@ type AssetListResponse struct {
 // AssetToResponse 转换为响应
 // minioEndpoint: MinIO 端点地址（如 "39.105.2.5:14250"）
 // minioBucket: MinIO 存储桶名称
+// minioPublicBase: MinIO 公共访问基址（如 "https://vision.ysmjjsy.com/minio"）
 // minioUseSSL: 是否使用 SSL
-func AssetToResponse(a *media.Asset, minioEndpoint, minioBucket string, minioUseSSL bool) *AssetResponse {
+func AssetToResponse(a *media.Asset, minioEndpoint, minioBucket, minioPublicBase string, minioUseSSL bool) *AssetResponse {
 	if a == nil {
 		return nil
 	}
@@ -97,11 +98,16 @@ func AssetToResponse(a *media.Asset, minioEndpoint, minioBucket string, minioUse
 		a.SourceType == media.AssetSourceOperatorOutput {
 		// 如果是上传或生成的文件，且 path 不是完整 URL，则生成 MinIO 完整 URL
 		if !strings.HasPrefix(path, "http://") && !strings.HasPrefix(path, "https://") {
-			protocol := "http"
-			if minioUseSSL {
-				protocol = "https"
+			if minioPublicBase != "" {
+				base := strings.TrimRight(minioPublicBase, "/")
+				path = base + "/" + minioBucket + "/" + strings.TrimPrefix(path, "/")
+			} else {
+				protocol := "http"
+				if minioUseSSL {
+					protocol = "https"
+				}
+				path = strings.TrimSuffix(protocol+"://"+minioEndpoint, "/") + "/" + minioBucket + "/" + strings.TrimPrefix(path, "/")
 			}
-			path = strings.TrimSuffix(protocol+"://"+minioEndpoint, "/") + "/" + minioBucket + "/" + strings.TrimPrefix(path, "/")
 		}
 	}
 
@@ -125,10 +131,10 @@ func AssetToResponse(a *media.Asset, minioEndpoint, minioBucket string, minioUse
 }
 
 // AssetsToResponse 转换为响应列表
-func AssetsToResponse(assets []*media.Asset, minioEndpoint, minioBucket string, minioUseSSL bool) []*AssetResponse {
+func AssetsToResponse(assets []*media.Asset, minioEndpoint, minioBucket, minioPublicBase string, minioUseSSL bool) []*AssetResponse {
 	result := make([]*AssetResponse, len(assets))
 	for i, a := range assets {
-		result[i] = AssetToResponse(a, minioEndpoint, minioBucket, minioUseSSL)
+		result[i] = AssetToResponse(a, minioEndpoint, minioBucket, minioPublicBase, minioUseSSL)
 	}
 	return result
 }

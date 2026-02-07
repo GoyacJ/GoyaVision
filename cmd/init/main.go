@@ -113,6 +113,7 @@ func createTables(db *gorm.DB) error {
 	log.Println("    - users, roles, permissions, menus")
 	log.Println("    - media_sources, media_assets")
 	log.Println("    - operators, operator_versions, operator_templates, operator_dependencies")
+	log.Println("    - ai_models")
 	log.Println("    - workflows, workflow_nodes, workflow_edges")
 	log.Println("    - tasks, artifacts")
 	log.Println("    - files")
@@ -191,6 +192,10 @@ func initPermissions(ctx context.Context, db *gorm.DB) error {
 		{"operator:mcp:list", "查看MCP服务", "GET", "/api/v1/operators/mcp/servers", ""},
 		{"operator:mcp:install", "安装MCP算子", "POST", "/api/v1/operators/mcp/install", ""},
 		{"operator:mcp:sync", "同步MCP模板", "POST", "/api/v1/operators/mcp/sync-templates", ""},
+		{"ai-model:list", "查看AI模型列表", "GET", "/api/v1/ai-models", ""},
+		{"ai-model:create", "创建AI模型", "POST", "/api/v1/ai-models", ""},
+		{"ai-model:update", "更新AI模型", "PUT", "/api/v1/ai-models/*", ""},
+		{"ai-model:delete", "删除AI模型", "DELETE", "/api/v1/ai-models/*", ""},
 		{"workflow:list", "查看工作流列表", "GET", "/api/v1/workflows", ""},
 		{"workflow:create", "创建工作流", "POST", "/api/v1/workflows", ""},
 		{"workflow:update", "更新工作流", "PUT", "/api/v1/workflows/*", ""},
@@ -303,9 +308,11 @@ func initMenus(ctx context.Context, db *gorm.DB) error {
 	}{
 		{uuid.MustParse("00000000-0000-0000-0000-000000000010"), nil, "asset", "媒体资产", 2, "/assets", "Files", "asset/index", "asset:list", 1, true},
 		{uuid.MustParse("00000000-0000-0000-0000-000000000011"), nil, "source", "媒体源", 2, "/sources", "VideoCamera", "source/index", "source:list", 2, true},
-		{uuid.MustParse("00000000-0000-0000-0000-000000000020"), nil, "operator", "算子管理", 2, "/operators", "Cpu", "operator/index", "operator:list", 3, true},
-		{uuid.MustParse("00000000-0000-0000-0000-000000000021"), nil, "operator-marketplace", "算子市场", 2, "/operator-marketplace", "Shop", "operator-marketplace/index", "operator:template:list", 4, true},
-		{uuid.MustParse("00000000-0000-0000-0000-000000000030"), nil, "workflow", "工作流", 2, "/workflows", "Connection", "workflow/index", "workflow:list", 5, true},
+		{uuid.MustParse("00000000-0000-0000-0000-000000000020"), nil, "operator", "算子中心", 1, "/operator", "Cpu", "", "", 3, true},
+		{uuid.MustParse("00000000-0000-0000-0000-000000000022"), ptrUUID("00000000-0000-0000-0000-000000000020"), "operator-list", "我的算子", 2, "/operator/list", "List", "operator/index", "operator:list", 1, true},
+		{uuid.MustParse("00000000-0000-0000-0000-000000000023"), ptrUUID("00000000-0000-0000-0000-000000000020"), "ai-model", "AI模型", 2, "/operator/ai-model", "Connection", "operator/ai-model/index", "ai-model:list", 2, true},
+		{uuid.MustParse("00000000-0000-0000-0000-000000000021"), ptrUUID("00000000-0000-0000-0000-000000000020"), "mcp-market", "MCP市场", 2, "/operator/mcp-market", "Shop", "operator-marketplace/index", "operator:template:list", 3, true},
+		{uuid.MustParse("00000000-0000-0000-0000-000000000030"), nil, "workflow", "工作流", 2, "/workflows", "Connection", "workflow/index", "workflow:list", 4, true},
 		{uuid.MustParse("00000000-0000-0000-0000-000000000040"), nil, "task", "任务管理", 2, "/tasks", "List", "task/index", "task:list", 6, true},
 		{uuid.MustParse("00000000-0000-0000-0000-000000000001"), nil, "system", "系统管理", 1, "/system", "Setting", "", "", 100, true},
 		{uuid.MustParse("00000000-0000-0000-0000-000000000002"), ptrUUID("00000000-0000-0000-0000-000000000001"), "system:user", "用户管理", 2, "/system/user", "User", "system/user/index", "user:list", 1, true},

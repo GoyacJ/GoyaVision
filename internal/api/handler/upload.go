@@ -113,5 +113,5 @@ func (h *uploadHandler) Upload(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(201, dto.AssetToResponse(asset, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL))
+	return c.JSON(201, dto.AssetToResponse(asset, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.PublicBase, h.cfg.MinIO.UseSSL))
 }

@@ -44,6 +44,9 @@ func (h *UpdateOperatorHandler) Handle(ctx context.Context, cmd dto.UpdateOperat
 		if cmd.Category != nil {
 			op.Category = *cmd.Category
 		}
+		if cmd.AIModelID != nil {
+			op.AIModelID = cmd.AIModelID
+		}
 		if len(cmd.Tags) > 0 {
 			op.Tags = cmd.Tags
 		}
