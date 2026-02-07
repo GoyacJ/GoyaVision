@@ -3,6 +3,7 @@ package port
 import (
 	"context"
 
+	"goyavision/internal/domain/ai_model"
 	"goyavision/internal/domain/identity"
 	"goyavision/internal/domain/media"
 	"goyavision/internal/domain/operator"
@@ -126,4 +127,11 @@ type Repository interface {
 	UpdateFile(ctx context.Context, f *storage.File) error
 	DeleteFile(ctx context.Context, id uuid.UUID) error
 	GetFileByHash(ctx context.Context, hash string) (*storage.File, error)
+
+	// AIModel
+	CreateAIModel(ctx context.Context, d *ai_model.AIModel) error
+	GetAIModel(ctx context.Context, id uuid.UUID) (*ai_model.AIModel, error)
+	UpdateAIModel(ctx context.Context, d *ai_model.AIModel) error
+	DeleteAIModel(ctx context.Context, id uuid.UUID) error
+	ListAIModels(ctx context.Context, filter ai_model.Filter) ([]*ai_model.AIModel, int64, error)
 }

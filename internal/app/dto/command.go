@@ -85,6 +85,7 @@ type CreateOperatorCommand struct {
 	Category    operator.Category
 	Type        operator.Type
 	Origin      operator.Origin
+	AIModelID   *uuid.UUID
 	ExecMode    operator.ExecMode
 	ExecConfig  *operator.ExecConfig
 	Status      operator.Status
@@ -96,6 +97,7 @@ type UpdateOperatorCommand struct {
 	Name        *string
 	Description *string
 	Category    *operator.Category
+	AIModelID   *uuid.UUID
 	Tags        []string
 }
 

@@ -24,6 +24,7 @@ services:
       - GOYAVISION_MINIO_SECRET_KEY=minioadmin
       - GOYAVISION_MINIO_BUCKET_NAME=goyavision
       - GOYAVISION_MINIO_USE_SSL=false
+      - GOYAVISION_MINIO_PUBLIC_BASE=
     volumes:
       - ./data:/app/data
     restart: unless-stopped

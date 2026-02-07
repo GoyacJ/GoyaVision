@@ -1,8 +1,8 @@
 <template>
   <GvContainer max-width="full">
     <PageHeader
-      title="算子模板市场"
-      description="浏览并安装模板，支持 MCP 来源同步模板"
+      title="MCP 市场"
+      description="浏览并安装 MCP 资源为算子模板"
     >
       <template #actions>
         <GvSpace>

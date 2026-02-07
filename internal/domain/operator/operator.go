@@ -72,6 +72,8 @@ type Operator struct {
 	Type        Type
 	Origin      Origin
 
+	AIModelID *uuid.UUID
+
 	// 版本化字段
 	ActiveVersionID *uuid.UUID
 	ActiveVersion   *OperatorVersion

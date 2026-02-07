@@ -81,6 +81,7 @@ func (h *CreateOperatorHandler) Handle(ctx context.Context, cmd dto.CreateOperat
 			Category:    cmd.Category,
 			Type:        cmd.Type,
 			Origin:      origin,
+			AIModelID:   cmd.AIModelID,
 			Status:      status,
 			Tags:        cmd.Tags,
 		}

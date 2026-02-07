@@ -34,6 +34,18 @@
       @focus="handleFocus"
       @blur="handleBlur"
     >
+      <template #suffix>
+        <div class="flex items-center gap-1">
+          <el-icon 
+            v-if="clearable && hasValue" 
+            class="cursor-pointer text-text-tertiary hover:text-text-secondary transition-colors"
+            @click.stop="handleCustomClear"
+          >
+            <CircleClose />
+          </el-icon>
+          <el-icon class="text-text-tertiary"><ArrowDown /></el-icon>
+        </div>
+      </template>
       <el-option
         v-for="option in options"
         :key="option[valueKey]"
@@ -67,7 +79,7 @@ import type { SelectProps, SelectEmits } from './types'
 const props = withDefaults(defineProps<SelectProps>(), {
   size: 'medium',
   disabled: false,
-  clearable: false,
+  clearable: true,
   multiple: false,
   filterable: false,
   allowCreate: false,
@@ -157,6 +169,20 @@ const handleClear = () => {
   emit('clear')
 }
 
+const hasValue = computed(() => {
+  if (Array.isArray(props.modelValue)) {
+    return props.modelValue.length > 0
+  }
+  return props.modelValue !== undefined && props.modelValue !== null && props.modelValue !== ''
+})
+
+const handleCustomClear = () => {
+  const emptyValue = props.multiple ? [] : undefined
+  emit('update:modelValue', emptyValue)
+  emit('change', emptyValue)
+  emit('clear')
+}
+
 // 聚焦
 const handleFocus = (event: FocusEvent) => {
   emit('focus', event)
@@ -171,7 +197,8 @@ const handleBlur = (event: FocusEvent) => {
 <style>
 /* 自定义 Element Plus Select 样式 */
 .gv-select__wrapper .el-select__wrapper {
-  @apply bg-white border border-neutral-300 rounded-xl;
+  @apply bg-white border border-neutral-300 rounded-xl transition-all;
+  @apply hover:border-neutral-400;
   box-shadow: none !important;
   padding: 0 12px;
 }
@@ -189,7 +216,7 @@ const handleBlur = (event: FocusEvent) => {
 }
 
 .gv-select__wrapper .el-select__wrapper.is-focused {
-  @apply border-neutral-300;
+  @apply border-primary-600 ring-4 ring-primary-50;
   box-shadow: none !important;
 }
 
@@ -222,13 +249,16 @@ const handleBlur = (event: FocusEvent) => {
 
 /* 下拉框样式 */
 .gv-select-dropdown {
-  @apply rounded-xl border border-neutral-200 shadow-lg;
+  @apply rounded-xl shadow-lg border-none;
   margin-top: 4px;
 }
 
 .gv-select-dropdown .el-select-dropdown__item {
-  @apply px-4 py-2 text-text-primary;
+  @apply px-4 py-2 text-text-primary flex items-center justify-start;
   @apply transition-colors duration-150;
+  height: auto;
+  min-height: 34px;
+  line-height: normal;
 }
 
 .gv-select-dropdown .el-select-dropdown__item:hover {

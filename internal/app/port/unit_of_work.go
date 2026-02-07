@@ -3,6 +3,7 @@ package port
 import (
 	"context"
 
+	"goyavision/internal/domain/ai_model"
 	"goyavision/internal/domain/identity"
 	"goyavision/internal/domain/media"
 	"goyavision/internal/domain/operator"
@@ -50,4 +51,5 @@ type Repositories struct {
 	Permissions identity.PermissionRepository
 	Menus       identity.MenuRepository
 	Files       storage.FileRepository
+	AIModels    ai_model.Repository
 }

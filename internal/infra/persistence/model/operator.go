@@ -16,6 +16,7 @@ type OperatorModel struct {
 	Type        string         `gorm:"type:varchar(50);not null;index:idx_operators_type"`
 	Origin      string         `gorm:"type:varchar(20);not null;default:'custom';index:idx_operators_origin"`
 
+	AIModelID       *uuid.UUID `gorm:"type:uuid;index:idx_operators_ai_model_id"`
 	ActiveVersionID *uuid.UUID `gorm:"type:uuid;index:idx_operators_active_version_id"`
 	Status      string         `gorm:"type:varchar(20);not null;default:'draft';index:idx_operators_status"`
 	Tags        datatypes.JSON `gorm:"type:jsonb"`

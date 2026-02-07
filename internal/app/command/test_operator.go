@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"goyavision/internal/app/dto"
@@ -62,7 +63,8 @@ func (h *TestOperatorHandler) Handle(ctx context.Context, cmd dto.TestOperatorCo
 
 		output, err := executor.Execute(ctx, op.ActiveVersion, input)
 		if err != nil {
-			return apperr.Wrap(err, apperr.CodeInternal, "operator test execution failed")
+			// 将具体错误信息包含在消息中，以便前端展示给用户
+			return apperr.Wrap(err, apperr.CodeInternal, fmt.Sprintf("operator test execution failed: %v", err))
 		}
 
 		result.Diagnostics = map[string]interface{}{

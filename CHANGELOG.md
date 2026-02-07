@@ -8,6 +8,11 @@
 ## [未发布]
 
 ### 新增
+- **AI 模型管理**：新增 AI 模型管理模块，支持 OpenAI、Anthropic、Ollama、Local 等多种模型提供商配置。
+- **算子关联模型**：创建/编辑算子时支持选择关联的 AI 模型。
+- **MinIO 公网基址**：新增 `GOYAVISION_MINIO_PUBLIC_BASE` 配置，支持自定义对象存储对外访问 URL。
+- **前端组件化**：算子管理相关表单（OperatorForm, ExecConfigForm, VersionForm）全面重构为使用 `Gv` 系列组件。
+- **GvInput 增强**：新增 `textarea` 类型支持及 `rows` 属性；优化聚焦样式（Primary 边框 + 光晕）。
 - **算子模块重设计 Phase E/F（模板市场 + 依赖治理最小闭环）**
   - 新增模板市场 Query/Command：`ListTemplatesHandler`、`GetTemplateHandler`、`InstallTemplateHandler`
   - 新增依赖治理 Query/Command：`ListOperatorDependenciesHandler`、`CheckDependenciesHandler`、`SetOperatorDependenciesHandler`

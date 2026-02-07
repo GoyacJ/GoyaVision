@@ -151,10 +151,13 @@
       v-model="showCreateDialog"
       title="添加算子"
       size="large"
-      :show-confirm="false"
+      confirm-text="保存"
+      :confirm-loading="creating"
+      @confirm="handleCreateConfirm"
       @cancel="showCreateDialog = false"
     >
       <OperatorForm
+        ref="createFormRef"
         :model-value="operatorFormModel"
         :loading="creating"
         @submit="handleCreateSubmit"
@@ -166,10 +169,13 @@
       v-model="showEditDialog"
       title="编辑算子"
       size="large"
-      :show-confirm="false"
+      confirm-text="保存"
+      :confirm-loading="editing"
+      @confirm="handleEditConfirm"
       @cancel="showEditDialog = false"
     >
       <OperatorForm
+        ref="editFormRef"
         :model-value="operatorFormModel"
         :loading="editing"
         @submit="handleEditSubmit"
@@ -294,6 +300,8 @@ const versionLoading = ref(false)
 const versionSubmitting = ref(false)
 const dependencyLoading = ref(false)
 const dependencyChecking = ref(false)
+const createFormRef = ref<InstanceType<typeof OperatorForm>>()
+const editFormRef = ref<InstanceType<typeof OperatorForm>>()
 
 const searchKeyword = ref('')
 
@@ -450,6 +458,10 @@ function openCreateDialog() {
   showCreateDialog.value = true
 }
 
+function handleCreateConfirm() {
+  createFormRef.value?.submit()
+}
+
 async function handleCreateSubmit(payload: OperatorCreateReq) {
   if (!payload.code || !payload.name || !payload.type || !payload.category) {
     ElMessage.warning('请完整填写算子代码、名称、分类与类型')
@@ -487,6 +499,10 @@ function handleEdit(row: Operator) {
     exec_config: row.active_version?.exec_config || {}
   })
   showEditDialog.value = true
+}
+
+function handleEditConfirm() {
+  editFormRef.value?.submit()
 }
 
 async function handleEditSubmit(payload: OperatorCreateReq) {
