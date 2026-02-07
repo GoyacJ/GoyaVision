@@ -48,4 +48,4 @@ jobs:
           username: ${{ secrets.ECS_USER }}
           key: ${{ secrets.ECS_SSH_KEY }}
           script: |
-            sudo /usr/local/bin/deploy_goyavision.sh
+            /usr/local/bin/deploy_goyavision.sh
