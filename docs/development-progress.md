@@ -624,6 +624,7 @@
 
 | 日期 | 版本 | 变更内容 |
 |------|------|----------|
+| 2026-02-07 | V1.0 | **超级管理员菜单可见性修复**：修复超级管理员在 `/auth/profile` 接口获取菜单时包含禁用状态菜单的问题，确保前端导航栏正确隐藏被禁用的菜单。 |
 | 2026-02-07 | V1.0 | **算子重设计文档口径校准（第十九轮）**：根据代码复核，`syncOperatorCompatFieldsFromVersion` 当前为空实现（no-op）。虽 `install_template` / `install_mcp_operator` / `create_operator` 仍保留函数调用，但已不再执行 `operators` 旧兼容字段写回；当前策略为“写路径兼容字段收口，统一以 `ActiveVersion` 为事实来源”。文档口径已同步修正，避免继续误导为“安装后会自动回填兼容字段”。 |
 | 2026-02-07 | V1.0 | **算子重设计收口推进（第十八轮）**：MCP 适配器从“约定式 HTTP”升级为“真实 MCP JSON-RPC 协议客户端”。`internal/adapter/mcp/client.go` 新增标准握手流程（`initialize` → `notifications/initialized`），工具发现与调用改为 `tools/list`、`tools/call`；同时引入按 server 维度的懒初始化与并发锁，避免多协程下重复初始化竞态。`HealthCheck/ListTools/CallTool` 统一基于协议会话执行，并保持 `MCPClient/MCPRegistry` Port 与注入链路不变，确保上层 Command/Query/Executor 无侵入切换到真协议。 |
 | 2026-02-07 | V1.0 | **算子重设计收口推进（第十七轮）**：完成 Operator 兼容字段后端收口。`internal/app/command/update_operator.go`、`delete_operator.go` 内置算子判定统一仅依据 `origin==builtin`；`internal/app/query/list_operators.go` 与 `internal/infra/persistence/repo/operator.go` 移除对 `is_builtin` 旧列过滤依赖；`internal/api/handler/operator.go` 创建算子时不再写入 `version/endpoint/method/input_schema/output_spec/config/is_builtin` 兼容字段；`internal/api/dto/operator.go` 的兼容输出改为从 `active_version` 计算，避免继续读取 Domain 旧字段。并更新 `migrations/20260207_operator_compat_backfill.sql`：在回填后新增 `ALTER TABLE operators DROP COLUMN ...`，删除旧兼容执行列（`version/endpoint/method/input_schema/output_spec/config/is_builtin`）。 |

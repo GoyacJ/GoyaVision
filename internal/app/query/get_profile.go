@@ -56,7 +56,8 @@ func (h *GetProfileHandler) Handle(ctx context.Context, query dto.GetProfileQuer
 		var allMenus []*identity.Menu
 		err := h.uow.Do(ctx, func(ctx context.Context, repos *port.Repositories) error {
 			var err error
-			allMenus, err = repos.Menus.List(ctx, nil)
+			enabledStatus := int(identity.MenuStatusEnabled)
+			allMenus, err = repos.Menus.List(ctx, &enabledStatus)
 			return err
 		})
 		if err != nil {

@@ -315,6 +315,7 @@
 - **清理重构遗留文件**：删除未使用的 `operator/index-refactored.vue`、`operator/index-old.vue`、`workflow/index-refactored.vue`、`workflow/index-old.vue`，消除构建时的循环依赖警告
 
 ### 修复
+- **超级管理员菜单可见性**：修复超级管理员在 `/auth/profile` 接口获取菜单时包含禁用状态菜单的问题，确保前端导航栏正确隐藏被禁用的菜单
 - **MediaMTX recordPath 校验失败**：所有 `recordPath` 配置添加 `%f`（微秒）占位符，满足最新版 MediaMTX 必需格式元素要求；`AddPath` 时携带完整的 `recordPath`/`recordFormat`/`recordSegmentDuration`，避免空值触发 MediaMTX 校验错误
 - **RTSP 拉流 UDP 被拒绝**：`AddPath` 默认设置 `rtspTransport: tcp`，`pathDefaults` 同步添加 `rtspTransport: tcp`；解决上游 RTSP 服务器（如 ZLMediaKit）不支持 UDP 传输返回 `406 Not Acceptable` 导致流无法就绪、HLS 预览 404 的问题
 - **资产更新权限边界修复**：后端 `PUT /api/v1/assets/:id` 增加 `asset:update` 强校验，未授权统一返回 `403` 与“无编辑权限”
