@@ -66,8 +66,9 @@
         v-model:current-page="currentPage"
         v-model:page-size="currentPageSize"
         :page-sizes="paginationConfig.pageSizes || [10, 20, 50, 100]"
-        :layout="paginationConfig.layout || 'total, sizes, prev, pager, next, jumper'"
+        :layout="isMobile ? 'prev, pager, next' : (paginationConfig.layout || 'total, sizes, prev, pager, next, jumper')"
         :total="paginationConfig.total"
+        :pager-count="isMobile ? 5 : 7"
         @current-change="handleCurrentChange"
         @size-change="handleSizeChange"
       />
@@ -78,6 +79,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { cn } from '@/utils/cn'
+import { useBreakpoint } from '@/composables/useBreakpoint'
 import type { TableProps, TableEmits, TableColumn } from './types'
 import type { ElTable } from 'element-plus'
 
@@ -99,6 +101,9 @@ const emit = defineEmits<TableEmits>()
 // 表格引用
 const tableRef = ref<InstanceType<typeof ElTable>>()
 
+// 响应式
+const { isMobile } = useBreakpoint()
+
 // 分页状态
 const currentPage = ref(props.paginationConfig?.currentPage || 1)
 const currentPageSize = ref(props.paginationConfig?.pageSize || 10)
@@ -117,7 +122,7 @@ watch(
 
 // 表格容器类名
 const tableContainerClasses = computed(() => {
-  return cn('gv-table', 'w-full')
+  return cn('gv-table', 'w-full', 'overflow-x-auto')
 })
 
 // 表格类名

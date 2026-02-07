@@ -2,10 +2,18 @@
   <el-container class="layout-container">
     <el-header class="layout-header">
       <div class="header-left">
+        <!-- Mobile Toggle -->
+        <div v-if="isMobile" class="mobile-toggle" @click="mobileMenuVisible = true">
+          <el-icon :size="24"><Menu /></el-icon>
+        </div>
+
         <div class="logo">
           <span class="logo-text">GoyaVision</span>
         </div>
+        
+        <!-- Desktop Menu -->
         <el-menu
+          v-if="!isMobile"
           :default-active="activeMenu"
           mode="horizontal"
           router
@@ -44,6 +52,33 @@
       </router-view>
     </el-main>
 
+    <!-- Mobile Navigation Drawer -->
+    <el-drawer
+      v-model="mobileMenuVisible"
+      direction="ltr"
+      size="240px"
+      :with-header="false"
+      class="mobile-nav-drawer"
+    >
+      <div class="mobile-menu-container">
+        <div class="mobile-menu-header">
+          <span class="logo-text">GoyaVision</span>
+        </div>
+        <el-menu
+          :default-active="activeMenu"
+          mode="vertical"
+          router
+          class="mobile-menu"
+        >
+          <sidebar-item
+            v-for="menu in menuRoutes"
+            :key="menu.id"
+            :item="menu"
+          />
+        </el-menu>
+      </div>
+    </el-drawer>
+
     <el-dialog v-model="passwordDialogVisible" title="修改密码" width="400px">
       <el-form ref="passwordFormRef" :model="passwordForm" :rules="passwordRules" label-width="80px">
         <el-form-item label="原密码" prop="old_password">
@@ -72,12 +107,15 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { useUserStore } from '../store/user'
 import { authApi } from '../api/auth'
+import { useBreakpoint } from '@/composables/useBreakpoint'
 import SidebarItem from './SidebarItem.vue'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+const { isMobile } = useBreakpoint()
 
+const mobileMenuVisible = ref(false)
 const passwordDialogVisible = ref(false)
 const passwordLoading = ref(false)
 const passwordFormRef = ref<FormInstance>()
@@ -361,5 +399,33 @@ async function handleChangePassword() {
   .username {
     display: none;
   }
+}
+
+.mobile-toggle {
+  display: flex;
+  align-items: center;
+  margin-right: 16px;
+  cursor: pointer;
+  color: #606266;
+}
+
+.mobile-menu-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-menu-header {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.mobile-menu {
+  flex: 1;
+  border-right: none;
+  overflow-y: auto;
 }
 </style>

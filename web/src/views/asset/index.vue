@@ -1,13 +1,13 @@
 <template>
   <GvContainer max-width="full" class="h-full">
-    <div class="flex h-full gap-4">
-      <!-- 左侧：类型和标签筛选（保留左右布局） -->
-      <aside class="w-64 flex-shrink-0">
+    <div class="flex flex-col lg:flex-row h-full gap-4">
+      <!-- 左侧：类型和标签筛选 -->
+      <aside class="w-full lg:w-64 flex-shrink-0">
         <div class="mb-4">
           <h1 class="text-2xl font-bold text-text-primary">媒体资产库</h1>
         </div>
 
-        <GvCard shadow="sm" padding="md" class="sticky top-4">
+        <GvCard shadow="sm" padding="md" class="lg:sticky lg:top-4">
           <div class="mb-6">
             <h3 class="text-sm font-semibold text-text-primary mb-3">媒体类型</h3>
             <div class="space-y-2">
@@ -68,17 +68,17 @@
 
       <main class="flex-1 min-w-0">
         <!-- 操作栏 -->
-        <div class="flex items-center justify-between mb-6">
-          <div class="flex items-center gap-3">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+          <div class="flex items-center gap-3 w-full sm:w-auto">
             <SearchBar
               v-model="searchName"
               placeholder="搜索资产名称"
-              class="w-80"
+              class="w-full sm:w-80"
               immediate
               :show-button="false"
               @search="() => { pagination.page = 1 }"
             />
-            <div class="view-switch-group">
+            <div class="view-switch-group flex-shrink-0">
               <button
                 :class="['view-switch-btn', { active: viewMode === 'grid' }]"
                 @click="viewMode = 'grid'"
@@ -87,6 +87,7 @@
                 <el-icon :size="18"><Grid /></el-icon>
               </button>
               <button
+                v-if="!isMobile"
                 :class="['view-switch-btn', { active: viewMode === 'list' }]"
                 @click="viewMode = 'list'"
                 title="列表视图"
@@ -95,7 +96,7 @@
               </button>
             </div>
           </div>
-          <GvButton @click="showUploadDialog = true">
+          <GvButton @click="showUploadDialog = true" class="w-full sm:w-auto">
             <template #icon>
               <el-icon><Upload /></el-icon>
             </template>
@@ -443,6 +444,7 @@ import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type Upload
 import { Upload, VideoCamera, Picture, Headset, Refresh, FolderOpened, Grid, List } from '@element-plus/icons-vue'
 import { assetApi, type MediaAsset, type AssetCreateReq, type AssetUpdateReq } from '@/api/asset'
 import { useTable, useAsyncData } from '@/composables'
+import { useBreakpoint } from '@/composables/useBreakpoint'
 import GvContainer from '@/components/layout/GvContainer/index.vue'
 import GvCard from '@/components/base/GvCard/index.vue'
 import GvModal from '@/components/base/GvModal/index.vue'
@@ -475,6 +477,14 @@ const selectedFile = ref<UploadFile | null>(null)
 const viewMode = ref<'grid' | 'list'>('grid')
 const showImagePreview = ref(false)
 const showVideoPreview = ref(false)
+
+const { isMobile } = useBreakpoint()
+
+watch(isMobile, (val) => {
+  if (val) {
+    viewMode.value = 'grid'
+  }
+}, { immediate: true })
 
 // 筛选参数
 const searchName = ref('')

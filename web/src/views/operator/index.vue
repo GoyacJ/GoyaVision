@@ -6,11 +6,11 @@
       description="管理 AI 算子，包括内置和自定义算子"
     >
       <template #actions>
-        <GvSpace>
+        <GvSpace wrap>
           <SearchBar
             v-model="searchKeyword"
             placeholder="搜索算子"
-            class="w-80"
+            class="w-full sm:w-80"
             immediate
             :show-button="false"
             @search="() => { pagination.page = 1 }"

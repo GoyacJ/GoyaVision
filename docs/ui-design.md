@@ -358,24 +358,39 @@
 
 ---
 
-## 响应式断点
+## 响应式设计指南
 
-```css
-/* 移动设备 */
-@media (max-width: 768px) {
-  /* 优化移动端体验 */
-}
+为了确保 GoyaVision 在不同设备（桌面、平板、手机）上的一致体验，采用以下响应式策略。
 
-/* 平板设备 */
-@media (min-width: 769px) and (max-width: 1024px) {
-  /* 平板适配 */
-}
+### 断点系统
 
-/* 桌面设备 */
-@media (min-width: 1025px) {
-  /* 桌面完整体验 */
-}
-```
+沿用 Tailwind CSS 默认断点：
+- `sm`: 640px
+- `md`: 768px
+- `lg`: 1024px
+- `xl`: 1280px
+- `2xl`: 1536px
+
+### 布局策略
+
+1.  **导航栏**
+    - **Desktop (`lg`+)**: 顶部水平导航栏，展示 Logo、菜单、用户信息。
+    - **Mobile/Tablet**: 隐藏水平菜单，使用左侧汉堡菜单 (Hamburger Menu) 呼出抽屉式导航 (`el-drawer`)。
+
+2.  **页面布局**
+    - **左右布局页 (如资产库)**：
+        - **Desktop**: `flex-row`，左侧固定宽筛选栏，右侧自适应内容区。
+        - **Mobile**: `flex-col`，筛选栏宽度 `w-full` 并置顶（或折叠），内容区顺延。
+    - **工具栏**: 使用 `flex-wrap` 确保搜索框与操作按钮在窄屏下自动换行。
+
+3.  **列表与视图**
+    - **网格视图 (Grid)**: 使用响应式 Grid Class，如 `grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5`。
+    - **表格视图 (List)**: 移动端体验较差，建议通过 `useBreakpoint` 检测 `isMobile`，强制切换为 **网格视图**。
+
+### 组件适配
+
+- **GvModal / GvDrawer**: 宽度应设为响应式，移动端推荐 `90%` 或 `100%` 宽度。
+- **GvSpace**: 开启 `wrap` 属性或手动添加 `flex-wrap` 以防止溢出。
 
 ---
 
@@ -541,6 +556,7 @@ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
 - [x] 资产管理页面优化
 - [x] 自定义滚动条
 - [x] 动画系统
+- [x] 响应式布局重构 (2026-02-08)
 
 ### 🚧 进行中
 
@@ -577,6 +593,12 @@ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
 
 ## 更新日志
 
+### 2026-02-08
+
+- 📱 新增响应式设计规范
+- ✨ 重构全局导航布局 (Drawer/Horizontal)
+- ✨ 优化资产库布局 (Stack/Row, Grid/List)
+
 ### 2026-02-03
 
 - 🎨 初始化 UI 设计系统
@@ -587,5 +609,5 @@ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
 ---
 
 **维护者**: GoyaVision Team  
-**最后更新**: 2026-02-03  
-**版本**: 1.0.0
+**最后更新**: 2026-02-08  
+**版本**: 1.1.0
