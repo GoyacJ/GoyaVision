@@ -45,4 +45,4 @@
 
 ### 变更
 - 资产管理与预览流程优化，移除废弃的算法绑定（AlgorithmBinding）相关代码，全面转向工作流驱动。
-- 全面更新项目核心文档（requirements, architecture, api, README），对齐算子版本化、DAG 工作流、MCP 集成与多租户隔离等最新设计实现。
+- 全面更新项目核心文档（README, requirements, architecture, api），对齐算子版本化、DAG 工作流、MCP 集成与多租户隔离等最新设计实现。
