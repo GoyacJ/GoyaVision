@@ -171,3 +171,109 @@ func (r *WorkflowRepo) ListEdges(ctx context.Context, workflowID uuid.UUID) ([]*
 func (r *WorkflowRepo) DeleteEdges(ctx context.Context, workflowID uuid.UUID) error {
 	return r.db.WithContext(ctx).Where("workflow_id = ?", workflowID).Delete(&model.WorkflowEdgeModel{}).Error
 }
+
+func (r *WorkflowRepo) CreateRevision(ctx context.Context, revision *workflow.WorkflowRevision) error {
+	if revision.ID == uuid.Nil {
+		revision.ID = uuid.New()
+	}
+	m := mapper.WorkflowRevisionToModel(revision)
+	return r.db.WithContext(ctx).Create(m).Error
+}
+
+func (r *WorkflowRepo) GetRevision(ctx context.Context, id uuid.UUID) (*workflow.WorkflowRevision, error) {
+	var m model.WorkflowRevisionModel
+	if err := r.db.WithContext(ctx).
+		Table("workflow_revisions AS r").
+		Select("r.*").
+		Joins("JOIN workflows w ON w.id = r.workflow_id").
+		Scopes(scope.ScopeTenant(ctx), scope.ScopeVisibility(ctx)).
+		Where("r.id = ?", id).
+		First(&m).Error; err != nil {
+		return nil, err
+	}
+	return mapper.WorkflowRevisionToDomain(&m), nil
+}
+
+func (r *WorkflowRepo) GetRevisionByNumber(ctx context.Context, workflowID uuid.UUID, revision int64) (*workflow.WorkflowRevision, error) {
+	var m model.WorkflowRevisionModel
+	if err := r.db.WithContext(ctx).
+		Table("workflow_revisions AS r").
+		Select("r.*").
+		Joins("JOIN workflows w ON w.id = r.workflow_id").
+		Scopes(scope.ScopeTenant(ctx), scope.ScopeVisibility(ctx)).
+		Where("r.workflow_id = ? AND r.revision = ?", workflowID, revision).
+		First(&m).Error; err != nil {
+		return nil, err
+	}
+	return mapper.WorkflowRevisionToDomain(&m), nil
+}
+
+func (r *WorkflowRepo) ListRevisions(ctx context.Context, filter workflow.RevisionFilter) ([]*workflow.WorkflowRevision, int64, error) {
+	limit := filter.Limit
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 200 {
+		limit = 200
+	}
+	offset := filter.Offset
+	if offset < 0 {
+		offset = 0
+	}
+
+	q := r.db.WithContext(ctx).
+		Table("workflow_revisions AS r").
+		Select("r.*").
+		Joins("JOIN workflows w ON w.id = r.workflow_id").
+		Scopes(scope.ScopeTenant(ctx), scope.ScopeVisibility(ctx)).
+		Where("r.workflow_id = ?", filter.WorkflowID)
+
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var models []*model.WorkflowRevisionModel
+	if err := q.Order("r.revision DESC").Limit(limit).Offset(offset).Find(&models).Error; err != nil {
+		return nil, 0, err
+	}
+	out := make([]*workflow.WorkflowRevision, len(models))
+	for i := range models {
+		out[i] = mapper.WorkflowRevisionToDomain(models[i])
+	}
+	return out, total, nil
+}
+
+func (r *WorkflowRepo) ActivateRevision(ctx context.Context, workflowID uuid.UUID, revisionID uuid.UUID) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var target model.WorkflowRevisionModel
+		if err := tx.Table("workflow_revisions AS r").
+			Select("r.*").
+			Joins("JOIN workflows w ON w.id = r.workflow_id").
+			Scopes(scope.ScopeTenant(ctx), scope.ScopeVisibility(ctx)).
+			Where("r.id = ? AND r.workflow_id = ?", revisionID, workflowID).
+			First(&target).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Model(&model.WorkflowRevisionModel{}).
+			Where("workflow_id = ? AND id <> ? AND status = ?", workflowID, revisionID, string(workflow.RevisionStatusActive)).
+			Update("status", string(workflow.RevisionStatusArchived)).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Model(&model.WorkflowRevisionModel{}).
+			Where("id = ?", revisionID).
+			Update("status", string(workflow.RevisionStatusActive)).Error; err != nil {
+			return err
+		}
+
+		return tx.Model(&model.WorkflowModel{}).
+			Scopes(scope.ScopeTenant(ctx)).
+			Where("id = ?", workflowID).
+			Updates(map[string]interface{}{
+				"current_revision_id": revisionID,
+				"current_revision":    target.Revision,
+			}).Error
+	})
+}

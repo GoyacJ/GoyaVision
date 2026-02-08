@@ -63,8 +63,9 @@ func main() {
 	log.Println("2. 初始化租户数据")
 	log.Println("3. 初始化权限数据")
 	log.Println("4. 初始化菜单数据")
-	log.Println("5. 初始化角色数据（超级管理员）")
+	log.Println("5. 初始化角色数据")
 	log.Println("6. 初始化管理员用户")
+	log.Println("7. 初始化系统配置")
 
 	if !confirm("\n是否继续？") && !*dryRun {
 		log.Println("已取消")
@@ -109,7 +110,7 @@ func main() {
 }
 
 func createTables(db *gorm.DB) error {
-	log.Println("\n[1/5] 创建数据库表结构")
+	log.Println("\n[1/7] 创建数据库表结构")
 
 	if *dryRun {
 		log.Println("  （模拟运行，跳过实际创建）")
@@ -133,14 +134,16 @@ func createTables(db *gorm.DB) error {
 	}
 
 	log.Println("  ✓ 已创建/更新以下表:")
-	log.Println("    - users, roles, permissions, menus")
+	log.Println("    - tenants, users, roles, permissions, menus, user_identities")
 	log.Println("    - media_sources, media_assets")
 	log.Println("    - operators, operator_versions, operator_templates, operator_dependencies")
+	log.Println("    - algorithms, algorithm_versions, algorithm_implementations, algorithm_evaluation_profiles")
 	log.Println("    - ai_models")
-	log.Println("    - workflows, workflow_nodes, workflow_edges")
-	log.Println("    - tasks, artifacts")
+	log.Println("    - workflows, workflow_revisions, workflow_nodes, workflow_edges")
+	log.Println("    - tasks, task_context_state, task_context_patches, task_context_snapshots")
+	log.Println("    - agent_sessions, run_events, tool_policies")
+	log.Println("    - artifacts")
 	log.Println("    - files")
-	log.Println("    - user_identities")
 	log.Println("    - system_configs")
 	log.Println("    - user_balances, user_subscriptions, transaction_records, point_records, usage_stats")
 
@@ -182,7 +185,7 @@ func createTables(db *gorm.DB) error {
 }
 
 func initTenants(ctx context.Context, db *gorm.DB) error {
-	log.Println("\n[2/6] 初始化租户数据")
+	log.Println("\n[2/7] 初始化租户数据")
 
 	if *dryRun {
 		log.Println("  （模拟运行，跳过实际初始化）")
@@ -224,8 +227,7 @@ func initTenants(ctx context.Context, db *gorm.DB) error {
 }
 
 func initPermissions(ctx context.Context, db *gorm.DB) error {
-	log.Println("\n[3/6] 初始化权限数据")
-	log.Println("\n[2/5] 初始化权限数据")
+	log.Println("\n[3/7] 初始化权限数据")
 
 	if *dryRun {
 		log.Println("  （模拟运行，跳过实际初始化）")
@@ -261,41 +263,74 @@ func initPermissions(ctx context.Context, db *gorm.DB) error {
 		{"operator:create", "创建算子", "POST", "/api/v1/operators", ""},
 		{"operator:update", "更新算子", "PUT", "/api/v1/operators/*", ""},
 		{"operator:delete", "删除算子", "DELETE", "/api/v1/operators/*", ""},
-		{"operator:enable", "启用算子", "PUT", "/api/v1/operators/*/enable", ""},
-		{"operator:disable", "禁用算子", "PUT", "/api/v1/operators/*/disable", ""},
+		{"operator:validate:schema", "校验算子Schema", "POST", "/api/v1/operators/validate-schema", ""},
+		{"operator:validate:connection", "校验算子连接配置", "POST", "/api/v1/operators/validate-connection", ""},
 		{"operator:publish", "发布算子", "POST", "/api/v1/operators/*/publish", ""},
 		{"operator:deprecate", "弃用算子", "POST", "/api/v1/operators/*/deprecate", ""},
 		{"operator:test", "测试算子", "POST", "/api/v1/operators/*/test", ""},
 		{"operator:version:list", "查看版本列表", "GET", "/api/v1/operators/*/versions", ""},
+		{"operator:version:get", "查看算子版本详情", "GET", "/api/v1/operators/*/versions/*", ""},
 		{"operator:version:create", "创建版本", "POST", "/api/v1/operators/*/versions", ""},
 		{"operator:version:activate", "激活版本", "POST", "/api/v1/operators/*/versions/activate", ""},
 		{"operator:version:rollback", "回滚版本", "POST", "/api/v1/operators/*/versions/rollback", ""},
 		{"operator:version:archive", "归档版本", "POST", "/api/v1/operators/*/versions/archive", ""},
 		{"operator:template:list", "查看模板列表", "GET", "/api/v1/operators/templates", ""},
+		{"operator:template:get", "查看模板详情", "GET", "/api/v1/operators/templates/*", ""},
 		{"operator:template:install", "安装模板", "POST", "/api/v1/operators/templates/install", ""},
 		{"operator:dependency:list", "查看依赖列表", "GET", "/api/v1/operators/*/dependencies", ""},
+		{"operator:dependency:check", "检查依赖满足性", "GET", "/api/v1/operators/*/dependencies/check", ""},
 		{"operator:dependency:update", "更新依赖", "PUT", "/api/v1/operators/*/dependencies", ""},
-		{"operator:mcp:list", "查看MCP服务", "GET", "/api/v1/operators/mcp/servers", ""},
+		{"operator:mcp:server:list", "查看MCP服务", "GET", "/api/v1/operators/mcp/servers", ""},
+		{"operator:mcp:tool:list", "查看MCP工具列表", "GET", "/api/v1/operators/mcp/servers/*/tools", ""},
+		{"operator:mcp:tool:preview", "预览MCP工具", "GET", "/api/v1/operators/mcp/servers/*/tools/*/preview", ""},
 		{"operator:mcp:install", "安装MCP算子", "POST", "/api/v1/operators/mcp/install", ""},
 		{"operator:mcp:sync", "同步MCP模板", "POST", "/api/v1/operators/mcp/sync-templates", ""},
+		{"algorithm:list", "查看算法库列表", "GET", "/api/v1/algorithms", ""},
+		{"algorithm:get", "查看算法详情", "GET", "/api/v1/algorithms/*", ""},
+		{"algorithm:create", "创建算法", "POST", "/api/v1/algorithms", ""},
+		{"algorithm:update", "更新算法", "PUT", "/api/v1/algorithms/*", ""},
+		{"algorithm:delete", "删除算法", "DELETE", "/api/v1/algorithms/*", ""},
+		{"algorithm:version:create", "创建算法版本", "POST", "/api/v1/algorithms/*/versions", ""},
+		{"algorithm:version:publish", "发布算法版本", "POST", "/api/v1/algorithms/*/versions/*/publish", ""},
 		{"ai-model:list", "查看AI模型列表", "GET", "/api/v1/ai-models", ""},
+		{"ai-model:get", "查看AI模型详情", "GET", "/api/v1/ai-models/*", ""},
 		{"ai-model:create", "创建AI模型", "POST", "/api/v1/ai-models", ""},
 		{"ai-model:update", "更新AI模型", "PUT", "/api/v1/ai-models/*", ""},
 		{"ai-model:delete", "删除AI模型", "DELETE", "/api/v1/ai-models/*", ""},
 		{"ai-model:test", "测试AI模型连接", "POST", "/api/v1/ai-models/*/test-connection", ""},
 		{"workflow:list", "查看工作流列表", "GET", "/api/v1/workflows", ""},
+		{"workflow:get", "查看工作流详情", "GET", "/api/v1/workflows/*", ""},
 		{"workflow:create", "创建工作流", "POST", "/api/v1/workflows", ""},
 		{"workflow:update", "更新工作流", "PUT", "/api/v1/workflows/*", ""},
 		{"workflow:delete", "删除工作流", "DELETE", "/api/v1/workflows/*", ""},
-		{"workflow:enable", "启用工作流", "PUT", "/api/v1/workflows/*/enable", ""},
-		{"workflow:disable", "禁用工作流", "PUT", "/api/v1/workflows/*/disable", ""},
+		{"workflow:enable", "启用工作流", "POST", "/api/v1/workflows/*/enable", ""},
+		{"workflow:disable", "禁用工作流", "POST", "/api/v1/workflows/*/disable", ""},
 		{"workflow:trigger", "触发工作流", "POST", "/api/v1/workflows/*/trigger", ""},
+		{"workflow:revision:list", "查看工作流版本列表", "GET", "/api/v1/workflows/*/revisions", ""},
+		{"workflow:revision:get", "查看工作流版本详情", "GET", "/api/v1/workflows/*/revisions/*", ""},
+		{"workflow:revision:create", "创建工作流版本", "POST", "/api/v1/workflows/*/revisions", ""},
 		{"task:list", "查看任务列表", "GET", "/api/v1/tasks", ""},
+		{"task:get", "查看任务详情", "GET", "/api/v1/tasks/*", ""},
 		{"task:create", "创建任务", "POST", "/api/v1/tasks", ""},
 		{"task:update", "更新任务", "PUT", "/api/v1/tasks/*", ""},
 		{"task:delete", "删除任务", "DELETE", "/api/v1/tasks/*", ""},
+		{"task:start", "启动任务", "POST", "/api/v1/tasks/*/start", ""},
+		{"task:complete", "完成任务", "POST", "/api/v1/tasks/*/complete", ""},
+		{"task:fail", "标记任务失败", "POST", "/api/v1/tasks/*/fail", ""},
 		{"task:cancel", "取消任务", "POST", "/api/v1/tasks/*/cancel", ""},
+		{"task:context:view", "查看任务上下文", "GET", "/api/v1/tasks/*/context", ""},
+		{"task:context:patch:list", "查看任务上下文补丁", "GET", "/api/v1/tasks/*/context/patches", ""},
+		{"task:context:snapshot:create", "创建任务上下文快照", "POST", "/api/v1/tasks/*/context/snapshot", ""},
+		{"task:event:list", "查看任务事件流", "GET", "/api/v1/tasks/*/events", ""},
+		{"agent:session:list", "查看Agent会话列表", "GET", "/api/v1/agent/sessions", ""},
+		{"agent:session:get", "查看Agent会话详情", "GET", "/api/v1/agent/sessions/*", ""},
+		{"agent:session:event:list", "查看Agent会话事件", "GET", "/api/v1/agent/sessions/*/events", ""},
+		{"agent:session:create", "创建Agent会话", "POST", "/api/v1/agent/sessions", ""},
+		{"agent:session:run", "执行Agent会话", "POST", "/api/v1/agent/sessions/*/run", ""},
+		{"agent:session:stop", "停止Agent会话", "POST", "/api/v1/agent/sessions/*/stop", ""},
 		{"artifact:list", "查看产物列表", "GET", "/api/v1/artifacts", ""},
+		{"artifact:get", "查看产物详情", "GET", "/api/v1/artifacts/*", ""},
+		{"artifact:create", "创建产物", "POST", "/api/v1/artifacts", ""},
 		{"artifact:delete", "删除产物", "DELETE", "/api/v1/artifacts/*", ""},
 		{"user:list", "查看用户列表", "GET", "/api/v1/users", ""},
 		{"user:create", "创建用户", "POST", "/api/v1/users", ""},
@@ -369,7 +404,7 @@ func initPermissions(ctx context.Context, db *gorm.DB) error {
 }
 
 func initMenus(ctx context.Context, db *gorm.DB) error {
-	log.Println("\n[4/6] 初始化菜单数据")
+	log.Println("\n[4/7] 初始化菜单数据")
 
 	if *dryRun {
 		log.Println("  （模拟运行，跳过实际初始化）")
@@ -405,8 +440,10 @@ func initMenus(ctx context.Context, db *gorm.DB) error {
 		{uuid.MustParse("00000000-0000-0000-0000-000000000022"), ptrUUID("00000000-0000-0000-0000-000000000020"), "operator-list", "我的算子", 2, "/operator/list", "List", "operator/index", "operator:list", 1, true},
 		{uuid.MustParse("00000000-0000-0000-0000-000000000023"), ptrUUID("00000000-0000-0000-0000-000000000020"), "ai-model", "AI模型", 2, "/operator/ai-model", "Connection", "operator/ai-model/index", "ai-model:list", 2, true},
 		{uuid.MustParse("00000000-0000-0000-0000-000000000021"), ptrUUID("00000000-0000-0000-0000-000000000020"), "mcp-market", "MCP市场", 2, "/operator/mcp-market", "Shop", "operator-marketplace/index", "operator:template:list", 3, true},
+		{uuid.MustParse("00000000-0000-0000-0000-000000000024"), ptrUUID("00000000-0000-0000-0000-000000000020"), "algorithm", "算法库", 2, "/algorithms", "DataAnalysis", "algorithm/index", "algorithm:list", 4, true},
 		{uuid.MustParse("00000000-0000-0000-0000-000000000030"), nil, "workflow", "工作流", 2, "/workflows", "Connection", "workflow/index", "workflow:list", 4, true},
 		{uuid.MustParse("00000000-0000-0000-0000-000000000040"), nil, "task", "任务管理", 2, "/tasks", "List", "task/index", "task:list", 6, true},
+		{uuid.MustParse("00000000-0000-0000-0000-000000000050"), nil, "agent-sessions", "Agent会话", 2, "/agent-sessions", "ChatLineSquare", "agent/index", "agent:session:list", 7, true},
 		{uuid.MustParse("00000000-0000-0000-0000-000000000001"), nil, "system", "系统管理", 1, "/system", "Setting", "", "", 100, true},
 		{uuid.MustParse("00000000-0000-0000-0000-000000000002"), ptrUUID("00000000-0000-0000-0000-000000000001"), "system:user", "用户管理", 2, "/system/user", "User", "system/user/index", "user:list", 1, true},
 		{uuid.MustParse("00000000-0000-0000-0000-000000000003"), ptrUUID("00000000-0000-0000-0000-000000000001"), "system:role", "角色管理", 2, "/system/role", "UserFilled", "system/role/index", "role:list", 2, true},
@@ -474,7 +511,7 @@ func initMenus(ctx context.Context, db *gorm.DB) error {
 }
 
 func initRoles(ctx context.Context, db *gorm.DB) error {
-	log.Println("\n[5/6] 初始化角色数据")
+	log.Println("\n[5/7] 初始化角色数据")
 
 	if *dryRun {
 		log.Println("  （模拟运行，跳过实际初始化）")
@@ -640,7 +677,7 @@ func initRoles(ctx context.Context, db *gorm.DB) error {
 }
 
 func initAdminUser(ctx context.Context, db *gorm.DB) error {
-	log.Println("\n[6/6] 初始化管理员用户")
+	log.Println("\n[6/7] 初始化管理员用户")
 
 	if *dryRun {
 		log.Println("  （模拟运行，跳过实际初始化）")
@@ -753,7 +790,7 @@ func confirm(msg string) bool {
 }
 
 func initSystemConfig(ctx context.Context, db *gorm.DB) error {
-	log.Println("\n[7/6] 初始化系统配置")
+	log.Println("\n[7/7] 初始化系统配置")
 
 	if *dryRun {
 		log.Println("  （模拟运行，跳过实际初始化）")

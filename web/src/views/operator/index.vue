@@ -24,6 +24,9 @@
           <GvButton variant="tonal" @click="router.push('/operator-marketplace')">
             模板市场
           </GvButton>
+          <GvButton variant="tonal" @click="router.push('/algorithms')">
+            算法库
+          </GvButton>
         </GvSpace>
       </template>
     </PageHeader>

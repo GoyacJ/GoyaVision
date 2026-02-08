@@ -175,11 +175,17 @@ func (s *WorkflowScheduler) runWorkflow(workflowID uuid.UUID) {
 		s.UnscheduleWorkflow(workflowID)
 		return
 	}
+	if wf.CurrentRevisionID == nil || wf.CurrentRevision == 0 {
+		log.Printf("[WorkflowScheduler] runWorkflow: workflow %s has no active revision", workflowID)
+		return
+	}
 
 	task := &workflow.Task{
-		WorkflowID: wf.ID,
-		Status:     workflow.TaskStatusPending,
-		Progress:   0,
+		WorkflowID:         wf.ID,
+		WorkflowRevisionID: wf.CurrentRevisionID,
+		WorkflowRevision:   wf.CurrentRevision,
+		Status:             workflow.TaskStatusPending,
+		Progress:           0,
 	}
 
 	if err := s.repo.CreateTask(ctx, task); err != nil {
@@ -212,6 +218,9 @@ func (s *WorkflowScheduler) TriggerWorkflow(ctx context.Context, workflowID uuid
 	if !wf.IsEnabled() {
 		return nil, fmt.Errorf("workflow is not enabled")
 	}
+	if wf.CurrentRevisionID == nil || wf.CurrentRevision == 0 {
+		return nil, fmt.Errorf("workflow has no active revision")
+	}
 
 	var inputParams map[string]interface{}
 	if assetID != nil {
@@ -221,11 +230,13 @@ func (s *WorkflowScheduler) TriggerWorkflow(ctx context.Context, workflowID uuid
 	}
 
 	task := &workflow.Task{
-		WorkflowID:  wf.ID,
-		AssetID:     assetID,
-		Status:      workflow.TaskStatusPending,
-		Progress:    0,
-		InputParams: inputParams,
+		WorkflowID:         wf.ID,
+		WorkflowRevisionID: wf.CurrentRevisionID,
+		WorkflowRevision:   wf.CurrentRevision,
+		AssetID:            assetID,
+		Status:             workflow.TaskStatusPending,
+		Progress:           0,
+		InputParams:        inputParams,
 	}
 
 	if err := s.repo.CreateTask(ctx, task); err != nil {
@@ -281,12 +292,18 @@ func (s *WorkflowScheduler) triggerWorkflowsByEvent(ctx context.Context, assetID
 			log.Printf("[WorkflowScheduler] triggerWorkflowsByEvent: get workflow %s: %v", wf.ID, err)
 			continue
 		}
+		if wfWithNodes.CurrentRevisionID == nil || wfWithNodes.CurrentRevision == 0 {
+			log.Printf("[WorkflowScheduler] triggerWorkflowsByEvent: workflow %s has no active revision", wf.ID)
+			continue
+		}
 		task := &workflow.Task{
-			WorkflowID:  wfWithNodes.ID,
-			AssetID:     assetIDPtr,
-			Status:      workflow.TaskStatusPending,
-			Progress:    0,
-			InputParams: map[string]interface{}{"asset_id": assetID.String()},
+			WorkflowID:         wfWithNodes.ID,
+			WorkflowRevisionID: wfWithNodes.CurrentRevisionID,
+			WorkflowRevision:   wfWithNodes.CurrentRevision,
+			AssetID:            assetIDPtr,
+			Status:             workflow.TaskStatusPending,
+			Progress:           0,
+			InputParams:        map[string]interface{}{"asset_id": assetID.String()},
 		}
 		if err := s.repo.CreateTask(ctx, task); err != nil {
 			log.Printf("[WorkflowScheduler] triggerWorkflowsByEvent: create task workflow=%s: %v", wf.ID, err)

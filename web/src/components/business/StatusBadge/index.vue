@@ -138,11 +138,21 @@ const statusConfig = {
     variant: 'tonal' as const,
     icon: CircleClose,
     animated: false
+  },
+  neutral: {
+    text: '未知',
+    color: 'neutral' as const,
+    variant: 'tonal' as const,
+    icon: Warning,
+    animated: false
   }
 }
 
 // 当前状态配置
-const currentConfig = computed(() => statusConfig[props.status])
+const currentConfig = computed(() => {
+  const key = typeof props.status === 'string' ? props.status.toLowerCase() : ''
+  return statusConfig[key as keyof typeof statusConfig] || statusConfig.neutral
+})
 
 // 显示文本
 const displayText = computed(() => props.text || currentConfig.value.text)

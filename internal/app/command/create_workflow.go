@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"goyavision/internal/app/dto"
 	"goyavision/internal/app/port"
@@ -63,16 +64,23 @@ func (h *CreateWorkflowHandler) Handle(ctx context.Context, cmd dto.CreateWorkfl
 		if err != nil {
 			return apperr.InvalidInput(err.Error())
 		}
+		contextSpec, err := parseContextSpec(cmd.ContextSpec)
+		if err != nil {
+			return apperr.InvalidInput(err.Error())
+		}
 
 		wf := &workflow.Workflow{
-			Code:        cmd.Code,
-			Name:        cmd.Name,
-			Description: cmd.Description,
-			Version:     version,
-			TriggerType: cmd.TriggerType,
-			TriggerConf: triggerConf,
-			Status:      status,
-			Tags:        cmd.Tags,
+			Code:           cmd.Code,
+			Name:           cmd.Name,
+			Description:    cmd.Description,
+			Version:        version,
+			TriggerType:    cmd.TriggerType,
+			TriggerConf:    triggerConf,
+			ContextSpec:    contextSpec,
+			Status:         status,
+			Tags:           cmd.Tags,
+			Visibility:     cmd.Visibility,
+			VisibleRoleIDs: cmd.VisibleRoleIDs,
 		}
 
 		if err := repos.Workflows.Create(ctx, wf); err != nil {
@@ -118,6 +126,13 @@ func (h *CreateWorkflowHandler) Handle(ctx context.Context, cmd dto.CreateWorkfl
 		wfWithNodes, err := repos.Workflows.GetWithNodes(ctx, wf.ID)
 		if err != nil {
 			return apperr.Wrap(err, apperr.CodeDBError, "failed to get workflow with nodes")
+		}
+		if _, err := persistAndActivateWorkflowRevision(ctx, repos, wfWithNodes, 1); err != nil {
+			return err
+		}
+		wfWithNodes, err = repos.Workflows.GetWithNodes(ctx, wf.ID)
+		if err != nil {
+			return apperr.Wrap(err, apperr.CodeDBError, "failed to reload workflow with revision")
 		}
 		result = wfWithNodes
 		return nil
@@ -169,4 +184,61 @@ func parseEdgeCondition(raw map[string]interface{}) *workflow.EdgeCondition {
 		return nil
 	}
 	return &cond
+}
+
+func parseContextSpec(raw map[string]interface{}) (*workflow.ContextSpec, error) {
+	if len(raw) == 0 {
+		return nil, nil
+	}
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return nil, err
+	}
+	var spec workflow.ContextSpec
+	if err := json.Unmarshal(data, &spec); err != nil {
+		return nil, err
+	}
+	if err := validateContextSpec(&spec); err != nil {
+		return nil, err
+	}
+	return &spec, nil
+}
+
+func validateContextSpec(spec *workflow.ContextSpec) error {
+	if spec == nil {
+		return nil
+	}
+	validPolicies := map[string]bool{
+		workflow.SharedConflictReject:    true,
+		workflow.SharedConflictOverwrite: true,
+		workflow.SharedConflictMerge:     true,
+		workflow.SharedConflictAppend:    true,
+	}
+
+	for key, shared := range spec.SharedKeys {
+		path := strings.TrimSpace(key)
+		if path == "" {
+			return fmt.Errorf("context_spec.shared_keys contains empty key")
+		}
+		if strings.HasPrefix(path, "vars.") {
+			return fmt.Errorf("shared key %s is invalid: vars.* cannot be declared as shared", path)
+		}
+		if !strings.HasPrefix(path, "shared.") {
+			return fmt.Errorf("shared key %s is invalid: must start with shared.", path)
+		}
+		if !shared.CAS {
+			return fmt.Errorf("shared key %s must enable cas", path)
+		}
+		if !validPolicies[shared.ConflictPolicy] {
+			return fmt.Errorf("shared key %s has invalid conflict_policy", path)
+		}
+	}
+
+	for key := range spec.Vars {
+		if strings.TrimSpace(key) == "" {
+			return fmt.Errorf("context_spec.vars contains empty key")
+		}
+	}
+
+	return nil
 }

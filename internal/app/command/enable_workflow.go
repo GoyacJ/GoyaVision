@@ -36,6 +36,11 @@ func (h *EnableWorkflowHandler) Handle(ctx context.Context, cmd dto.EnableWorkfl
 				return apperr.InvalidInput("workflow must have at least one node to enable")
 			}
 			wf.Status = workflow.StatusEnabled
+			if wf.CurrentRevisionID == nil || wf.CurrentRevision == 0 {
+				if _, err := persistAndActivateWorkflowRevision(ctx, repos, wf, 1); err != nil {
+					return err
+				}
+			}
 		} else {
 			wf.Status = workflow.StatusDisabled
 		}
@@ -43,8 +48,11 @@ func (h *EnableWorkflowHandler) Handle(ctx context.Context, cmd dto.EnableWorkfl
 		if err := repos.Workflows.Update(ctx, wf); err != nil {
 			return apperr.Wrap(err, apperr.CodeDBError, "failed to update workflow status")
 		}
-
-		result = wf
+		reloaded, err := repos.Workflows.GetWithNodes(ctx, wf.ID)
+		if err != nil {
+			return apperr.Wrap(err, apperr.CodeDBError, "failed to reload workflow")
+		}
+		result = reloaded
 		return nil
 	})
 

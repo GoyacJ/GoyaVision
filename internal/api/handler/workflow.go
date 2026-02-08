@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 
 	"goyavision/internal/api/dto"
@@ -18,9 +19,12 @@ func RegisterWorkflowRoutes(public *echo.Group, protected *echo.Group, h *Handle
 	// Public
 	public.GET("/workflows", handler.List)
 	public.GET("/workflows/:id", handler.Get)
+	public.GET("/workflows/:id/revisions", handler.ListRevisions)
+	public.GET("/workflows/:id/revisions/:revision", handler.GetRevision)
 
 	// Protected
 	protected.POST("/workflows", handler.Create)
+	protected.POST("/workflows/:id/revisions", handler.CreateRevision)
 	protected.PUT("/workflows/:id", handler.Update)
 	protected.DELETE("/workflows/:id", handler.Delete)
 	protected.POST("/workflows/:id/enable", handler.Enable)
@@ -126,6 +130,7 @@ func (h *workflowHandler) Create(c echo.Context) error {
 		Version:        req.Version,
 		TriggerType:    workflow.TriggerType(req.TriggerType),
 		TriggerConf:    req.TriggerConf,
+		ContextSpec:    req.ContextSpec,
 		Status:         status,
 		Tags:           req.Tags,
 		Nodes:          nodes,
@@ -203,6 +208,7 @@ func (h *workflowHandler) Update(c echo.Context) error {
 		Name:           req.Name,
 		Description:    req.Description,
 		TriggerConf:    req.TriggerConf,
+		ContextSpec:    req.ContextSpec,
 		Tags:           req.Tags,
 		Nodes:          nodes,
 		Edges:          edges,
@@ -296,4 +302,73 @@ func (h *workflowHandler) Trigger(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusAccepted, dto.TaskToResponse(task))
+}
+
+func (h *workflowHandler) ListRevisions(c echo.Context) error {
+	workflowID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid workflow id")
+	}
+
+	var query dto.WorkflowRevisionListQuery
+	if err := c.Bind(&query); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid query parameters")
+	}
+
+	result, err := h.h.ListWorkflowRevisions.Handle(c.Request().Context(), appdto.ListWorkflowRevisionsQuery{
+		WorkflowID: workflowID,
+		Pagination: appdto.Pagination{
+			Limit:  query.Limit,
+			Offset: query.Offset,
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, dto.WorkflowRevisionListResponse{
+		Items: dto.WorkflowRevisionsToResponse(result.Items),
+		Total: result.Total,
+	})
+}
+
+func (h *workflowHandler) GetRevision(c echo.Context) error {
+	workflowID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid workflow id")
+	}
+	revNo, err := strconv.ParseInt(c.Param("revision"), 10, 64)
+	if err != nil || revNo <= 0 {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid revision")
+	}
+
+	rev, err := h.h.GetWorkflowRevision.Handle(c.Request().Context(), appdto.GetWorkflowRevisionQuery{
+		WorkflowID: workflowID,
+		Revision:   revNo,
+	})
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, dto.WorkflowRevisionToResponse(rev))
+}
+
+func (h *workflowHandler) CreateRevision(c echo.Context) error {
+	workflowID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid workflow id")
+	}
+
+	var req dto.WorkflowRevisionCreateReq
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
+	}
+
+	rev, err := h.h.CreateWorkflowRevision.Handle(c.Request().Context(), appdto.CreateWorkflowRevisionCommand{
+		WorkflowID: workflowID,
+		Activate:   req.Activate,
+	})
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusCreated, dto.WorkflowRevisionToResponse(rev))
 }

@@ -21,6 +21,7 @@ export type StatusType =
   | 'offline'      // 离线
   | 'enabled'      // 启用
   | 'disabled'     // 禁用
+  | 'neutral'      // 未知/中性
 
 /**
  * StatusBadge Props

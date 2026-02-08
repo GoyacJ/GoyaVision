@@ -2,6 +2,8 @@ package dto
 
 import (
 	"github.com/google/uuid"
+	"goyavision/internal/domain/agent"
+	"goyavision/internal/domain/algorithm"
 	"goyavision/internal/domain/identity"
 	"goyavision/internal/domain/media"
 	"goyavision/internal/domain/operator"
@@ -224,6 +226,76 @@ type SetOperatorDependenciesCommand struct {
 	Dependencies []DependencyItemInput
 }
 
+// Algorithm Commands
+
+type AlgorithmImplementationInput struct {
+	Name         string
+	Type         algorithm.ImplementationType
+	BindingRef   string
+	Config       map[string]interface{}
+	LatencyMS    int
+	CostScore    float64
+	QualityScore float64
+	Tier         string
+	IsDefault    bool
+}
+
+type AlgorithmEvaluationInput struct {
+	DatasetRef       string
+	Metrics          map[string]float64
+	ReportArtifactID *uuid.UUID
+	Summary          string
+}
+
+type AlgorithmVersionInput struct {
+	Version         string
+	Status          algorithm.VersionStatus
+	SelectionPolicy algorithm.SelectionPolicy
+	Implementations []AlgorithmImplementationInput
+	Evaluations     []AlgorithmEvaluationInput
+}
+
+type CreateAlgorithmCommand struct {
+	Code           string
+	Name           string
+	Description    string
+	Scenario       string
+	Status         algorithm.Status
+	Tags           []string
+	Visibility     algorithm.Visibility
+	VisibleRoleIDs []string
+	InitialVersion *AlgorithmVersionInput
+}
+
+type UpdateAlgorithmCommand struct {
+	ID             uuid.UUID
+	Name           *string
+	Description    *string
+	Scenario       *string
+	Status         *algorithm.Status
+	Tags           []string
+	Visibility     *algorithm.Visibility
+	VisibleRoleIDs []string
+}
+
+type DeleteAlgorithmCommand struct {
+	ID uuid.UUID
+}
+
+type CreateAlgorithmVersionCommand struct {
+	AlgorithmID     uuid.UUID
+	Version         string
+	Status          algorithm.VersionStatus
+	SelectionPolicy algorithm.SelectionPolicy
+	Implementations []AlgorithmImplementationInput
+	Evaluations     []AlgorithmEvaluationInput
+}
+
+type PublishAlgorithmVersionCommand struct {
+	AlgorithmID uuid.UUID
+	VersionID   uuid.UUID
+}
+
 // Workflow Commands
 
 type WorkflowNodeInput struct {
@@ -247,6 +319,7 @@ type CreateWorkflowCommand struct {
 	Version        string
 	TriggerType    workflow.TriggerType
 	TriggerConf    map[string]interface{}
+	ContextSpec    map[string]interface{}
 	Status         workflow.Status
 	Tags           []string
 	Nodes          []WorkflowNodeInput
@@ -260,6 +333,7 @@ type UpdateWorkflowCommand struct {
 	Name           *string
 	Description    *string
 	TriggerConf    map[string]interface{}
+	ContextSpec    map[string]interface{}
 	Status         *workflow.Status
 	Tags           []string
 	Nodes          []WorkflowNodeInput
@@ -275,6 +349,11 @@ type DeleteWorkflowCommand struct {
 type EnableWorkflowCommand struct {
 	ID      uuid.UUID
 	Enabled bool
+}
+
+type CreateWorkflowRevisionCommand struct {
+	WorkflowID uuid.UUID
+	Activate   bool
 }
 
 // Task Commands
@@ -312,6 +391,26 @@ type FailTaskCommand struct {
 
 type CancelTaskCommand struct {
 	ID uuid.UUID
+}
+
+type CreateTaskContextSnapshotCommand struct {
+	TaskID  uuid.UUID
+	Trigger string
+}
+
+type CreateAgentSessionCommand struct {
+	TaskID uuid.UUID
+	Budget map[string]interface{}
+}
+
+type StopAgentSessionCommand struct {
+	SessionID uuid.UUID
+	Status    agent.SessionStatus
+}
+
+type RunAgentSessionStepCommand struct {
+	SessionID  uuid.UUID
+	MaxActions int
 }
 
 // User Management Commands

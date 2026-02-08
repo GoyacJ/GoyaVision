@@ -14,6 +14,7 @@
       </div>
       
       <div class="flex items-center gap-4" v-if="task">
+        <el-button @click="openRuntimeDialog">上下文/事件</el-button>
         <div class="flex flex-col items-end">
           <div class="text-sm text-gray-500">进度</div>
           <div class="w-32">
@@ -168,6 +169,59 @@
         </div>
       </div>
     </div>
+
+    <el-dialog v-model="showRuntimeDialog" title="运行上下文与事件" width="920px">
+      <div v-loading="runtimeLoading" class="space-y-5">
+        <el-descriptions v-if="contextState" :column="3" border>
+          <el-descriptions-item label="任务ID">{{ contextState.task_id }}</el-descriptions-item>
+          <el-descriptions-item label="上下文版本">{{ contextState.version }}</el-descriptions-item>
+          <el-descriptions-item label="更新时间">{{ formatDateTime(contextState.updated_at) }}</el-descriptions-item>
+        </el-descriptions>
+
+        <el-tabs>
+          <el-tab-pane label="ContextState">
+            <pre class="max-h-72 overflow-auto rounded bg-gray-50 p-3 text-xs leading-5">{{ formatPrettyJSON(contextState?.data || {}) }}</pre>
+          </el-tab-pane>
+          <el-tab-pane label="Patch日志">
+            <el-timeline v-if="contextPatches.length > 0">
+              <el-timeline-item
+                v-for="patch in contextPatches"
+                :key="patch.id"
+                :timestamp="formatDateTime(patch.created_at)"
+                placement="top"
+              >
+                <div class="text-sm font-medium">
+                  {{ patch.writer_node_key || 'system' }}: v{{ patch.before_version }} -> v{{ patch.after_version }}
+                </div>
+                <pre class="mt-2 max-h-40 overflow-auto rounded bg-gray-50 p-2 text-xs leading-5">{{ formatPrettyJSON(patch.diff || {}) }}</pre>
+              </el-timeline-item>
+            </el-timeline>
+            <div v-else class="text-sm text-gray-400">暂无 patch 记录</div>
+          </el-tab-pane>
+          <el-tab-pane label="RunEvents">
+            <el-table :data="taskEvents" border size="small">
+              <el-table-column prop="created_at" label="时间" width="180">
+                <template #default="{ row }">
+                  {{ formatDateTime(row.created_at) }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="event_type" label="事件类型" width="150" />
+              <el-table-column prop="source" label="来源" width="140" />
+              <el-table-column prop="node_key" label="节点" width="120" />
+              <el-table-column label="载荷">
+                <template #default="{ row }">
+                  <pre class="max-h-28 overflow-auto rounded bg-gray-50 p-2 text-xs leading-5">{{ formatPrettyJSON(row.payload || {}) }}</pre>
+                </template>
+              </el-table-column>
+            </el-table>
+          </el-tab-pane>
+        </el-tabs>
+      </div>
+      <template #footer>
+        <el-button @click="showRuntimeDialog = false">关闭</el-button>
+        <el-button :loading="runtimeLoading" @click="loadRuntimeData">刷新</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -198,6 +252,11 @@ const task = ref<any>(null)
 const elements = ref<any[]>([])
 const selectedNode = ref<any>(null)
 const nodeArtifacts = ref<any[]>([])
+const showRuntimeDialog = ref(false)
+const runtimeLoading = ref(false)
+const contextState = ref<any>(null)
+const contextPatches = ref<any[]>([])
+const taskEvents = ref<any[]>([])
 
 const { nodeExecutions, status, progress, connect } = useTaskProgress(taskId)
 
@@ -235,11 +294,13 @@ onMounted(async () => {
 
   // 1. Get Task
   const taskRes = await taskApi.get(taskId.value, true)
-  task.value = taskRes
+  const resolvedTask = unwrapPayload<any>(taskRes)
+  task.value = resolvedTask
   
   // 2. Get Workflow Structure
-  if (taskRes.workflow_id) {
-    const wf = await workflowApi.get(taskRes.workflow_id, true)
+  if (resolvedTask.workflow_id) {
+    const wfRes = await workflowApi.get(resolvedTask.workflow_id, true)
+    const wf = unwrapPayload<any>(wfRes)
     
     const flowNodes = (wf.nodes || []).map((node: any) => ({
       id: node.node_key,
@@ -264,6 +325,7 @@ onMounted(async () => {
 
   // 3. Connect SSE
   connect()
+  await loadRuntimeData()
 })
 
 // Helpers
@@ -271,6 +333,51 @@ const selectedNodeExec = computed(() => {
   if (!selectedNode.value) return null
   return nodeExecutions.value.find(e => e.node_key === selectedNode.value.id)
 })
+
+function openRuntimeDialog() {
+  showRuntimeDialog.value = true
+  loadRuntimeData()
+}
+
+async function loadRuntimeData() {
+  if (!taskId.value) return
+  runtimeLoading.value = true
+  try {
+    const [ctxRes, patchRes, eventRes] = await Promise.all([
+      taskApi.getContext(taskId.value),
+      taskApi.listContextPatches(taskId.value, { limit: 50, offset: 0 }),
+      taskApi.listEvents(taskId.value, { limit: 100, offset: 0 }),
+    ])
+
+    const ctxPayload = unwrapPayload<any>(ctxRes)
+    const patchPayload = unwrapPayload<any>(patchRes)
+    const eventPayload = unwrapPayload<any>(eventRes)
+
+    contextState.value = ctxPayload || null
+    contextPatches.value = patchPayload?.items || []
+    taskEvents.value = eventPayload?.items || []
+  } catch (error) {
+    console.error('Failed to load runtime context/events', error)
+  } finally {
+    runtimeLoading.value = false
+  }
+}
+
+function unwrapPayload<T>(response: any): T {
+  if (!response || typeof response !== 'object') {
+    return response as T
+  }
+
+  if ('data' in response) {
+    const level1 = (response as any).data
+    if (level1 && typeof level1 === 'object' && 'data' in level1) {
+      return level1.data as T
+    }
+    return level1 as T
+  }
+
+  return response as T
+}
 
 watch(selectedNode, async (node) => {
   if (!node) {
@@ -284,7 +391,8 @@ watch(selectedNode, async (node) => {
       node_key: node.id,
       page_size: 100
     })
-    nodeArtifacts.value = res.items
+    const payload = unwrapPayload<any>(res)
+    nodeArtifacts.value = payload.items || []
   } catch (e) {
     console.error('Failed to load artifacts', e)
   }
@@ -364,6 +472,19 @@ function formatSize(bytes?: number) {
 function formatDate(dateStr?: string) {
   if (!dateStr) return '-'
   return new Date(dateStr).toLocaleTimeString()
+}
+
+function formatDateTime(dateStr?: string) {
+  if (!dateStr) return '-'
+  return new Date(dateStr).toLocaleString()
+}
+
+function formatPrettyJSON(value: any) {
+  try {
+    return JSON.stringify(value || {}, null, 2)
+  } catch {
+    return '{}'
+  }
 }
 
 function mapStatus(status: string) {

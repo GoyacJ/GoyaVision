@@ -11,22 +11,28 @@ import (
 
 func WorkflowToModel(w *workflow.Workflow) *model.WorkflowModel {
 	m := &model.WorkflowModel{
-		ID:             w.ID,
-		TenantID:       w.TenantID,
-		OwnerID:        w.OwnerID,
-		Visibility:     int(w.Visibility),
-		Code:           w.Code,
-		Name:           w.Name,
-		Description: w.Description,
-		Version:     w.Version,
-		TriggerType: string(w.TriggerType),
-		Status:      string(w.Status),
-		CreatedAt:   w.CreatedAt,
-		UpdatedAt:   w.UpdatedAt,
+		ID:                w.ID,
+		TenantID:          w.TenantID,
+		OwnerID:           w.OwnerID,
+		Visibility:        int(w.Visibility),
+		Code:              w.Code,
+		Name:              w.Name,
+		Description:       w.Description,
+		Version:           w.Version,
+		CurrentRevisionID: w.CurrentRevisionID,
+		CurrentRevision:   w.CurrentRevision,
+		TriggerType:       string(w.TriggerType),
+		Status:            string(w.Status),
+		CreatedAt:         w.CreatedAt,
+		UpdatedAt:         w.UpdatedAt,
 	}
 	if w.TriggerConf != nil {
 		data, _ := json.Marshal(w.TriggerConf)
 		m.TriggerConf = datatypes.JSON(data)
+	}
+	if w.ContextSpec != nil {
+		data, _ := json.Marshal(w.ContextSpec)
+		m.ContextSpec = datatypes.JSON(data)
 	}
 	if w.Tags != nil {
 		data, _ := json.Marshal(w.Tags)
@@ -47,23 +53,31 @@ func WorkflowToModel(w *workflow.Workflow) *model.WorkflowModel {
 
 func WorkflowToDomain(m *model.WorkflowModel) *workflow.Workflow {
 	w := &workflow.Workflow{
-		ID:             m.ID,
-		TenantID:       m.TenantID,
-		OwnerID:        m.OwnerID,
-		Visibility:     workflow.Visibility(m.Visibility),
-		Code:           m.Code,
-		Name:           m.Name,
-		Description: m.Description,
-		Version:     m.Version,
-		TriggerType: workflow.TriggerType(m.TriggerType),
-		Status:      workflow.Status(m.Status),
-		CreatedAt:   m.CreatedAt,
-		UpdatedAt:   m.UpdatedAt,
+		ID:                m.ID,
+		TenantID:          m.TenantID,
+		OwnerID:           m.OwnerID,
+		Visibility:        workflow.Visibility(m.Visibility),
+		Code:              m.Code,
+		Name:              m.Name,
+		Description:       m.Description,
+		Version:           m.Version,
+		CurrentRevisionID: m.CurrentRevisionID,
+		CurrentRevision:   m.CurrentRevision,
+		TriggerType:       workflow.TriggerType(m.TriggerType),
+		Status:            workflow.Status(m.Status),
+		CreatedAt:         m.CreatedAt,
+		UpdatedAt:         m.UpdatedAt,
 	}
 	if m.TriggerConf != nil {
 		var tc workflow.TriggerConfig
 		if err := json.Unmarshal(m.TriggerConf, &tc); err == nil {
 			w.TriggerConf = &tc
+		}
+	}
+	if m.ContextSpec != nil {
+		var cs workflow.ContextSpec
+		if err := json.Unmarshal(m.ContextSpec, &cs); err == nil {
+			w.ContextSpec = &cs
 		}
 	}
 	if m.Tags != nil {
@@ -163,19 +177,22 @@ func EdgeToDomain(m *model.WorkflowEdgeModel) *workflow.Edge {
 
 func TaskToModel(t *workflow.Task) *model.TaskModel {
 	m := &model.TaskModel{
-		ID:                t.ID,
-		TenantID:          t.TenantID,
-		TriggeredByUserID: t.TriggeredByUserID,
-		WorkflowID:        t.WorkflowID,
-		AssetID:           t.AssetID,
-		Status:      string(t.Status),
-		Progress:    t.Progress,
-		CurrentNode: t.CurrentNode,
-		Error:       t.Error,
-		StartedAt:   t.StartedAt,
-		CompletedAt: t.CompletedAt,
-		CreatedAt:   t.CreatedAt,
-		UpdatedAt:   t.UpdatedAt,
+		ID:                 t.ID,
+		TenantID:           t.TenantID,
+		TriggeredByUserID:  t.TriggeredByUserID,
+		WorkflowID:         t.WorkflowID,
+		WorkflowRevisionID: t.WorkflowRevisionID,
+		WorkflowRevision:   t.WorkflowRevision,
+		AssetID:            t.AssetID,
+		Status:             string(t.Status),
+		Progress:           t.Progress,
+		CurrentNode:        t.CurrentNode,
+		ContextVersion:     t.ContextVersion,
+		Error:              t.Error,
+		StartedAt:          t.StartedAt,
+		CompletedAt:        t.CompletedAt,
+		CreatedAt:          t.CreatedAt,
+		UpdatedAt:          t.UpdatedAt,
 	}
 	if t.InputParams != nil {
 		data, _ := json.Marshal(t.InputParams)
@@ -190,19 +207,22 @@ func TaskToModel(t *workflow.Task) *model.TaskModel {
 
 func TaskToDomain(m *model.TaskModel) *workflow.Task {
 	t := &workflow.Task{
-		ID:                m.ID,
-		TenantID:          m.TenantID,
-		TriggeredByUserID: m.TriggeredByUserID,
-		WorkflowID:        m.WorkflowID,
-		AssetID:           m.AssetID,
-		Status:      workflow.TaskStatus(m.Status),
-		Progress:    m.Progress,
-		CurrentNode: m.CurrentNode,
-		Error:       m.Error,
-		StartedAt:   m.StartedAt,
-		CompletedAt: m.CompletedAt,
-		CreatedAt:   m.CreatedAt,
-		UpdatedAt:   m.UpdatedAt,
+		ID:                 m.ID,
+		TenantID:           m.TenantID,
+		TriggeredByUserID:  m.TriggeredByUserID,
+		WorkflowID:         m.WorkflowID,
+		WorkflowRevisionID: m.WorkflowRevisionID,
+		WorkflowRevision:   m.WorkflowRevision,
+		AssetID:            m.AssetID,
+		Status:             workflow.TaskStatus(m.Status),
+		Progress:           m.Progress,
+		CurrentNode:        m.CurrentNode,
+		ContextVersion:     m.ContextVersion,
+		Error:              m.Error,
+		StartedAt:          m.StartedAt,
+		CompletedAt:        m.CompletedAt,
+		CreatedAt:          m.CreatedAt,
+		UpdatedAt:          m.UpdatedAt,
 	}
 	if m.InputParams != nil {
 		_ = json.Unmarshal(m.InputParams, &t.InputParams)
@@ -247,4 +267,34 @@ func ArtifactToDomain(m *model.ArtifactModel) *workflow.Artifact {
 		}
 	}
 	return a
+}
+
+func WorkflowRevisionToModel(rev *workflow.WorkflowRevision) *model.WorkflowRevisionModel {
+	m := &model.WorkflowRevisionModel{
+		ID:         rev.ID,
+		WorkflowID: rev.WorkflowID,
+		Revision:   rev.Revision,
+		Status:     string(rev.Status),
+		CreatedAt:  rev.CreatedAt,
+		UpdatedAt:  rev.UpdatedAt,
+	}
+	if b, err := json.Marshal(rev.Definition); err == nil {
+		m.Definition = datatypes.JSON(b)
+	}
+	return m
+}
+
+func WorkflowRevisionToDomain(m *model.WorkflowRevisionModel) *workflow.WorkflowRevision {
+	rev := &workflow.WorkflowRevision{
+		ID:         m.ID,
+		WorkflowID: m.WorkflowID,
+		Revision:   m.Revision,
+		Status:     workflow.RevisionStatus(m.Status),
+		CreatedAt:  m.CreatedAt,
+		UpdatedAt:  m.UpdatedAt,
+	}
+	if len(m.Definition) > 0 {
+		_ = json.Unmarshal(m.Definition, &rev.Definition)
+	}
+	return rev
 }

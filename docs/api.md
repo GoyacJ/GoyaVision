@@ -1,85 +1,169 @@
-# GoyaVision V1.0 API 文档
+# GoyaVision API 文档（V1.0）
 
 ## 概述
 
-GoyaVision API 遵循 RESTful 设计原则，所有 API 端点以 `/api/v1` 为前缀。
-
-## 认证
-
-使用 JWT (JSON Web Token) 进行认证。Access Token 需携带在 `Authorization` 头中：
-
-```http
-Authorization: Bearer <access_token>
-```
-
-- **Access Token**: `token_type=access`，有效期 2 小时。
-- **Refresh Token**: `token_type=refresh`，有效期 7 天。
+- 基础前缀：`/api/v1`
+- 认证方式：JWT Bearer Token（`Authorization: Bearer <token>`）
+- 公开与受保护接口混合存在：部分查询接口可匿名访问，写操作需登录
 
 ## 通用约定
 
-### 多租户与权限
-所有核心资源 DTO 包含以下公共字段：
-- `tenant_id`: 归属租户 ID。
-- `owner_id`: 创建者 ID。
-- `visibility`: 可见性级别（0: 私有, 1: 租户公开, 2: 系统公开）。
+- 主要资源支持 `limit/offset` 分页参数。
+- 多租户核心字段：`tenant_id`, `owner_id`, `visibility`。
+- 运行时相关接口统一使用 `task_id` / `session_id` 追踪。
 
-### 错误响应
-API 统一返回错误信封：
+## 认证与用户
 
-```json
-{
-  "code": 40000,
-  "message": "错误详情",
-  "request_id": "req-xxx",
-  "timestamp": 1700000000
-}
-```
+- `POST /api/v1/auth/login`
+- `POST /api/v1/auth/refresh`
+- `POST /api/v1/auth/logout`
+- `GET /api/v1/auth/profile`
+- `PUT /api/v1/auth/password`
 
-## API 端点
+## 系统配置
 
-### 认证 (Auth)
-- `POST /auth/login`: 登录获取双 Token。
-- `POST /auth/refresh`: 使用 Refresh Token 刷新。
-- `GET /auth/profile`: 获取当前用户信息、角色、权限与菜单。
-- `GET /auth/oauth/login`: OAuth 三方登录入口。
+- `GET /api/v1/public/config`
+- `PUT /api/v1/system/config`
 
-### 媒体源 (Sources)
-- `GET /sources`: 列出媒体源（集成 MediaMTX 状态）。
-- `POST /sources`: 创建媒体源（支持 pull/push 类型）。
-- `GET /sources/:id/preview`: 获取多协议预览地址（HLS/RTSP/RTMP/WebRTC）。
+## 资产与媒体源
 
-### 媒体资产 (Assets)
-- `GET /assets`: 搜索与列出资产（支持 type/source_type/tags/visibility 过滤）。
-- `POST /assets`: 接入新资产（支持文件上传与 URL 接入）。
-- `GET /assets/:id/children`: 获取派生资产列表。
+### Media Sources
+- `GET /api/v1/sources`
+- `GET /api/v1/sources/:id`
+- `POST /api/v1/sources`
+- `PUT /api/v1/sources/:id`
+- `DELETE /api/v1/sources/:id`
 
-### 算子管理 (Operators)
-- `POST /operators`: 创建算子基础信息。
-- `POST /operators/:id/publish`: 发布算子（触发 Schema 与依赖门禁校验）。
-- `POST /operators/:id/test`: 连通性测试（真实执行器试运行）。
+### Media Assets
+- `GET /api/v1/assets`
+- `GET /api/v1/assets/:id`
+- `GET /api/v1/assets/:id/children`
+- `GET /api/v1/assets/tags`
+- `POST /api/v1/assets`
+- `PUT /api/v1/assets/:id`
+- `DELETE /api/v1/assets/:id`
 
-#### 版本管理
-- `GET /operators/:id/versions`: 列出所有版本。
-- `POST /operators/:id/versions`: 创建新版本（定义 ExecMode 与 ExecConfig）。
-- `POST /operators/:id/versions/activate`: 激活指定版本为生产版本。
+## 算子中心
 
-#### MCP 生态集成
-- `GET /operators/mcp/servers`: 列出已连接的 MCP 服务。
-- `GET /operators/mcp/servers/:id/tools`: 浏览工具列表。
-- `POST /operators/mcp/install`: 将 MCP Tool 直接安装为系统算子。
-- `POST /operators/mcp/sync-templates`: 从 MCP 同步市场模板。
+### Operators
+- `GET /api/v1/operators`
+- `GET /api/v1/operators/:id`
+- `POST /api/v1/operators`
+- `PUT /api/v1/operators/:id`
+- `DELETE /api/v1/operators/:id`
+- `POST /api/v1/operators/:id/publish`
+- `POST /api/v1/operators/:id/deprecate`
+- `POST /api/v1/operators/:id/test`
+- `POST /api/v1/operators/validate-schema`
+- `POST /api/v1/operators/validate-connection`
 
-### 工作流与任务 (Workflows & Tasks)
-- `POST /workflows`: 创建 DAG 工作流（触发连接兼容性校验）。
-- `POST /workflows/:id/trigger`: 手动触发工作流执行。
-- `GET /tasks`: 任务列表与统计。
-- `GET /tasks/:id`: 任务详情（含 **NodeExecutions** 节点状态追踪）。
-- `GET /tasks/:id/progress/stream`: **SSE** 实时进度推送。
+### Operator Versions / Templates / Dependencies
+- `GET /api/v1/operators/:id/versions`
+- `GET /api/v1/operators/:id/versions/:version_id`
+- `POST /api/v1/operators/:id/versions`
+- `POST /api/v1/operators/:id/versions/activate`
+- `POST /api/v1/operators/:id/versions/rollback`
+- `POST /api/v1/operators/:id/versions/archive`
+- `GET /api/v1/operators/templates`
+- `GET /api/v1/operators/templates/:template_id`
+- `POST /api/v1/operators/templates/install`
+- `GET /api/v1/operators/:id/dependencies`
+- `GET /api/v1/operators/:id/dependencies/check`
+- `PUT /api/v1/operators/:id/dependencies`
 
-### 系统配置 (System Config)
-- `GET /system/configs`: 按分类获取系统配置。
-- `PUT /system/configs`: 批量更新系统参数。
+### MCP
+- `GET /api/v1/operators/mcp/servers`
+- `GET /api/v1/operators/mcp/servers/:id/tools`
+- `GET /api/v1/operators/mcp/servers/:id/tools/:tool/preview`
+- `POST /api/v1/operators/mcp/install`
+- `POST /api/v1/operators/mcp/sync-templates`
 
----
+## 算法库
+
+- `GET /api/v1/algorithms`
+- `GET /api/v1/algorithms/:id`
+- `POST /api/v1/algorithms`
+- `PUT /api/v1/algorithms/:id`
+- `DELETE /api/v1/algorithms/:id`
+- `POST /api/v1/algorithms/:id/versions`
+- `POST /api/v1/algorithms/:id/versions/:version_id/publish`
+
+## AI 模型
+
+- `GET /api/v1/ai-models`
+- `GET /api/v1/ai-models/:id`
+- `POST /api/v1/ai-models`
+- `PUT /api/v1/ai-models/:id`
+- `DELETE /api/v1/ai-models/:id`
+- `POST /api/v1/ai-models/:id/test-connection`
+
+## 工作流与任务
+
+### Workflows
+- `GET /api/v1/workflows`
+- `GET /api/v1/workflows/:id`
+- `POST /api/v1/workflows`
+- `PUT /api/v1/workflows/:id`
+- `DELETE /api/v1/workflows/:id`
+- `POST /api/v1/workflows/:id/enable`
+- `POST /api/v1/workflows/:id/disable`
+- `POST /api/v1/workflows/:id/trigger`
+
+### Workflow Revisions
+- `GET /api/v1/workflows/:id/revisions`
+- `GET /api/v1/workflows/:id/revisions/:revision`
+- `POST /api/v1/workflows/:id/revisions`
+
+### Tasks
+- `GET /api/v1/tasks`
+- `GET /api/v1/tasks/stats`
+- `GET /api/v1/tasks/:id`
+- `POST /api/v1/tasks`
+- `PUT /api/v1/tasks/:id`
+- `DELETE /api/v1/tasks/:id`
+- `POST /api/v1/tasks/:id/start`
+- `POST /api/v1/tasks/:id/complete`
+- `POST /api/v1/tasks/:id/fail`
+- `POST /api/v1/tasks/:id/cancel`
+- `GET /api/v1/tasks/:id/progress/stream`（SSE）
+
+### Task Context / Events
+- `GET /api/v1/tasks/:id/context`
+- `GET /api/v1/tasks/:id/context/patches`
+- `POST /api/v1/tasks/:id/context/snapshot`
+- `GET /api/v1/tasks/:id/events`
+
+## Agent Run Loop
+
+- `GET /api/v1/agent/sessions`
+- `GET /api/v1/agent/sessions/:id`
+- `GET /api/v1/agent/sessions/:id/events`
+- `POST /api/v1/agent/sessions`
+- `POST /api/v1/agent/sessions/:id/run`
+- `POST /api/v1/agent/sessions/:id/stop`
+
+## 产物与文件
+
+### Artifacts
+- `GET /api/v1/artifacts`
+- `GET /api/v1/artifacts/:id`
+- `POST /api/v1/artifacts`
+- `DELETE /api/v1/artifacts/:id`
+- `GET /api/v1/tasks/:task_id/artifacts`
+
+### Files
+- `GET /api/v1/files`
+- `POST /api/v1/files`
+- `GET /api/v1/files/:id`
+- `PUT /api/v1/files/:id`
+- `DELETE /api/v1/files/:id`
+- `GET /api/v1/files/:id/download`
+
+## 管理接口
+
+- Users: `GET/POST/PUT/DELETE /api/v1/users...`
+- Roles: `GET/POST/PUT/DELETE /api/v1/roles...`
+- Menus: `GET/POST/PUT/DELETE /api/v1/menus...`
+- Tenants: `GET/POST/PUT/DELETE /api/v1/tenants...`
 
 最后更新：2026-02-08

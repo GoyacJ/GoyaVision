@@ -5,10 +5,13 @@ import type { MediaAsset } from './asset'
 export interface Task {
   id: string
   workflow_id: string
+  workflow_revision_id?: string
+  workflow_revision?: number
   asset_id?: string
   status: 'pending' | 'running' | 'success' | 'failed' | 'cancelled'
   progress: number
   current_node?: string
+  context_version?: number
   input_params?: Record<string, any>
   error?: string
   started_at?: string
@@ -48,6 +51,48 @@ export interface TaskStats {
   success: number
   failed: number
   cancelled: number
+}
+
+export interface TaskContext {
+  task_id: string
+  version: number
+  data?: Record<string, any>
+  updated_at: string
+}
+
+export interface TaskContextPatch {
+  id: string
+  task_id: string
+  writer_node_key: string
+  before_version: number
+  after_version: number
+  diff: {
+    set?: Record<string, any>
+    unset?: string[]
+  }
+  created_at: string
+}
+
+export interface TaskContextPatchListResponse {
+  items: TaskContextPatch[]
+  total: number
+}
+
+export interface TaskRunEvent {
+  id: string
+  task_id: string
+  session_id?: string
+  event_type: string
+  source: string
+  node_key?: string
+  tool_name?: string
+  payload?: Record<string, any>
+  created_at: string
+}
+
+export interface TaskRunEventListResponse {
+  items: TaskRunEvent[]
+  total: number
 }
 
 export interface TaskListResponse {
@@ -96,5 +141,21 @@ export const taskApi = {
 
   getStats() {
     return apiClient.get<TaskStats>('/tasks/stats')
+  },
+
+  getContext(id: string) {
+    return apiClient.get<TaskContext>(`/tasks/${id}/context`)
+  },
+
+  listContextPatches(id: string, params?: { limit?: number; offset?: number }) {
+    return apiClient.get<TaskContextPatchListResponse>(`/tasks/${id}/context/patches`, { params })
+  },
+
+  createContextSnapshot(id: string, trigger: string = 'manual') {
+    return apiClient.post(`/tasks/${id}/context/snapshot`, { trigger })
+  },
+
+  listEvents(id: string, params?: { source?: string; node_key?: string; limit?: number; offset?: number }) {
+    return apiClient.get<TaskRunEventListResponse>(`/tasks/${id}/events`, { params })
   }
 }

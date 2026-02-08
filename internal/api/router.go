@@ -13,8 +13,8 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
-	"gorm.io/gorm"
 	"github.com/labstack/echo/v4/middleware"
+	"gorm.io/gorm"
 )
 
 func NewHandlers(
@@ -85,8 +85,10 @@ func RegisterRouter(e *echo.Echo, h *handler.Handlers, webFS fs.FS) {
 	handler.RegisterUpload(api, h)
 	handler.RegisterFile(api, h)
 	handler.RegisterOperatorRoutes(optionalApi, api, h)
+	handler.RegisterAlgorithmRoutes(optionalApi, api, h)
 	handler.RegisterWorkflowRoutes(optionalApi, api, h)
 	handler.RegisterTaskRoutes(optionalApi, api, h)
+	handler.RegisterAgentRoutes(optionalApi, api, h)
 	handler.RegisterArtifact(api, h)
 	handler.RegisterAIModelRoutes(optionalApi, api, h)
 	handler.RegisterUserAssetRoutes(api, h)

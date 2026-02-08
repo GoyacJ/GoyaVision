@@ -19,14 +19,24 @@ type WorkflowListQuery struct {
 	Offset      int     `query:"offset"`
 }
 
+type WorkflowRevisionListQuery struct {
+	Limit  int `query:"limit"`
+	Offset int `query:"offset"`
+}
+
+type WorkflowRevisionCreateReq struct {
+	Activate bool `json:"activate,omitempty"`
+}
+
 // WorkflowCreateReq 创建工作流请求
 type WorkflowCreateReq struct {
-	Code        string                 `json:"code" validate:"required"`
-	Name        string                 `json:"name" validate:"required"`
-	Description string                 `json:"description,omitempty"`
-	Version     string                 `json:"version,omitempty"`
-	TriggerType string                 `json:"trigger_type" validate:"required"`
-	TriggerConf map[string]interface{} `json:"trigger_conf,omitempty"`
+	Code           string                 `json:"code" validate:"required"`
+	Name           string                 `json:"name" validate:"required"`
+	Description    string                 `json:"description,omitempty"`
+	Version        string                 `json:"version,omitempty"`
+	TriggerType    string                 `json:"trigger_type" validate:"required"`
+	TriggerConf    map[string]interface{} `json:"trigger_conf,omitempty"`
+	ContextSpec    map[string]interface{} `json:"context_spec,omitempty"`
 	Status         string                 `json:"status,omitempty"`
 	Tags           []string               `json:"tags,omitempty"`
 	Nodes          []WorkflowNodeInput    `json:"nodes,omitempty"`
@@ -40,6 +50,7 @@ type WorkflowUpdateReq struct {
 	Name           *string                `json:"name,omitempty"`
 	Description    *string                `json:"description,omitempty"`
 	TriggerConf    map[string]interface{} `json:"trigger_conf,omitempty"`
+	ContextSpec    map[string]interface{} `json:"context_spec,omitempty"`
 	Status         *string                `json:"status,omitempty"`
 	Tags           []string               `json:"tags,omitempty"`
 	Nodes          []WorkflowNodeInput    `json:"nodes,omitempty"`
@@ -66,38 +77,44 @@ type WorkflowEdgeInput struct {
 
 // WorkflowResponse 工作流响应
 type WorkflowResponse struct {
-	ID          uuid.UUID              `json:"id"`
-	Code        string                 `json:"code"`
-	Name        string                 `json:"name"`
-	Description string                 `json:"description,omitempty"`
-	Version     string                 `json:"version"`
-	TriggerType string                 `json:"trigger_type"`
-	TriggerConf    map[string]interface{} `json:"trigger_conf,omitempty"`
-	Status         string                 `json:"status"`
-	Tags           []string               `json:"tags,omitempty"`
-	Visibility     int                    `json:"visibility"`
-	VisibleRoleIDs []string               `json:"visible_role_ids,omitempty"`
-	CreatedAt      time.Time              `json:"created_at"`
-	UpdatedAt      time.Time              `json:"updated_at"`
+	ID                uuid.UUID              `json:"id"`
+	Code              string                 `json:"code"`
+	Name              string                 `json:"name"`
+	Description       string                 `json:"description,omitempty"`
+	Version           string                 `json:"version"`
+	CurrentRevisionID *uuid.UUID             `json:"current_revision_id,omitempty"`
+	CurrentRevision   int64                  `json:"current_revision,omitempty"`
+	TriggerType       string                 `json:"trigger_type"`
+	TriggerConf       map[string]interface{} `json:"trigger_conf,omitempty"`
+	ContextSpec       map[string]interface{} `json:"context_spec,omitempty"`
+	Status            string                 `json:"status"`
+	Tags              []string               `json:"tags,omitempty"`
+	Visibility        int                    `json:"visibility"`
+	VisibleRoleIDs    []string               `json:"visible_role_ids,omitempty"`
+	CreatedAt         time.Time              `json:"created_at"`
+	UpdatedAt         time.Time              `json:"updated_at"`
 }
 
 // WorkflowWithNodesResponse 工作流及节点响应
 type WorkflowWithNodesResponse struct {
-	ID          uuid.UUID              `json:"id"`
-	Code        string                 `json:"code"`
-	Name        string                 `json:"name"`
-	Description string                 `json:"description,omitempty"`
-	Version     string                 `json:"version"`
-	TriggerType string                 `json:"trigger_type"`
-	TriggerConf    map[string]interface{} `json:"trigger_conf,omitempty"`
-	Status         string                 `json:"status"`
-	Tags           []string               `json:"tags,omitempty"`
-	Visibility     int                    `json:"visibility"`
-	VisibleRoleIDs []string               `json:"visible_role_ids,omitempty"`
-	Nodes          []WorkflowNodeResponse `json:"nodes"`
-	Edges          []WorkflowEdgeResponse `json:"edges"`
-	CreatedAt      time.Time              `json:"created_at"`
-	UpdatedAt      time.Time              `json:"updated_at"`
+	ID                uuid.UUID              `json:"id"`
+	Code              string                 `json:"code"`
+	Name              string                 `json:"name"`
+	Description       string                 `json:"description,omitempty"`
+	Version           string                 `json:"version"`
+	CurrentRevisionID *uuid.UUID             `json:"current_revision_id,omitempty"`
+	CurrentRevision   int64                  `json:"current_revision,omitempty"`
+	TriggerType       string                 `json:"trigger_type"`
+	TriggerConf       map[string]interface{} `json:"trigger_conf,omitempty"`
+	ContextSpec       map[string]interface{} `json:"context_spec,omitempty"`
+	Status            string                 `json:"status"`
+	Tags              []string               `json:"tags,omitempty"`
+	Visibility        int                    `json:"visibility"`
+	VisibleRoleIDs    []string               `json:"visible_role_ids,omitempty"`
+	Nodes             []WorkflowNodeResponse `json:"nodes"`
+	Edges             []WorkflowEdgeResponse `json:"edges"`
+	CreatedAt         time.Time              `json:"created_at"`
+	UpdatedAt         time.Time              `json:"updated_at"`
 }
 
 // WorkflowNodeResponse 工作流节点响应
@@ -125,6 +142,21 @@ type WorkflowListResponse struct {
 	Total int64               `json:"total"`
 }
 
+type WorkflowRevisionResponse struct {
+	ID         uuid.UUID              `json:"id"`
+	WorkflowID uuid.UUID              `json:"workflow_id"`
+	Revision   int64                  `json:"revision"`
+	Status     string                 `json:"status"`
+	Definition map[string]interface{} `json:"definition,omitempty"`
+	CreatedAt  time.Time              `json:"created_at"`
+	UpdatedAt  time.Time              `json:"updated_at"`
+}
+
+type WorkflowRevisionListResponse struct {
+	Items []*WorkflowRevisionResponse `json:"items"`
+	Total int64                       `json:"total"`
+}
+
 // WorkflowToResponse 转换为响应
 func WorkflowToResponse(w *workflow.Workflow) *WorkflowResponse {
 	if w == nil {
@@ -136,6 +168,11 @@ func WorkflowToResponse(w *workflow.Workflow) *WorkflowResponse {
 		triggerConfBytes, _ := json.Marshal(w.TriggerConf)
 		json.Unmarshal(triggerConfBytes, &triggerConf)
 	}
+	var contextSpec map[string]interface{}
+	if w.ContextSpec != nil {
+		contextSpecBytes, _ := json.Marshal(w.ContextSpec)
+		json.Unmarshal(contextSpecBytes, &contextSpec)
+	}
 
 	tags := w.Tags
 	if tags == nil {
@@ -143,19 +180,22 @@ func WorkflowToResponse(w *workflow.Workflow) *WorkflowResponse {
 	}
 
 	return &WorkflowResponse{
-		ID:          w.ID,
-		Code:        w.Code,
-		Name:        w.Name,
-		Description: w.Description,
-		Version:     w.Version,
-		TriggerType:    string(w.TriggerType),
-		TriggerConf:    triggerConf,
-		Status:         string(w.Status),
-		Tags:           tags,
-		Visibility:     int(w.Visibility),
-		VisibleRoleIDs: w.VisibleRoleIDs,
-		CreatedAt:      w.CreatedAt,
-		UpdatedAt:      w.UpdatedAt,
+		ID:                w.ID,
+		Code:              w.Code,
+		Name:              w.Name,
+		Description:       w.Description,
+		Version:           w.Version,
+		CurrentRevisionID: w.CurrentRevisionID,
+		CurrentRevision:   w.CurrentRevision,
+		TriggerType:       string(w.TriggerType),
+		TriggerConf:       triggerConf,
+		ContextSpec:       contextSpec,
+		Status:            string(w.Status),
+		Tags:              tags,
+		Visibility:        int(w.Visibility),
+		VisibleRoleIDs:    w.VisibleRoleIDs,
+		CreatedAt:         w.CreatedAt,
+		UpdatedAt:         w.UpdatedAt,
 	}
 }
 
@@ -169,6 +209,11 @@ func WorkflowToResponseWithNodes(w *workflow.Workflow) *WorkflowWithNodesRespons
 	if w.TriggerConf != nil {
 		triggerConfBytes, _ := json.Marshal(w.TriggerConf)
 		json.Unmarshal(triggerConfBytes, &triggerConf)
+	}
+	var contextSpec map[string]interface{}
+	if w.ContextSpec != nil {
+		contextSpecBytes, _ := json.Marshal(w.ContextSpec)
+		json.Unmarshal(contextSpecBytes, &contextSpec)
 	}
 
 	tags := w.Tags
@@ -219,21 +264,24 @@ func WorkflowToResponseWithNodes(w *workflow.Workflow) *WorkflowWithNodesRespons
 	}
 
 	return &WorkflowWithNodesResponse{
-		ID:          w.ID,
-		Code:        w.Code,
-		Name:        w.Name,
-		Description: w.Description,
-		Version:     w.Version,
-		TriggerType:    string(w.TriggerType),
-		TriggerConf:    triggerConf,
-		Status:         string(w.Status),
-		Tags:           tags,
-		Visibility:     int(w.Visibility),
-		VisibleRoleIDs: w.VisibleRoleIDs,
-		Nodes:          nodes,
-		Edges:          edges,
-		CreatedAt:      w.CreatedAt,
-		UpdatedAt:      w.UpdatedAt,
+		ID:                w.ID,
+		Code:              w.Code,
+		Name:              w.Name,
+		Description:       w.Description,
+		Version:           w.Version,
+		CurrentRevisionID: w.CurrentRevisionID,
+		CurrentRevision:   w.CurrentRevision,
+		TriggerType:       string(w.TriggerType),
+		TriggerConf:       triggerConf,
+		ContextSpec:       contextSpec,
+		Status:            string(w.Status),
+		Tags:              tags,
+		Visibility:        int(w.Visibility),
+		VisibleRoleIDs:    w.VisibleRoleIDs,
+		Nodes:             nodes,
+		Edges:             edges,
+		CreatedAt:         w.CreatedAt,
+		UpdatedAt:         w.UpdatedAt,
 	}
 }
 
@@ -244,4 +292,30 @@ func WorkflowsToResponse(workflows []*workflow.Workflow) []*WorkflowResponse {
 		result[i] = WorkflowToResponse(w)
 	}
 	return result
+}
+
+func WorkflowRevisionToResponse(rev *workflow.WorkflowRevision) *WorkflowRevisionResponse {
+	if rev == nil {
+		return nil
+	}
+	def := map[string]interface{}{}
+	b, _ := json.Marshal(rev.Definition)
+	_ = json.Unmarshal(b, &def)
+	return &WorkflowRevisionResponse{
+		ID:         rev.ID,
+		WorkflowID: rev.WorkflowID,
+		Revision:   rev.Revision,
+		Status:     string(rev.Status),
+		Definition: def,
+		CreatedAt:  rev.CreatedAt,
+		UpdatedAt:  rev.UpdatedAt,
+	}
+}
+
+func WorkflowRevisionsToResponse(items []*workflow.WorkflowRevision) []*WorkflowRevisionResponse {
+	out := make([]*WorkflowRevisionResponse, len(items))
+	for i := range items {
+		out[i] = WorkflowRevisionToResponse(items[i])
+	}
+	return out
 }

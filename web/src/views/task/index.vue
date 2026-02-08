@@ -6,12 +6,17 @@
       description="查看和管理所有工作流任务的执行状态"
     >
       <template #actions>
-        <GvButton @click="handleRefresh">
-          <template #icon>
-            <el-icon><Refresh /></el-icon>
-          </template>
-          刷新
-        </GvButton>
+        <GvSpace wrap>
+          <GvButton variant="tonal" @click="router.push('/agent-sessions')">
+            Agent 会话
+          </GvButton>
+          <GvButton @click="handleRefresh">
+            <template #icon>
+              <el-icon><Refresh /></el-icon>
+            </template>
+            刷新
+          </GvButton>
+        </GvSpace>
       </template>
       
       <template #extra>

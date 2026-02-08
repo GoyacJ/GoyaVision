@@ -23,6 +23,12 @@ type Repository interface {
 	CreateEdge(ctx context.Context, e *Edge) error
 	ListEdges(ctx context.Context, workflowID uuid.UUID) ([]*Edge, error)
 	DeleteEdges(ctx context.Context, workflowID uuid.UUID) error
+
+	CreateRevision(ctx context.Context, revision *WorkflowRevision) error
+	GetRevision(ctx context.Context, id uuid.UUID) (*WorkflowRevision, error)
+	GetRevisionByNumber(ctx context.Context, workflowID uuid.UUID, revision int64) (*WorkflowRevision, error)
+	ListRevisions(ctx context.Context, filter RevisionFilter) ([]*WorkflowRevision, int64, error)
+	ActivateRevision(ctx context.Context, workflowID uuid.UUID, revisionID uuid.UUID) error
 }
 
 type TaskRepository interface {
@@ -43,4 +49,12 @@ type ArtifactRepository interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 	ListByTask(ctx context.Context, taskID uuid.UUID) ([]*Artifact, error)
 	ListByType(ctx context.Context, taskID uuid.UUID, artifactType ArtifactType) ([]*Artifact, error)
+}
+
+type ContextRepository interface {
+	InitializeState(ctx context.Context, state *TaskContextState) error
+	GetState(ctx context.Context, taskID uuid.UUID) (*TaskContextState, error)
+	ApplyPatch(ctx context.Context, patch *TaskContextPatch) error
+	CreateSnapshot(ctx context.Context, snapshot *TaskContextSnapshot) error
+	ListPatches(ctx context.Context, taskID uuid.UUID, limit, offset int) ([]*TaskContextPatch, int64, error)
 }

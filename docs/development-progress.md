@@ -10,6 +10,31 @@
 - 模块重命名：资产库、算子中心、任务中心、控制台
 - 不向后兼容，全新架构
 
+## 最新状态（2026-02-08）
+
+### 已落地（本轮重构）
+
+- **统一上下文（定义态 + 运行态）**
+  - 工作流定义新增 `context_spec`，并引入 `workflow_revisions` 版本实体。
+  - 任务运行态落地 `task_context_state` / `task_context_patches` / `task_context_snapshots`。
+  - 任务接口新增上下文查询、补丁列表与手动快照能力。
+- **算法库（Algorithm Library）**
+  - 新增 `algorithms`、`algorithm_versions`、`algorithm_implementations`、`algorithm_evaluation_profiles`。
+  - 后端完成算法 CRUD、版本创建与发布接口。
+  - 前端新增算法库页面并接入 API。
+- **Agent 工程化（Run Loop）**
+  - 新增 `agent_sessions`、`run_events`、`tool_policies` 模型。
+  - 后端落地 Agent 会话创建、执行、停止、事件查询接口。
+  - Run Loop 已接入 DAG 引擎，可用于受控运行与观测。
+- **初始化与文档对齐**
+  - `cmd/init/main.go` 已同步：新增算法/上下文/Agent 相关权限、菜单与表结构说明。
+  - 初始化菜单新增“算法库”“Agent会话”入口。
+
+### 当前边界（尚未完成）
+
+- DAG 内 **Decision Node**（Agent 作为节点）尚未启用，当前以 Run Loop 为主。
+- ToolPolicy 的细粒度强制策略仍在迭代，当前以基础建模和会话运行可用为主。
+
 ## 开发路线
 
 ### Phase 1：核心闭环（V1.0）

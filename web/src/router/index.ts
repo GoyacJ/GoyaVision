@@ -43,6 +43,12 @@ export const constantRoutes: RouteRecordRaw[] = [
         meta: { title: '算子模板市场', hidden: true }
       },
       {
+        path: '/algorithms',
+        name: 'Algorithms',
+        component: () => import('../views/algorithm/index.vue'),
+        meta: { title: '算法库' }
+      },
+      {
         path: '/workflows',
         name: 'Workflows',
         component: () => import('../views/workflow/index.vue'),
@@ -59,6 +65,12 @@ export const constantRoutes: RouteRecordRaw[] = [
         name: 'Tasks',
         component: () => import('../views/task/index.vue'),
         meta: { title: '任务管理' }
+      },
+      {
+        path: '/agent-sessions',
+        name: 'AgentSessions',
+        component: () => import('../views/agent/index.vue'),
+        meta: { title: 'Agent 会话' }
       },
       {
         path: '/tasks/:id',

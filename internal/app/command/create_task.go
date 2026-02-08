@@ -39,6 +39,9 @@ func (h *CreateTaskHandler) Handle(ctx context.Context, cmd dto.CreateTaskComman
 		if !wf.IsEnabled() {
 			return apperr.InvalidInput("workflow is not enabled")
 		}
+		if err := ensureWorkflowHasActiveRevision(wf); err != nil {
+			return err
+		}
 
 		if cmd.AssetID != nil {
 			if _, err := repos.Assets.Get(ctx, *cmd.AssetID); err != nil {
@@ -50,11 +53,13 @@ func (h *CreateTaskHandler) Handle(ctx context.Context, cmd dto.CreateTaskComman
 		}
 
 		task := &workflow.Task{
-			WorkflowID:  cmd.WorkflowID,
-			AssetID:     cmd.AssetID,
-			Status:      workflow.TaskStatusPending,
-			Progress:    0,
-			InputParams: cmd.InputParams,
+			WorkflowID:         cmd.WorkflowID,
+			WorkflowRevisionID: wf.CurrentRevisionID,
+			WorkflowRevision:   wf.CurrentRevision,
+			AssetID:            cmd.AssetID,
+			Status:             workflow.TaskStatusPending,
+			Progress:           0,
+			InputParams:        cmd.InputParams,
 		}
 
 		if err := repos.Tasks.Create(ctx, task); err != nil {

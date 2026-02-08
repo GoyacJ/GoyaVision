@@ -36,21 +36,24 @@ type NodeExecution struct {
 }
 
 type Task struct {
-	ID                uuid.UUID
-	TenantID          uuid.UUID
-	TriggeredByUserID *uuid.UUID
-	WorkflowID        uuid.UUID
-	AssetID           *uuid.UUID
-	Status            TaskStatus
-	Progress          int
-	CurrentNode       string
-	InputParams       map[string]interface{}
-	Error             string
-	NodeExecutions    []NodeExecution
-	StartedAt         *time.Time
-	CompletedAt       *time.Time
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
+	ID                 uuid.UUID
+	TenantID           uuid.UUID
+	TriggeredByUserID  *uuid.UUID
+	WorkflowID         uuid.UUID
+	WorkflowRevisionID *uuid.UUID
+	WorkflowRevision   int64
+	AssetID            *uuid.UUID
+	Status             TaskStatus
+	Progress           int
+	CurrentNode        string
+	ContextVersion     int64
+	InputParams        map[string]interface{}
+	Error              string
+	NodeExecutions     []NodeExecution
+	StartedAt          *time.Time
+	CompletedAt        *time.Time
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 func (t *Task) IsPending() bool {

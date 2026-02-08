@@ -5,14 +5,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"goyavision/internal/app/port"
+	"goyavision/internal/domain/agent"
+	"goyavision/internal/domain/algorithm"
 	"goyavision/internal/domain/operator"
 	"goyavision/internal/domain/workflow"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 var _ workflow.Engine = (*DAGWorkflowEngine)(nil)
@@ -31,6 +36,7 @@ type taskExecution struct {
 	cancel         context.CancelFunc
 	progress       int
 	currentNode    string
+	contextVersion int64
 	nodeResults    map[string]*operator.Output
 	nodeExecutions map[string]*workflow.NodeExecution
 	mu             sync.RWMutex
@@ -53,20 +59,25 @@ func NewDAGWorkflowEngine(uow port.UnitOfWork, executor workflow.OperatorExecuto
 
 // Execute executes a workflow using DAG topology with parallel execution
 func (e *DAGWorkflowEngine) Execute(ctx context.Context, wf *workflow.Workflow, task *workflow.Task) error {
-	if len(wf.Nodes) == 0 {
+	execWF, err := e.resolveWorkflowForTask(ctx, wf, task)
+	if err != nil {
+		return fmt.Errorf("failed to resolve workflow revision: %w", err)
+	}
+
+	if len(execWF.Nodes) == 0 {
 		return errors.New("workflow has no nodes")
 	}
 
 	// Build execution layers from DAG
-	layers, err := e.buildExecutionLayers(wf.Nodes, wf.Edges)
+	layers, err := e.buildExecutionLayers(execWF.Nodes, execWF.Edges)
 	if err != nil {
 		return fmt.Errorf("failed to build execution layers: %w", err)
 	}
 
 	// Create node map for quick lookup
 	nodeMap := make(map[string]*workflow.Node)
-	for i := range wf.Nodes {
-		nodeMap[wf.Nodes[i].NodeKey] = &wf.Nodes[i]
+	for i := range execWF.Nodes {
+		nodeMap[execWF.Nodes[i].NodeKey] = &execWF.Nodes[i]
 	}
 
 	// Setup execution context
@@ -82,7 +93,7 @@ func (e *DAGWorkflowEngine) Execute(ctx context.Context, wf *workflow.Workflow, 
 	}
 
 	// Initialize node executions
-	for _, node := range wf.Nodes {
+	for _, node := range execWF.Nodes {
 		exec.nodeExecutions[node.NodeKey] = &workflow.NodeExecution{
 			NodeKey: node.NodeKey,
 			Status:  workflow.NodeExecPending,
@@ -111,6 +122,11 @@ func (e *DAGWorkflowEngine) Execute(ctx context.Context, wf *workflow.Workflow, 
 		return fmt.Errorf("failed to update task status: %w", err)
 	}
 
+	if err := e.initializeTaskContextState(ctx, execWF, task, exec); err != nil {
+		e.updateTaskStatus(ctx, task, workflow.TaskStatusFailed, err.Error())
+		return fmt.Errorf("failed to initialize task context: %w", err)
+	}
+
 	// Execute layers sequentially, nodes within layer in parallel
 	totalLayers := len(layers)
 	for i, layer := range layers {
@@ -121,7 +137,7 @@ func (e *DAGWorkflowEngine) Execute(ctx context.Context, wf *workflow.Workflow, 
 		default:
 		}
 
-		if err := e.executeLayer(execCtx, layer, nodeMap, wf.Edges, task, exec); err != nil {
+		if err := e.executeLayer(execCtx, layer, nodeMap, execWF, execWF.Edges, task, exec); err != nil {
 			e.updateTaskStatus(ctx, task, workflow.TaskStatusFailed, err.Error())
 			return fmt.Errorf("layer %d execution failed: %w", i+1, err)
 		}
@@ -285,6 +301,7 @@ func (e *DAGWorkflowEngine) executeLayer(
 	ctx context.Context,
 	layer []string,
 	nodeMap map[string]*workflow.Node,
+	wf *workflow.Workflow,
 	edges []workflow.Edge,
 	task *workflow.Task,
 	exec *taskExecution,
@@ -308,7 +325,7 @@ func (e *DAGWorkflowEngine) executeLayer(
 			exec.mu.Unlock()
 		}
 	}
-	
+
 	// Sync skipped status
 	if len(nodesToExecute) < len(layer) {
 		if err := e.syncTaskNodeExecutions(ctx, task, exec); err != nil {
@@ -322,7 +339,7 @@ func (e *DAGWorkflowEngine) executeLayer(
 
 	// For single node, execute directly
 	if len(nodesToExecute) == 1 {
-		return e.executeNode(ctx, nodeMap[nodesToExecute[0]], task, exec)
+		return e.executeNode(ctx, nodeMap[nodesToExecute[0]], wf, task, exec)
 	}
 
 	// Parallel execution for multiple nodes
@@ -333,7 +350,7 @@ func (e *DAGWorkflowEngine) executeLayer(
 		wg.Add(1)
 		go func(nk string) {
 			defer wg.Done()
-			if err := e.executeNode(ctx, nodeMap[nk], task, exec); err != nil {
+			if err := e.executeNode(ctx, nodeMap[nk], wf, task, exec); err != nil {
 				errChan <- fmt.Errorf("node %s: %w", nk, err)
 			}
 		}(nodeKey)
@@ -358,6 +375,7 @@ func (e *DAGWorkflowEngine) executeLayer(
 func (e *DAGWorkflowEngine) executeNode(
 	ctx context.Context,
 	node *workflow.Node,
+	wf *workflow.Workflow,
 	task *workflow.Task,
 	exec *taskExecution,
 ) error {
@@ -375,9 +393,36 @@ func (e *DAGWorkflowEngine) executeNode(
 	if err := e.syncTaskNodeExecutions(ctx, task, exec); err != nil {
 		return err
 	}
+	e.emitRunEvent(ctx, &agent.RunEvent{
+		TaskID:    task.ID,
+		EventType: agent.EventTypeNodeStarted,
+		Source:    "dag_engine",
+		NodeKey:   node.NodeKey,
+		Payload: map[string]interface{}{
+			"status": "running",
+		},
+	})
 
-	// Skip if no operator
-	if node.OperatorID == nil {
+	contextState, err := e.getTaskContextState(ctx, task.ID)
+	if err != nil {
+		return e.failNode(ctx, task, exec, node.NodeKey, fmt.Errorf("failed to get task context: %w", err))
+	}
+
+	versionToExecute, err := e.resolveNodeOperatorVersion(ctx, node)
+	if err != nil {
+		return e.failNode(ctx, task, exec, node.NodeKey, err)
+	}
+
+	// Skip if no executable operator
+	if versionToExecute == nil {
+		diff, err := e.buildNodeContextDiff(wf, node, nil, nil)
+		if err != nil {
+			return e.failNode(ctx, task, exec, node.NodeKey, err)
+		}
+		if err := e.applyNodeContextPatch(ctx, task, exec, node.NodeKey, diff); err != nil {
+			return e.failNode(ctx, task, exec, node.NodeKey, fmt.Errorf("failed to persist node context diff: %w", err))
+		}
+
 		// Mark as success immediately
 		exec.mu.Lock()
 		if execNode, ok := exec.nodeExecutions[node.NodeKey]; ok {
@@ -388,25 +433,13 @@ func (e *DAGWorkflowEngine) executeNode(
 		exec.mu.Unlock()
 		return e.syncTaskNodeExecutions(ctx, task, exec)
 	}
-
-	// Get operator using UnitOfWork
-	var op *operator.Operator
-	err := e.uow.Do(ctx, func(ctx context.Context, repos *port.Repositories) error {
-		var err error
-		op, err = repos.Operators.GetWithActiveVersion(ctx, *node.OperatorID)
-		return err
-	})
-	if err != nil {
-		return e.failNode(ctx, task, exec, node.NodeKey, fmt.Errorf("failed to get operator: %w", err))
-	}
-
-	if op.ActiveVersion == nil {
-		return e.failNode(ctx, task, exec, node.NodeKey, fmt.Errorf("operator %s has no active version", op.Code))
+	if err := e.enforceNodeToolPolicy(ctx, node, versionToExecute); err != nil {
+		return e.failNode(ctx, task, exec, node.NodeKey, err)
 	}
 
 	// Prepare input (merge task input + node config + previous outputs)
-	input := e.prepareNodeInput(task, node, exec)
-	if err := e.validateNodeInput(ctx, op.ActiveVersion, input); err != nil {
+	input := e.prepareNodeInput(task, node, exec, contextState)
+	if err := e.validateNodeInput(ctx, versionToExecute, input); err != nil {
 		return e.failNode(ctx, task, exec, node.NodeKey, err)
 	}
 
@@ -427,7 +460,7 @@ func (e *DAGWorkflowEngine) executeNode(
 
 	var lastErr error
 	for attempt := 0; attempt < retryCount; attempt++ {
-		output, lastErr = e.executor.Execute(nodeCtx, op.ActiveVersion, input)
+		output, lastErr = e.executor.Execute(nodeCtx, versionToExecute, input)
 		if lastErr == nil {
 			break
 		}
@@ -441,7 +474,7 @@ func (e *DAGWorkflowEngine) executeNode(
 		return e.failNode(ctx, task, exec, node.NodeKey, fmt.Errorf("node %s failed after %d attempts: %w", node.NodeKey, retryCount, lastErr))
 	}
 
-	if err := e.validateNodeOutput(nodeCtx, op.ActiveVersion, output); err != nil {
+	if err := e.validateNodeOutput(nodeCtx, versionToExecute, output); err != nil {
 		return e.failNode(ctx, task, exec, node.NodeKey, err)
 	}
 
@@ -459,6 +492,14 @@ func (e *DAGWorkflowEngine) executeNode(
 		}
 	}
 
+	diff, err := e.buildNodeContextDiff(wf, node, output, artifactIDs)
+	if err != nil {
+		return e.failNode(ctx, task, exec, node.NodeKey, err)
+	}
+	if err := e.applyNodeContextPatch(ctx, task, exec, node.NodeKey, diff); err != nil {
+		return e.failNode(ctx, task, exec, node.NodeKey, fmt.Errorf("failed to persist node context diff: %w", err))
+	}
+
 	// Mark as success
 	exec.mu.Lock()
 	if execNode, ok := exec.nodeExecutions[node.NodeKey]; ok {
@@ -468,6 +509,16 @@ func (e *DAGWorkflowEngine) executeNode(
 		execNode.ArtifactIDs = artifactIDs
 	}
 	exec.mu.Unlock()
+	e.emitRunEvent(ctx, &agent.RunEvent{
+		TaskID:    task.ID,
+		EventType: agent.EventTypeNodeSucceeded,
+		Source:    "dag_engine",
+		NodeKey:   node.NodeKey,
+		Payload: map[string]interface{}{
+			"artifact_ids":    artifactIDs,
+			"context_version": task.ContextVersion,
+		},
+	})
 
 	return e.syncTaskNodeExecutions(ctx, task, exec)
 }
@@ -481,6 +532,15 @@ func (e *DAGWorkflowEngine) failNode(ctx context.Context, task *workflow.Task, e
 		execNode.CompletedAt = &now
 	}
 	exec.mu.Unlock()
+	e.emitRunEvent(ctx, &agent.RunEvent{
+		TaskID:    task.ID,
+		EventType: agent.EventTypeNodeFailed,
+		Source:    "dag_engine",
+		NodeKey:   nodeKey,
+		Payload: map[string]interface{}{
+			"error": err.Error(),
+		},
+	})
 	_ = e.syncTaskNodeExecutions(ctx, task, exec)
 	return err
 }
@@ -545,11 +605,13 @@ func (e *DAGWorkflowEngine) syncTaskNodeExecutions(ctx context.Context, task *wo
 		executions = append(executions, *v)
 	}
 	currentNode := exec.currentNode
+	contextVersion := exec.contextVersion
 	exec.mu.RUnlock()
 
 	return e.uow.Do(ctx, func(ctx context.Context, repos *port.Repositories) error {
 		task.NodeExecutions = executions
 		task.CurrentNode = currentNode
+		task.ContextVersion = contextVersion
 		return repos.Tasks.Update(ctx, task)
 	})
 }
@@ -612,6 +674,7 @@ func (e *DAGWorkflowEngine) prepareNodeInput(
 	task *workflow.Task,
 	node *workflow.Node,
 	exec *taskExecution,
+	contextState *workflow.TaskContextState,
 ) *operator.Input {
 	input := &operator.Input{
 		Params: make(map[string]interface{}),
@@ -626,6 +689,21 @@ func (e *DAGWorkflowEngine) prepareNodeInput(
 	if task.InputParams != nil {
 		for k, v := range task.InputParams {
 			input.Params[k] = v
+		}
+	}
+
+	// Attach full context for operators that can consume unified context.
+	if contextState != nil && contextState.Data != nil {
+		input.Params["context"] = contextState.Data
+	}
+
+	// Resolve mapped inputs from context first.
+	if node.Config != nil && len(node.Config.InputMapping) > 0 && contextState != nil {
+		for paramKey, contextPath := range node.Config.InputMapping {
+			value, ok := resolveAnyByPath(contextState.Data, contextPath)
+			if ok {
+				input.Params[paramKey] = value
+			}
 		}
 	}
 
@@ -816,4 +894,741 @@ func (e *DAGWorkflowEngine) updateTaskStatus(
 		}
 		return repos.Tasks.Update(ctx, task)
 	})
+}
+
+func (e *DAGWorkflowEngine) initializeTaskContextState(
+	ctx context.Context,
+	wf *workflow.Workflow,
+	task *workflow.Task,
+	exec *taskExecution,
+) error {
+	return e.uow.Do(ctx, func(ctx context.Context, repos *port.Repositories) error {
+		if repos.Contexts == nil {
+			return errors.New("context repository is not configured")
+		}
+
+		state := &workflow.TaskContextState{
+			TaskID:  task.ID,
+			Version: 1,
+			Data:    buildInitialTaskContextData(wf, task),
+		}
+		if err := repos.Contexts.InitializeState(ctx, state); err != nil {
+			return err
+		}
+
+		task.ContextVersion = state.Version
+		exec.mu.Lock()
+		exec.contextVersion = state.Version
+		exec.mu.Unlock()
+		return repos.Tasks.Update(ctx, task)
+	})
+}
+
+func buildInitialTaskContextData(wf *workflow.Workflow, task *workflow.Task) map[string]interface{} {
+	vars := map[string]interface{}{}
+	if wf != nil && wf.ContextSpec != nil && wf.ContextSpec.Vars != nil {
+		for key, spec := range wf.ContextSpec.Vars {
+			if spec.Default != nil {
+				vars[key] = spec.Default
+			}
+		}
+	}
+	for key, value := range task.InputParams {
+		vars[key] = value
+	}
+
+	meta := map[string]interface{}{
+		"task_id":        task.ID.String(),
+		"workflow_id":    task.WorkflowID.String(),
+		"initialized_at": time.Now().UTC().Format(time.RFC3339),
+	}
+	if wf != nil {
+		meta["workflow_code"] = wf.Code
+	}
+	if task.AssetID != nil {
+		meta["asset_id"] = task.AssetID.String()
+	}
+
+	return map[string]interface{}{
+		"meta":      meta,
+		"vars":      vars,
+		"shared":    map[string]interface{}{},
+		"nodes":     map[string]interface{}{},
+		"artifacts": map[string]interface{}{},
+	}
+}
+
+func (e *DAGWorkflowEngine) getTaskContextState(ctx context.Context, taskID uuid.UUID) (*workflow.TaskContextState, error) {
+	var state *workflow.TaskContextState
+	err := e.uow.Do(ctx, func(ctx context.Context, repos *port.Repositories) error {
+		if repos.Contexts == nil {
+			return errors.New("context repository is not configured")
+		}
+		var err error
+		state, err = repos.Contexts.GetState(ctx, taskID)
+		return err
+	})
+	return state, err
+}
+
+func (e *DAGWorkflowEngine) applyNodeContextPatch(
+	ctx context.Context,
+	task *workflow.Task,
+	exec *taskExecution,
+	nodeKey string,
+	diff workflow.ContextDiff,
+) error {
+	const maxAttempts = 8
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		err := e.uow.Do(ctx, func(ctx context.Context, repos *port.Repositories) error {
+			if repos.Contexts == nil {
+				return errors.New("context repository is not configured")
+			}
+			state, err := repos.Contexts.GetState(ctx, task.ID)
+			if err != nil {
+				return err
+			}
+
+			patch := &workflow.TaskContextPatch{
+				TaskID:        task.ID,
+				WriterNodeKey: nodeKey,
+				BeforeVersion: state.Version,
+				Diff:          diff,
+			}
+			if err := repos.Contexts.ApplyPatch(ctx, patch); err != nil {
+				return err
+			}
+
+			task.ContextVersion = patch.AfterVersion
+			exec.mu.Lock()
+			exec.contextVersion = patch.AfterVersion
+			exec.mu.Unlock()
+			return repos.Tasks.Update(ctx, task)
+		})
+		if err == nil {
+			return nil
+		}
+		if errors.Is(err, workflow.ErrContextVersionConflict) {
+			time.Sleep(time.Duration(1<<uint(attempt)) * 10 * time.Millisecond)
+			continue
+		}
+		return err
+	}
+	return workflow.ErrContextVersionConflict
+}
+
+func (e *DAGWorkflowEngine) buildNodeContextDiff(
+	wf *workflow.Workflow,
+	node *workflow.Node,
+	output *operator.Output,
+	artifactIDs []uuid.UUID,
+) (workflow.ContextDiff, error) {
+	diff := workflow.ContextDiff{
+		Set: map[string]interface{}{
+			fmt.Sprintf("nodes.%s.status", node.NodeKey): workflow.NodeExecSuccess,
+		},
+	}
+
+	if len(artifactIDs) > 0 {
+		diff.Set[fmt.Sprintf("nodes.%s.artifact_ids", node.NodeKey)] = artifactIDs
+	}
+
+	outputPayload := map[string]interface{}{}
+	if output != nil {
+		var err error
+		outputPayload, err = outputToMap(output)
+		if err != nil {
+			return workflow.ContextDiff{}, fmt.Errorf("failed to serialize node output: %w", err)
+		}
+		diff.Set[fmt.Sprintf("nodes.%s.output", node.NodeKey)] = outputPayload
+	}
+
+	if node.Config != nil && len(node.Config.OutputMapping) > 0 {
+		for contextPath, outputSelector := range node.Config.OutputMapping {
+			contextPath = strings.TrimSpace(contextPath)
+			outputSelector = strings.TrimSpace(outputSelector)
+			if contextPath == "" || outputSelector == "" {
+				continue
+			}
+			value, ok := resolveAnyByPath(outputPayload, outputSelector)
+			if !ok {
+				return workflow.ContextDiff{}, fmt.Errorf("invalid output_mapping: selector %s not found", outputSelector)
+			}
+			diff.Set[contextPath] = value
+		}
+	}
+
+	if err := validateContextWritePaths(wf, node.NodeKey, diff); err != nil {
+		return workflow.ContextDiff{}, err
+	}
+	return diff, nil
+}
+
+func validateContextWritePaths(wf *workflow.Workflow, nodeKey string, diff workflow.ContextDiff) error {
+	isLocalPath := func(path string) bool {
+		return strings.HasPrefix(path, "nodes."+nodeKey+".")
+	}
+
+	checkPath := func(path string) error {
+		if isLocalPath(path) {
+			return nil
+		}
+		if strings.HasPrefix(path, "vars.") {
+			return fmt.Errorf("forbidden context write path %s: writing vars.* is not allowed", path)
+		}
+		if wf == nil || wf.ContextSpec == nil || wf.ContextSpec.SharedKeys == nil {
+			return fmt.Errorf("context write path %s is not allowed: shared key is not declared", path)
+		}
+		spec, ok := wf.ContextSpec.SharedKeys[path]
+		if !ok {
+			return fmt.Errorf("context write path %s is not declared in context_spec.shared_keys", path)
+		}
+		if !spec.CAS {
+			return fmt.Errorf("shared key %s must enable cas", path)
+		}
+		if strings.TrimSpace(spec.ConflictPolicy) == "" {
+			return fmt.Errorf("shared key %s must declare conflict policy", path)
+		}
+		return nil
+	}
+
+	for path := range diff.Set {
+		if err := checkPath(path); err != nil {
+			return err
+		}
+	}
+	for _, path := range diff.Unset {
+		if err := checkPath(path); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func outputToMap(output *operator.Output) (map[string]interface{}, error) {
+	if output == nil {
+		return map[string]interface{}{}, nil
+	}
+	b, err := json.Marshal(output)
+	if err != nil {
+		return nil, err
+	}
+	m := map[string]interface{}{}
+	if err := json.Unmarshal(b, &m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func resolveAnyByPath(root interface{}, path string) (interface{}, bool) {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return root, true
+	}
+	current := root
+	for _, part := range strings.Split(path, ".") {
+		switch typed := current.(type) {
+		case map[string]interface{}:
+			next, ok := typed[part]
+			if !ok {
+				return nil, false
+			}
+			current = next
+		case []interface{}:
+			index, err := strconv.Atoi(part)
+			if err != nil || index < 0 || index >= len(typed) {
+				return nil, false
+			}
+			current = typed[index]
+		default:
+			return nil, false
+		}
+	}
+	return current, true
+}
+
+func (e *DAGWorkflowEngine) resolveNodeOperatorVersion(ctx context.Context, node *workflow.Node) (*operator.OperatorVersion, error) {
+	if node == nil {
+		return nil, nil
+	}
+
+	if node.OperatorID != nil {
+		var op *operator.Operator
+		err := e.uow.Do(ctx, func(ctx context.Context, repos *port.Repositories) error {
+			var err error
+			op, err = repos.Operators.GetWithActiveVersion(ctx, *node.OperatorID)
+			return err
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to get operator: %w", err)
+		}
+		if op == nil || op.ActiveVersion == nil {
+			return nil, fmt.Errorf("operator has no active version")
+		}
+		return op.ActiveVersion, nil
+	}
+
+	if node.Config == nil || node.Config.AlgorithmRef == nil {
+		return nil, nil
+	}
+
+	ref := node.Config.AlgorithmRef
+	var selected *operator.OperatorVersion
+	err := e.uow.Do(ctx, func(ctx context.Context, repos *port.Repositories) error {
+		if repos.Algorithms == nil {
+			return fmt.Errorf("algorithm repository is not configured")
+		}
+		if repos.OperatorVersions == nil {
+			return fmt.Errorf("operator version repository is not configured")
+		}
+
+		var algo *algorithm.Algorithm
+		if ref.AlgorithmID != nil {
+			var err error
+			algo, err = repos.Algorithms.GetWithRelations(ctx, *ref.AlgorithmID)
+			if err != nil {
+				return err
+			}
+		} else if strings.TrimSpace(ref.AlgorithmCode) != "" {
+			a, err := repos.Algorithms.GetByCode(ctx, ref.AlgorithmCode)
+			if err != nil {
+				return err
+			}
+			algo, err = repos.Algorithms.GetWithRelations(ctx, a.ID)
+			if err != nil {
+				return err
+			}
+		} else {
+			return fmt.Errorf("algorithm_ref requires algorithm_id or algorithm_code")
+		}
+
+		version, err := resolveAlgorithmVersion(ctx, repos.Algorithms, algo, ref.Version)
+		if err != nil {
+			return err
+		}
+		impl := selectAlgorithmImplementation(version, ref)
+		if impl == nil {
+			return fmt.Errorf("algorithm %s revision %s has no operator_version implementation", algo.Code, version.Version)
+		}
+
+		opVersionID, err := uuid.Parse(strings.TrimSpace(impl.BindingRef))
+		if err != nil {
+			return fmt.Errorf("invalid implementation binding_ref: %w", err)
+		}
+		versionRef, err := repos.OperatorVersions.Get(ctx, opVersionID)
+		if err != nil {
+			return err
+		}
+		selected = versionRef
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if selected == nil {
+		return nil, fmt.Errorf("no executable operator version resolved")
+	}
+	return selected, nil
+}
+
+func resolveAlgorithmVersion(
+	ctx context.Context,
+	repo algorithm.Repository,
+	algo *algorithm.Algorithm,
+	versionName string,
+) (*algorithm.Version, error) {
+	if algo == nil {
+		return nil, fmt.Errorf("algorithm is not found")
+	}
+	if strings.TrimSpace(versionName) != "" {
+		version, err := repo.GetVersionByName(ctx, algo.ID, strings.TrimSpace(versionName))
+		if err != nil {
+			return nil, err
+		}
+		return version, nil
+	}
+
+	versions, err := repo.ListVersions(ctx, algo.ID)
+	if err != nil {
+		return nil, err
+	}
+	if len(versions) == 0 {
+		return nil, fmt.Errorf("algorithm has no versions")
+	}
+	for i := range versions {
+		if versions[i].Status == algorithm.VersionStatusPublished {
+			return versions[i], nil
+		}
+	}
+	return versions[0], nil
+}
+
+func selectAlgorithmImplementation(version *algorithm.Version, ref *workflow.AlgorithmRef) *algorithm.Implementation {
+	if version == nil || len(version.Implementations) == 0 {
+		return nil
+	}
+
+	candidates := make([]algorithm.Implementation, 0, len(version.Implementations))
+	for i := range version.Implementations {
+		if version.Implementations[i].Type == algorithm.ImplementationOperatorVersion {
+			candidates = append(candidates, version.Implementations[i])
+		}
+	}
+	if len(candidates) == 0 {
+		return nil
+	}
+
+	if ref != nil && strings.TrimSpace(ref.Tier) != "" {
+		for i := range candidates {
+			if strings.EqualFold(candidates[i].Tier, strings.TrimSpace(ref.Tier)) {
+				return &candidates[i]
+			}
+		}
+	}
+
+	policy := string(version.SelectionPolicy)
+	if ref != nil && strings.TrimSpace(ref.SelectionPolicy) != "" {
+		policy = strings.TrimSpace(ref.SelectionPolicy)
+	}
+
+	switch policy {
+	case string(algorithm.SelectionPolicyHighQuality):
+		best := candidates[0]
+		for i := 1; i < len(candidates); i++ {
+			if candidates[i].QualityScore > best.QualityScore {
+				best = candidates[i]
+			}
+		}
+		return &best
+	case string(algorithm.SelectionPolicyLowCost):
+		best := candidates[0]
+		for i := 1; i < len(candidates); i++ {
+			if candidates[i].CostScore < best.CostScore {
+				best = candidates[i]
+			}
+		}
+		return &best
+	default:
+		for i := range candidates {
+			if candidates[i].IsDefault {
+				return &candidates[i]
+			}
+		}
+		first := candidates[0]
+		return &first
+	}
+}
+
+func (e *DAGWorkflowEngine) enforceNodeToolPolicy(ctx context.Context, node *workflow.Node, version *operator.OperatorVersion) error {
+	if version == nil {
+		return nil
+	}
+
+	return e.uow.Do(ctx, func(ctx context.Context, repos *port.Repositories) error {
+		if repos.ToolPolicies == nil || repos.Operators == nil {
+			return nil
+		}
+
+		op, err := repos.Operators.Get(ctx, version.OperatorID)
+		if err != nil {
+			return err
+		}
+		policy, err := repos.ToolPolicies.GetByToolName(ctx, op.Code)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil
+			}
+			return err
+		}
+		if policy == nil {
+			return nil
+		}
+		if !policy.Enabled {
+			return fmt.Errorf("tool policy denied: %s is disabled", op.Code)
+		}
+		if strings.EqualFold(policy.RiskLevel, "high") {
+			approved := false
+			if node != nil && node.Config != nil && node.Config.Params != nil {
+				if v, ok := node.Config.Params["policy_approved"].(bool); ok {
+					approved = v
+				}
+			}
+			if !approved {
+				return fmt.Errorf("tool policy denied: high-risk tool %s requires policy_approved=true", op.Code)
+			}
+		}
+		if len(policy.Permissions) > 0 {
+			granted := extractStringSlice(nil)
+			if node != nil && node.Config != nil && node.Config.Params != nil {
+				granted = extractStringSlice(node.Config.Params["granted_permissions"])
+			}
+			missing := missingItems(policy.Permissions, granted)
+			if len(missing) > 0 {
+				return fmt.Errorf("tool policy denied: %s missing permissions %s", op.Code, strings.Join(missing, ","))
+			}
+		}
+
+		requestedAccess := extractNodeDataAccess(node)
+		if err := validateDataAccessPolicy(op.Code, policy.DataAccess, requestedAccess); err != nil {
+			return fmt.Errorf("tool policy denied: %w", err)
+		}
+		return nil
+	})
+}
+
+func extractNodeDataAccess(node *workflow.Node) agent.DataAccess {
+	out := agent.DataAccess{}
+	if node == nil || node.Config == nil || node.Config.Params == nil {
+		return out
+	}
+
+	params := node.Config.Params
+	if raw, ok := params["data_access"]; ok {
+		if m, ok := raw.(map[string]interface{}); ok {
+			if v, ok := m["read_scopes"]; ok {
+				out.ReadScopes = append(out.ReadScopes, extractStringSlice(v)...)
+			}
+			if v, ok := m["write_scopes"]; ok {
+				out.WriteScopes = append(out.WriteScopes, extractStringSlice(v)...)
+			}
+			if v, ok := m["network_allowlist"]; ok {
+				out.NetworkAllowlist = append(out.NetworkAllowlist, extractStringSlice(v)...)
+			}
+		}
+	}
+
+	if v, ok := params["read_scopes"]; ok {
+		out.ReadScopes = append(out.ReadScopes, extractStringSlice(v)...)
+	}
+	if v, ok := params["write_scopes"]; ok {
+		out.WriteScopes = append(out.WriteScopes, extractStringSlice(v)...)
+	}
+	if v, ok := params["network_allowlist"]; ok {
+		out.NetworkAllowlist = append(out.NetworkAllowlist, extractStringSlice(v)...)
+	}
+
+	out.ReadScopes = dedupeStrings(out.ReadScopes)
+	out.WriteScopes = dedupeStrings(out.WriteScopes)
+	out.NetworkAllowlist = dedupeStrings(out.NetworkAllowlist)
+	return out
+}
+
+func validateDataAccessPolicy(toolName string, allowed agent.DataAccess, requested agent.DataAccess) error {
+	if err := validateScopeAccess(toolName, "read_scopes", allowed.ReadScopes, requested.ReadScopes); err != nil {
+		return err
+	}
+	if err := validateScopeAccess(toolName, "write_scopes", allowed.WriteScopes, requested.WriteScopes); err != nil {
+		return err
+	}
+	if err := validateScopeAccess(toolName, "network_allowlist", allowed.NetworkAllowlist, requested.NetworkAllowlist); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateScopeAccess(toolName string, scopeType string, allowed []string, requested []string) error {
+	if len(requested) == 0 {
+		return nil
+	}
+	if len(allowed) == 0 {
+		return fmt.Errorf("%s requests %s but policy allowlist is empty", toolName, scopeType)
+	}
+
+	allowSet := make(map[string]struct{}, len(allowed))
+	for _, v := range allowed {
+		v = strings.TrimSpace(v)
+		if v == "" {
+			continue
+		}
+		allowSet[v] = struct{}{}
+	}
+	for _, req := range requested {
+		req = strings.TrimSpace(req)
+		if req == "" {
+			continue
+		}
+		if _, ok := allowSet[req]; !ok {
+			return fmt.Errorf("%s scope %s is not allowed for %s", scopeType, req, toolName)
+		}
+	}
+	return nil
+}
+
+func extractStringSlice(raw interface{}) []string {
+	switch v := raw.(type) {
+	case nil:
+		return nil
+	case []string:
+		out := make([]string, 0, len(v))
+		for _, item := range v {
+			item = strings.TrimSpace(item)
+			if item != "" {
+				out = append(out, item)
+			}
+		}
+		return out
+	case []interface{}:
+		out := make([]string, 0, len(v))
+		for _, item := range v {
+			switch typed := item.(type) {
+			case string:
+				typed = strings.TrimSpace(typed)
+				if typed != "" {
+					out = append(out, typed)
+				}
+			default:
+				text := strings.TrimSpace(fmt.Sprint(typed))
+				if text != "" && text != "<nil>" {
+					out = append(out, text)
+				}
+			}
+		}
+		return out
+	case string:
+		parts := strings.Split(v, ",")
+		out := make([]string, 0, len(parts))
+		for _, part := range parts {
+			part = strings.TrimSpace(part)
+			if part != "" {
+				out = append(out, part)
+			}
+		}
+		return out
+	default:
+		text := strings.TrimSpace(fmt.Sprint(v))
+		if text == "" || text == "<nil>" {
+			return nil
+		}
+		return []string{text}
+	}
+}
+
+func missingItems(required []string, granted []string) []string {
+	grantSet := make(map[string]struct{}, len(granted))
+	for _, item := range granted {
+		item = strings.TrimSpace(item)
+		if item == "" {
+			continue
+		}
+		grantSet[item] = struct{}{}
+	}
+
+	missing := make([]string, 0)
+	for _, item := range required {
+		item = strings.TrimSpace(item)
+		if item == "" {
+			continue
+		}
+		if _, ok := grantSet[item]; !ok {
+			missing = append(missing, item)
+		}
+	}
+	return missing
+}
+
+func dedupeStrings(items []string) []string {
+	if len(items) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(items))
+	out := make([]string, 0, len(items))
+	for _, item := range items {
+		item = strings.TrimSpace(item)
+		if item == "" {
+			continue
+		}
+		if _, ok := seen[item]; ok {
+			continue
+		}
+		seen[item] = struct{}{}
+		out = append(out, item)
+	}
+	return out
+}
+
+func (e *DAGWorkflowEngine) emitRunEvent(ctx context.Context, event *agent.RunEvent) {
+	if event == nil {
+		return
+	}
+	_ = e.uow.Do(ctx, func(ctx context.Context, repos *port.Repositories) error {
+		if repos.RunEvents == nil {
+			return nil
+		}
+		return repos.RunEvents.Create(ctx, event)
+	})
+}
+
+func (e *DAGWorkflowEngine) resolveWorkflowForTask(ctx context.Context, wf *workflow.Workflow, task *workflow.Task) (*workflow.Workflow, error) {
+	if task == nil {
+		return wf, nil
+	}
+	if task.WorkflowRevisionID == nil {
+		if wf != nil && wf.CurrentRevisionID != nil {
+			task.WorkflowRevisionID = wf.CurrentRevisionID
+			task.WorkflowRevision = wf.CurrentRevision
+		}
+		return wf, nil
+	}
+
+	var rev *workflow.WorkflowRevision
+	err := e.uow.Do(ctx, func(ctx context.Context, repos *port.Repositories) error {
+		var err error
+		rev, err = repos.Workflows.GetRevision(ctx, *task.WorkflowRevisionID)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	if rev == nil {
+		return wf, nil
+	}
+
+	if task.WorkflowRevision == 0 {
+		task.WorkflowRevision = rev.Revision
+	}
+	return buildWorkflowFromRevisionDefinition(wf, rev), nil
+}
+
+func buildWorkflowFromRevisionDefinition(base *workflow.Workflow, rev *workflow.WorkflowRevision) *workflow.Workflow {
+	if rev == nil {
+		return base
+	}
+	out := &workflow.Workflow{
+		ID:                rev.WorkflowID,
+		CurrentRevisionID: &rev.ID,
+		CurrentRevision:   rev.Revision,
+		Version:           rev.Definition.Version,
+		TriggerType:       rev.Definition.TriggerType,
+		TriggerConf:       rev.Definition.TriggerConf,
+		ContextSpec:       rev.Definition.ContextSpec,
+		Nodes:             rev.Definition.Nodes,
+		Edges:             rev.Definition.Edges,
+	}
+	if base != nil {
+		out.ID = base.ID
+		out.TenantID = base.TenantID
+		out.OwnerID = base.OwnerID
+		out.Visibility = base.Visibility
+		out.VisibleRoleIDs = base.VisibleRoleIDs
+		out.Code = base.Code
+		out.Name = base.Name
+		out.Description = base.Description
+		out.Status = base.Status
+		out.Tags = base.Tags
+		out.CreatedAt = base.CreatedAt
+		out.UpdatedAt = base.UpdatedAt
+		if out.Version == "" {
+			out.Version = base.Version
+		}
+		if out.TriggerType == "" {
+			out.TriggerType = base.TriggerType
+		}
+		if out.TriggerConf == nil {
+			out.TriggerConf = base.TriggerConf
+		}
+		if out.ContextSpec == nil {
+			out.ContextSpec = base.ContextSpec
+		}
+	}
+	return out
 }

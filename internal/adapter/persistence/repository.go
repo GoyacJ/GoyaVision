@@ -36,11 +36,16 @@ type repository struct {
 	assets  *repo.MediaAssetRepo
 	sources *repo.MediaSourceRepo
 
-	operators *repo.OperatorRepo
+	operators  *repo.OperatorRepo
+	algorithms *repo.AlgorithmRepo
 
-	workflows *repo.WorkflowRepo
-	tasks     *repo.TaskRepo
-	artifacts *repo.ArtifactRepo
+	workflows     *repo.WorkflowRepo
+	tasks         *repo.TaskRepo
+	artifacts     *repo.ArtifactRepo
+	contexts      *repo.ContextRepo
+	agentSessions *repo.AgentSessionRepo
+	runEvents     *repo.RunEventRepo
+	toolPolicies  *repo.ToolPolicyRepo
 
 	files          *repo.FileRepo
 	aiModels       *repo.AIModelRepo
@@ -59,9 +64,14 @@ func NewRepository(db *gorm.DB) *repository {
 		assets:         repo.NewMediaAssetRepo(db),
 		sources:        repo.NewMediaSourceRepo(db),
 		operators:      repo.NewOperatorRepo(db),
+		algorithms:     repo.NewAlgorithmRepo(db),
 		workflows:      repo.NewWorkflowRepo(db),
 		tasks:          repo.NewTaskRepo(db),
 		artifacts:      repo.NewArtifactRepo(db),
+		contexts:       repo.NewContextRepo(db),
+		agentSessions:  repo.NewAgentSessionRepo(db),
+		runEvents:      repo.NewRunEventRepo(db),
+		toolPolicies:   repo.NewToolPolicyRepo(db),
 		files:          repo.NewFileRepo(db),
 		aiModels:       repo.NewAIModelRepo(db),
 		userIdentities: repo.NewUserIdentityRepo(db),
@@ -93,10 +103,21 @@ func AutoMigrate(db *gorm.DB) error {
 		&model.OperatorVersionModel{},
 		&model.OperatorTemplateModel{},
 		&model.OperatorDependencyModel{},
+		&model.AlgorithmModel{},
+		&model.AlgorithmVersionModel{},
+		&model.AlgorithmImplementationModel{},
+		&model.AlgorithmEvaluationModel{},
 		&model.WorkflowModel{},
+		&model.WorkflowRevisionModel{},
 		&model.WorkflowNodeModel{},
 		&model.WorkflowEdgeModel{},
 		&model.TaskModel{},
+		&model.TaskContextStateModel{},
+		&model.TaskContextPatchModel{},
+		&model.TaskContextSnapshotModel{},
+		&model.AgentSessionModel{},
+		&model.RunEventModel{},
+		&model.ToolPolicyModel{},
 		&model.ArtifactModel{},
 		&model.FileModel{},
 		&model.AIModelModel{},

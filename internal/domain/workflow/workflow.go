@@ -34,23 +34,26 @@ const (
 )
 
 type Workflow struct {
-	ID             uuid.UUID
-	TenantID       uuid.UUID
-	OwnerID        uuid.UUID
-	Visibility     Visibility
-	VisibleRoleIDs []string
-	Code           string
-	Name           string
-	Description string
-	Version     string
-	TriggerType TriggerType
-	TriggerConf *TriggerConfig
-	Status      Status
-	Tags        []string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	Nodes       []Node
-	Edges       []Edge
+	ID                uuid.UUID
+	TenantID          uuid.UUID
+	OwnerID           uuid.UUID
+	Visibility        Visibility
+	VisibleRoleIDs    []string
+	Code              string
+	Name              string
+	Description       string
+	Version           string
+	CurrentRevisionID *uuid.UUID
+	CurrentRevision   int64
+	TriggerType       TriggerType
+	TriggerConf       *TriggerConfig
+	ContextSpec       *ContextSpec
+	Status            Status
+	Tags              []string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	Nodes             []Node
+	Edges             []Edge
 }
 
 func (w *Workflow) IsEnabled() bool {
@@ -149,6 +152,17 @@ type NodeConfig struct {
 	Params         map[string]interface{} `json:"params,omitempty"`
 	RetryCount     int                    `json:"retry_count,omitempty"`
 	TimeoutSeconds int                    `json:"timeout_seconds,omitempty"`
+	InputMapping   map[string]string      `json:"input_mapping,omitempty"`
+	OutputMapping  map[string]string      `json:"output_mapping,omitempty"`
+	AlgorithmRef   *AlgorithmRef          `json:"algorithm_ref,omitempty"`
+}
+
+type AlgorithmRef struct {
+	AlgorithmID     *uuid.UUID `json:"algorithm_id,omitempty"`
+	AlgorithmCode   string     `json:"algorithm_code,omitempty"`
+	Version         string     `json:"version,omitempty"`
+	SelectionPolicy string     `json:"selection_policy,omitempty"`
+	Tier            string     `json:"tier,omitempty"`
 }
 
 type EdgeCondition struct {

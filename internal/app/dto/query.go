@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"goyavision/internal/domain/agent"
+	"goyavision/internal/domain/algorithm"
 	"goyavision/internal/domain/media"
 	"goyavision/internal/domain/operator"
 	"goyavision/internal/domain/workflow"
@@ -136,6 +138,19 @@ type CheckDependenciesQuery struct {
 	OperatorID uuid.UUID
 }
 
+// Algorithm Queries
+type GetAlgorithmQuery struct {
+	ID uuid.UUID
+}
+
+type ListAlgorithmsQuery struct {
+	Status     *algorithm.Status
+	Scenario   string
+	Tags       []string
+	Keyword    string
+	Pagination Pagination
+}
+
 type ValidateSchemaQuery struct {
 	Schema map[string]interface{}
 }
@@ -166,6 +181,16 @@ type ListWorkflowsQuery struct {
 	Pagination  Pagination
 }
 
+type GetWorkflowRevisionQuery struct {
+	WorkflowID uuid.UUID
+	Revision   int64
+}
+
+type ListWorkflowRevisionsQuery struct {
+	WorkflowID uuid.UUID
+	Pagination Pagination
+}
+
 // Task Queries
 type GetTaskQuery struct {
 	ID uuid.UUID
@@ -190,6 +215,39 @@ type GetTaskStatsQuery struct {
 }
 
 type ListRunningTasksQuery struct{}
+
+type GetTaskContextQuery struct {
+	TaskID uuid.UUID
+}
+
+type ListTaskContextPatchesQuery struct {
+	TaskID     uuid.UUID
+	Pagination Pagination
+}
+
+type ListTaskEventsQuery struct {
+	TaskID     uuid.UUID
+	Source     string
+	NodeKey    string
+	Pagination Pagination
+}
+
+type GetAgentSessionQuery struct {
+	ID uuid.UUID
+}
+
+type ListAgentSessionsQuery struct {
+	TaskID     *uuid.UUID
+	Status     *agent.SessionStatus
+	Pagination Pagination
+}
+
+type ListAgentSessionEventsQuery struct {
+	SessionID  uuid.UUID
+	Source     string
+	NodeKey    string
+	Pagination Pagination
+}
 
 // User Management Queries
 type GetUserQuery struct {

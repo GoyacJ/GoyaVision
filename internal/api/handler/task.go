@@ -22,6 +22,9 @@ func RegisterTaskRoutes(public *echo.Group, protected *echo.Group, h *Handlers) 
 	public.GET("/tasks", handler.List)
 	public.GET("/tasks/stats", handler.Stats)
 	public.GET("/tasks/:id", handler.Get)
+	public.GET("/tasks/:id/context", handler.GetContext)
+	public.GET("/tasks/:id/context/patches", handler.ListContextPatches)
+	public.GET("/tasks/:id/events", handler.ListEvents)
 	public.GET("/tasks/:id/progress/stream", handler.ProgressStream)
 
 	// Protected
@@ -32,6 +35,7 @@ func RegisterTaskRoutes(public *echo.Group, protected *echo.Group, h *Handlers) 
 	protected.POST("/tasks/:id/complete", handler.Complete)
 	protected.POST("/tasks/:id/fail", handler.Fail)
 	protected.POST("/tasks/:id/cancel", handler.Cancel)
+	protected.POST("/tasks/:id/context/snapshot", handler.CreateContextSnapshot)
 }
 
 type taskHandler struct {
@@ -271,6 +275,102 @@ func (h *taskHandler) Cancel(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, dto.TaskToResponse(task))
+}
+
+func (h *taskHandler) GetContext(c echo.Context) error {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid task id")
+	}
+
+	state, err := h.h.GetTaskContext.Handle(c.Request().Context(), appdto.GetTaskContextQuery{TaskID: id})
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, dto.TaskContextToResponse(state))
+}
+
+func (h *taskHandler) ListContextPatches(c echo.Context) error {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid task id")
+	}
+
+	var query dto.TaskContextPatchListQuery
+	if err := c.Bind(&query); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid query parameters")
+	}
+
+	result, err := h.h.ListTaskContextPatches.Handle(c.Request().Context(), appdto.ListTaskContextPatchesQuery{
+		TaskID: id,
+		Pagination: appdto.Pagination{
+			Limit:  query.Limit,
+			Offset: query.Offset,
+		},
+	})
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, dto.TaskContextPatchListResponse{
+		Items: dto.TaskContextPatchesToResponse(result.Items),
+		Total: result.Total,
+	})
+}
+
+func (h *taskHandler) CreateContextSnapshot(c echo.Context) error {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid task id")
+	}
+
+	var req dto.TaskContextSnapshotReq
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
+	}
+
+	snapshot, err := h.h.CreateTaskContextSnapshot.Handle(c.Request().Context(), appdto.CreateTaskContextSnapshotCommand{
+		TaskID:  id,
+		Trigger: req.Trigger,
+	})
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusCreated, dto.TaskContextSnapshotToResponse(snapshot))
+}
+
+func (h *taskHandler) ListEvents(c echo.Context) error {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid task id")
+	}
+
+	var query dto.TaskEventListQuery
+	if err := c.Bind(&query); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid query parameters")
+	}
+
+	q := appdto.ListTaskEventsQuery{
+		TaskID: id,
+		Pagination: appdto.Pagination{
+			Limit:  query.Limit,
+			Offset: query.Offset,
+		},
+	}
+	if query.Source != nil {
+		q.Source = *query.Source
+	}
+	if query.NodeKey != nil {
+		q.NodeKey = *query.NodeKey
+	}
+
+	result, err := h.h.ListTaskEvents.Handle(c.Request().Context(), q)
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, dto.TaskRunEventListResponse{
+		Items: dto.TaskRunEventsToResponse(result.Items),
+		Total: result.Total,
+	})
 }
 
 func (h *taskHandler) Stats(c echo.Context) error {

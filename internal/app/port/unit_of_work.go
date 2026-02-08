@@ -3,7 +3,9 @@ package port
 import (
 	"context"
 
+	"goyavision/internal/domain/agent"
 	"goyavision/internal/domain/ai_model"
+	"goyavision/internal/domain/algorithm"
 	"goyavision/internal/domain/identity"
 	"goyavision/internal/domain/media"
 	"goyavision/internal/domain/operator"
@@ -38,21 +40,26 @@ type UnitOfWork interface {
 
 // Repositories 聚合所有仓储的访问器
 type Repositories struct {
-	Sources     media.SourceRepository
-	Assets      media.AssetRepository
-	Operators   operator.Repository
+	Sources              media.SourceRepository
+	Assets               media.AssetRepository
+	Operators            operator.Repository
 	OperatorVersions     operator.VersionRepository
 	OperatorTemplates    operator.TemplateRepository
 	OperatorDependencies operator.DependencyRepository
-	Workflows   workflow.Repository
-	Tasks       workflow.TaskRepository
-	Artifacts   workflow.ArtifactRepository
-	Users       identity.UserRepository
-	Roles       identity.RoleRepository
-	Permissions identity.PermissionRepository
-	Menus       identity.MenuRepository
-	Files       storage.FileRepository
-	AIModels       ai_model.Repository
-	UserIdentities identity.UserIdentityRepository
-	UserAssets     portrepo.UserAssetRepository
+	Algorithms           algorithm.Repository
+	Workflows            workflow.Repository
+	Tasks                workflow.TaskRepository
+	Artifacts            workflow.ArtifactRepository
+	Contexts             workflow.ContextRepository
+	AgentSessions        agent.SessionRepository
+	RunEvents            agent.RunEventRepository
+	ToolPolicies         agent.ToolPolicyRepository
+	Users                identity.UserRepository
+	Roles                identity.RoleRepository
+	Permissions          identity.PermissionRepository
+	Menus                identity.MenuRepository
+	Files                storage.FileRepository
+	AIModels             ai_model.Repository
+	UserIdentities       identity.UserIdentityRepository
+	UserAssets           portrepo.UserAssetRepository
 }

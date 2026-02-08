@@ -8,24 +8,28 @@ import (
 )
 
 type WorkflowModel struct {
-	ID             uuid.UUID      `gorm:"type:uuid;primaryKey"`
-	TenantID       uuid.UUID      `gorm:"type:uuid;not null;index:idx_workflows_tenant_id"`
-	OwnerID        uuid.UUID      `gorm:"type:uuid;index:idx_workflows_owner_id"`
-	Visibility     int            `gorm:"default:0;index:idx_workflows_visibility"`
-	VisibleRoleIDs datatypes.JSON `gorm:"serializer:json"`
-	Code           string         `gorm:"type:varchar(100);not null;uniqueIndex"`
-	Name           string         `gorm:"type:varchar(255);not null"`
-	Description string         `gorm:"type:text"`
-	Version     string         `gorm:"type:varchar(50);not null;default:'1.0.0'"`
-	TriggerType string         `gorm:"type:varchar(50);not null;index:idx_workflows_trigger_type"`
-	TriggerConf datatypes.JSON `gorm:"serializer:json"`
-	Status      string         `gorm:"type:varchar(20);not null;default:'draft';index:idx_workflows_status"`
-	Tags        datatypes.JSON `gorm:"serializer:json"`
-	CreatedAt   time.Time      `gorm:"autoCreateTime;index:idx_workflows_created_at"`
-	UpdatedAt   time.Time      `gorm:"autoUpdateTime"`
+	ID                uuid.UUID      `gorm:"type:uuid;primaryKey"`
+	TenantID          uuid.UUID      `gorm:"type:uuid;not null;index:idx_workflows_tenant_id"`
+	OwnerID           uuid.UUID      `gorm:"type:uuid;index:idx_workflows_owner_id"`
+	Visibility        int            `gorm:"default:0;index:idx_workflows_visibility"`
+	VisibleRoleIDs    datatypes.JSON `gorm:"serializer:json"`
+	Code              string         `gorm:"type:varchar(100);not null;uniqueIndex"`
+	Name              string         `gorm:"type:varchar(255);not null"`
+	Description       string         `gorm:"type:text"`
+	Version           string         `gorm:"type:varchar(50);not null;default:'1.0.0'"`
+	CurrentRevisionID *uuid.UUID     `gorm:"type:uuid;index:idx_workflows_current_revision_id"`
+	CurrentRevision   int64          `gorm:"not null;default:0"`
+	TriggerType       string         `gorm:"type:varchar(50);not null;index:idx_workflows_trigger_type"`
+	TriggerConf       datatypes.JSON `gorm:"serializer:json"`
+	ContextSpec       datatypes.JSON `gorm:"serializer:json"`
+	Status            string         `gorm:"type:varchar(20);not null;default:'draft';index:idx_workflows_status"`
+	Tags              datatypes.JSON `gorm:"serializer:json"`
+	CreatedAt         time.Time      `gorm:"autoCreateTime;index:idx_workflows_created_at"`
+	UpdatedAt         time.Time      `gorm:"autoUpdateTime"`
 
-	Nodes []WorkflowNodeModel `gorm:"foreignKey:WorkflowID;constraint:OnDelete:CASCADE"`
-	Edges []WorkflowEdgeModel `gorm:"foreignKey:WorkflowID;constraint:OnDelete:CASCADE"`
+	Nodes              []WorkflowNodeModel    `gorm:"foreignKey:WorkflowID;constraint:OnDelete:CASCADE"`
+	Edges              []WorkflowEdgeModel    `gorm:"foreignKey:WorkflowID;constraint:OnDelete:CASCADE"`
+	CurrentRevisionRef *WorkflowRevisionModel `gorm:"foreignKey:CurrentRevisionID"`
 }
 
 func (WorkflowModel) TableName() string { return "workflows" }
@@ -57,3 +61,15 @@ type WorkflowEdgeModel struct {
 }
 
 func (WorkflowEdgeModel) TableName() string { return "workflow_edges" }
+
+type WorkflowRevisionModel struct {
+	ID         uuid.UUID      `gorm:"type:uuid;primaryKey"`
+	WorkflowID uuid.UUID      `gorm:"type:uuid;not null;index:idx_workflow_revisions_workflow_id"`
+	Revision   int64          `gorm:"not null;index:idx_workflow_revisions_revision"`
+	Status     string         `gorm:"type:varchar(20);not null;default:'draft';index:idx_workflow_revisions_status"`
+	Definition datatypes.JSON `gorm:"serializer:json"`
+	CreatedAt  time.Time      `gorm:"autoCreateTime;index:idx_workflow_revisions_created_at"`
+	UpdatedAt  time.Time      `gorm:"autoUpdateTime"`
+}
+
+func (WorkflowRevisionModel) TableName() string { return "workflow_revisions" }

@@ -45,6 +45,13 @@ func (h *UpdateWorkflowHandler) Handle(ctx context.Context, cmd dto.UpdateWorkfl
 			}
 			wf.TriggerConf = triggerConf
 		}
+		if cmd.ContextSpec != nil {
+			contextSpec, err := parseContextSpec(cmd.ContextSpec)
+			if err != nil {
+				return apperr.InvalidInput(err.Error())
+			}
+			wf.ContextSpec = contextSpec
+		}
 		if cmd.Status != nil {
 			wf.Status = *cmd.Status
 		}
@@ -53,6 +60,9 @@ func (h *UpdateWorkflowHandler) Handle(ctx context.Context, cmd dto.UpdateWorkfl
 		}
 		if cmd.Visibility != nil {
 			wf.Visibility = *cmd.Visibility
+		}
+		if cmd.VisibleRoleIDs != nil {
+			wf.VisibleRoleIDs = cmd.VisibleRoleIDs
 		}
 
 		if len(cmd.Nodes) > 0 {
@@ -109,6 +119,13 @@ func (h *UpdateWorkflowHandler) Handle(ctx context.Context, cmd dto.UpdateWorkfl
 		wfWithNodes, err := repos.Workflows.GetWithNodes(ctx, wf.ID)
 		if err != nil {
 			return apperr.Wrap(err, apperr.CodeDBError, "failed to get workflow with nodes")
+		}
+		if _, err := persistAndActivateWorkflowRevision(ctx, repos, wfWithNodes, nextWorkflowRevision(wf.CurrentRevision)); err != nil {
+			return err
+		}
+		wfWithNodes, err = repos.Workflows.GetWithNodes(ctx, wf.ID)
+		if err != nil {
+			return apperr.Wrap(err, apperr.CodeDBError, "failed to reload workflow with revision")
 		}
 		result = wfWithNodes
 		return nil
