@@ -21,7 +21,7 @@
 
 2. **发送安全报告**
    - 发送邮件至：chenjie@ysmjjsy.com
-   - 或通过 [GitHub Security Advisories](https://github.com/GoyaDo/GoyaVision/security/advisories) 报告
+   - 或通过 [GitHub Security Advisories](https://github.com/GoyacJ/GoyaVision/security/advisories) 报告
 
 3. **报告内容**
    请包含以下信息：
@@ -96,4 +96,4 @@
 
 如有安全问题，请联系：
 - 安全邮箱：chenjie@ysmjjsy.com
-- [GitHub Security Advisories](https://github.com/GoyaDo/GoyaVision/security/advisories)
+- [GitHub Security Advisories](https://github.com/GoyacJ/GoyaVision/security/advisories)

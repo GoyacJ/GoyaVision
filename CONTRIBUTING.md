@@ -6,7 +6,7 @@
 
 ### 报告问题
 
-如果您发现了 bug 或有功能建议，请通过 [GitHub Issues](https://github.com/GoyaDo/GoyaVision/issues) 提交。
+如果您发现了 bug 或有功能建议，请通过 [GitHub Issues](https://github.com/GoyacJ/GoyaVision/issues) 提交。
 
 在提交 issue 前，请：
 - 搜索现有 issue，避免重复
@@ -18,7 +18,7 @@
 
 1. **Fork 项目**
    ```bash
-   git clone https://github.com/GoyaDo/GoyaVision.git
+   git clone https://github.com/GoyacJ/GoyaVision.git
    cd GoyaVision
    ```
 
@@ -112,7 +112,7 @@
 
 ```bash
 # 克隆项目
-git clone https://github.com/GoyaDo/GoyaVision.git
+git clone https://github.com/GoyacJ/GoyaVision.git
 cd GoyaVision
 
 # 安装依赖
@@ -142,7 +142,7 @@ go run ./cmd/server
 ## 获取帮助
 
 - 查看 [文档](README.md)
-- 搜索 [现有 Issues](https://github.com/GoyaDo/GoyaVision/issues)
+- 搜索 [现有 Issues](https://github.com/GoyacJ/GoyaVision/issues)
 - 创建新的 Issue 提问
 
 再次感谢您的贡献！

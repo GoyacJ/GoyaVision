@@ -36,7 +36,7 @@
 
 可以通过以下方式报告滥用、骚扰或其他不可接受的行为：
 - 发送邮件至：chenjie@ysmjjsy.com
-- 通过 [GitHub Issues](https://github.com/GoyaDo/GoyaVision/issues) 报告
+- 通过 [GitHub Issues](https://github.com/GoyacJ/GoyaVision/issues) 报告
 
 所有投诉都将得到审查和调查，并将产生被认为必要和适当的响应。项目团队有义务对事件报告者保密。具体执行政策的更多细节可能会单独发布。
 
