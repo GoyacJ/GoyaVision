@@ -6,7 +6,7 @@
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Go Version](https://img.shields.io/badge/go-1.22+-00ADD8.svg)](https://golang.org/)
-[![Go Report Card](https://goreportcard.com/badge/github.com/GoyaDo/GoyaVision)](https://goreportcard.com/report/github.com/GoyaDo/GoyaVision)
+[![Go Report Card](https://goreportcard.com/badge/github.com/GoyacJ/GoyaVision)](https://goreportcard.com/report/github.com/GoyacJ/GoyaVision)
 
 [功能特性](#-功能特性) • [系统架构](#-系统架构) • [快速开始](#-快速开始) • [配置说明](#-配置说明) • [API 文档](#-api-文档) • [贡献](#-贡献)
 
@@ -113,7 +113,7 @@ GoyaVision 遵循 **Clean Architecture** 规范，并采用 **CQRS** 模式分�
 
 ```bash
 # 克隆仓库
-git clone https://github.com/GoyaDo/GoyaVision.git
+git clone https://github.com/GoyacJ/GoyaVision.git
 cd GoyaVision
 
 # 一键启动
@@ -159,6 +159,6 @@ docker-compose up -d
 
 **业务 = 配置 · 能力 = 插件 · 执行 = 引擎**
 
-[⭐ Star us on GitHub](https://github.com/GoyaDo/GoyaVision) • [📖 阅读文档](docs/README.md) • [🤝 参与贡献](CONTRIBUTING.md)
+[⭐ Star us on GitHub](https://github.com/GoyacJ/GoyaVision) • [📖 阅读文档](docs/README.md) • [🤝 参与贡献](CONTRIBUTING.md)
 
 </div>
