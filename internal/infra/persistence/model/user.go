@@ -32,7 +32,7 @@ type RoleModel struct {
 	Description      string            `gorm:"size:256"`
 	Status           int               `gorm:"default:1"`
 	IsDefault        bool              `gorm:"default:false;index:idx_roles_is_default"`
-	AutoAssignConfig datatypes.JSON    `gorm:"type:jsonb"`
+	AutoAssignConfig datatypes.JSON    `gorm:"serializer:json"`
 	CreatedAt        time.Time         `gorm:"autoCreateTime"`
 	UpdatedAt   time.Time         `gorm:"autoUpdateTime"`
 	Permissions []PermissionModel `gorm:"many2many:role_permissions"`

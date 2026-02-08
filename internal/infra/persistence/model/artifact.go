@@ -13,7 +13,7 @@ type ArtifactModel struct {
 	TaskID    uuid.UUID      `gorm:"type:uuid;not null;index:idx_artifacts_task_id"`
 	Type      string         `gorm:"type:varchar(50);not null;index:idx_artifacts_type"`
 	AssetID   *uuid.UUID     `gorm:"type:uuid;index:idx_artifacts_asset_id"`
-	Data      datatypes.JSON `gorm:"type:jsonb"`
+	Data      datatypes.JSON `gorm:"serializer:json"`
 	CreatedAt time.Time      `gorm:"autoCreateTime;index:idx_artifacts_created_at"`
 	UpdatedAt time.Time      `gorm:"autoUpdateTime"`
 

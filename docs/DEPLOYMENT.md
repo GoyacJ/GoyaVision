@@ -87,6 +87,30 @@ psql -c "CREATE USER goyavision WITH PASSWORD 'goyavision';"
 psql -c "GRANT ALL PRIVILEGES ON DATABASE goyavision TO goyavision;"
 ```
 
+### 多数据库支持
+
+除 PostgreSQL 外，支持 **MySQL** 和 **SQLite**，通过 `db.driver` 与 `db.dsn` 配置：
+
+| 驱动 | 说明 | DSN 示例 |
+|------|------|----------|
+| `postgres` | 默认，生产推荐 | `host=localhost user=goyavision password=xxx dbname=goyavision port=5432 sslmode=disable` |
+| `mysql` | 需 MySQL 5.7+（支持 JSON） | `user:pass@tcp(host:3306)/dbname?charset=utf8mb4&parseTime=True` |
+| `sqlite3` | 单文件，无需独立服务 | `file:./data/goyavision.db?mode=rwc` |
+
+环境变量：`GOYAVISION_DB_DRIVER`、`GOYAVISION_DB_DSN`。未配置 `db.dsn` 时跳过数据库连接（如仅运行前端静态服务）。
+
+### 多文件存储支持
+
+文件与资产存储支持三种后端，通过 `storage.type` 选择：
+
+| 类型 | 说明 | 配置 |
+|------|------|------|
+| `minio` | 默认，MinIO 或兼容 S3 的服务 | `minio.*`（endpoint、access_key、secret_key、bucket_name 等） |
+| `s3` | AWS S3 或兼容端点 | `storage.s3.*`（region、bucket、endpoint、access_key、secret_key、public_base 等） |
+| `local` | 本地目录 | `storage.local.base_path`（存储路径）、`storage.local.base_url`（对外访问 base URL） |
+
+未配置或 `storage.type` 为空时默认为 `minio`，行为与仅配置 `minio` 段一致。使用 `local` 时需确保应用能读写 `base_path`，且 `base_url` 与对外提供文件访问的地址一致（如通过反向代理或静态路由提供下载）。
+
 ## 配置
 
 ### 配置结构

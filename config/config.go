@@ -20,6 +20,7 @@ type Config struct {
 	AI         AI
 	JWT        JWT
 	MediaMTX   MediaMTX
+	Storage    Storage
 	MinIO      MinIO
 	MCP        MCP
 	OAuth      OAuth
@@ -119,7 +120,8 @@ type Server struct {
 }
 
 type DB struct {
-	DSN string
+	Driver string
+	DSN    string
 }
 
 type FFmpeg struct {
@@ -143,6 +145,27 @@ type Record struct {
 type AI struct {
 	Timeout time.Duration
 	Retry   int
+}
+
+type Storage struct {
+	Type   string
+	S3     S3
+	Local  LocalStorage
+}
+
+type S3 struct {
+	Region     string
+	Bucket     string
+	Endpoint   string
+	AccessKey  string
+	SecretKey  string
+	UseSSL     bool
+	PublicBase string
+}
+
+type LocalStorage struct {
+	BasePath string
+	BaseURL  string
 }
 
 type MinIO struct {
@@ -182,7 +205,10 @@ func Load() (*Config, error) {
 	cfg := &Config{
 		Env:    env,
 		Server: Server{Port: v.GetInt("server.port")},
-		DB:     DB{DSN: v.GetString("db.dsn")},
+		DB: DB{
+			Driver: v.GetString("db.driver"),
+			DSN:    v.GetString("db.dsn"),
+		},
 		FFmpeg: FFmpeg{
 			Bin:       v.GetString("ffmpeg.bin"),
 			MaxRecord: v.GetInt("ffmpeg.max_record"),
@@ -221,6 +247,22 @@ func Load() (*Config, error) {
 			Username:        v.GetString("mediamtx.username"),
 			Password:        v.GetString("mediamtx.password"),
 		},
+		Storage: Storage{
+			Type: v.GetString("storage.type"),
+			S3: S3{
+				Region:     v.GetString("storage.s3.region"),
+				Bucket:     v.GetString("storage.s3.bucket"),
+				Endpoint:   v.GetString("storage.s3.endpoint"),
+				AccessKey:  v.GetString("storage.s3.access_key"),
+				SecretKey:  v.GetString("storage.s3.secret_key"),
+				UseSSL:     v.GetBool("storage.s3.use_ssl"),
+				PublicBase: v.GetString("storage.s3.public_base"),
+			},
+			Local: LocalStorage{
+				BasePath: v.GetString("storage.local.base_path"),
+				BaseURL:  v.GetString("storage.local.base_url"),
+			},
+		},
 		MinIO: MinIO{
 			Endpoint:   v.GetString("minio.endpoint"),
 			AccessKey:  v.GetString("minio.access_key"),
@@ -229,6 +271,9 @@ func Load() (*Config, error) {
 			UseSSL:     v.GetBool("minio.use_ssl"),
 			PublicBase: v.GetString("minio.public_base"),
 		},
+	}
+	if cfg.Storage.Type == "" {
+		cfg.Storage.Type = "minio"
 	}
 	if cfg.Server.Port == 0 {
 		cfg.Server.Port = 8080
@@ -276,8 +321,14 @@ func (c *Config) Validate() error {
 	if c.Server.Port == 0 {
 		return fmt.Errorf("server.port is required")
 	}
-	if c.DB.DSN == "" {
-		return fmt.Errorf("db.dsn is required")
+	if c.DB.DSN != "" {
+		validDrivers := map[string]bool{"postgres": true, "mysql": true, "sqlite3": true}
+		if c.DB.Driver == "" {
+			c.DB.Driver = "postgres"
+		}
+		if !validDrivers[c.DB.Driver] {
+			return fmt.Errorf("db.driver must be one of: postgres, mysql, sqlite3")
+		}
 	}
 	if c.JWT.Secret == "" {
 		return fmt.Errorf("jwt.secret is required")
@@ -291,8 +342,25 @@ func (c *Config) Validate() error {
 	if c.MediaMTX.RecordPath == "" || c.MediaMTX.RecordFormat == "" || c.MediaMTX.SegmentDuration == "" {
 		return fmt.Errorf("mediamtx record settings are required")
 	}
-	if c.MinIO.Endpoint == "" || c.MinIO.AccessKey == "" || c.MinIO.SecretKey == "" || c.MinIO.BucketName == "" {
-		return fmt.Errorf("minio configuration is required")
+	stype := c.Storage.Type
+	if stype == "" {
+		stype = "minio"
+	}
+	switch stype {
+	case "minio":
+		if c.MinIO.Endpoint == "" || c.MinIO.AccessKey == "" || c.MinIO.SecretKey == "" || c.MinIO.BucketName == "" {
+			return fmt.Errorf("storage.type=minio requires minio.endpoint, access_key, secret_key, bucket_name")
+		}
+	case "s3":
+		if c.Storage.S3.Bucket == "" || c.Storage.S3.AccessKey == "" || c.Storage.S3.SecretKey == "" {
+			return fmt.Errorf("storage.type=s3 requires storage.s3.bucket, access_key, secret_key")
+		}
+	case "local":
+		if c.Storage.Local.BasePath == "" || c.Storage.Local.BaseURL == "" {
+			return fmt.Errorf("storage.type=local requires storage.local.base_path and base_url")
+		}
+	default:
+		return fmt.Errorf("storage.type must be one of: minio, s3, local")
 	}
 	return nil
 }

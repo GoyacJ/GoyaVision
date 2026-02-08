@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"goyavision/internal/domain/storage"
+	appport "goyavision/internal/app/port"
 	"goyavision/internal/port"
-	storageUtil "goyavision/pkg/storage"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -56,13 +56,13 @@ type ListFilesRequest struct {
 
 type FileService struct {
 	repo        port.Repository
-	minioClient *storageUtil.MinIOClient
+	fileStorage appport.FileStorage
 }
 
-func NewFileService(repo port.Repository, minioClient *storageUtil.MinIOClient) *FileService {
+func NewFileService(repo port.Repository, fileStorage appport.FileStorage) *FileService {
 	return &FileService{
 		repo:        repo,
-		minioClient: minioClient,
+		fileStorage: fileStorage,
 	}
 }
 
@@ -100,8 +100,7 @@ func (s *FileService) UploadFile(ctx context.Context, reader io.Reader, filename
 	// 生成存储路径
 	objectName := fmt.Sprintf("files/%s/%s%s", fileType, uuid.New().String(), ext)
 
-	// 上传到 MinIO
-	_, err = s.minioClient.Upload(ctx, objectName, &buf, int64(buf.Len()), mimeType)
+	_, err = s.fileStorage.Upload(ctx, objectName, &buf, int64(buf.Len()), mimeType)
 	if err != nil {
 		return nil, fmt.Errorf("failed to upload file to storage: %w", err)
 	}
@@ -121,7 +120,7 @@ func (s *FileService) UploadFile(ctx context.Context, reader io.Reader, filename
 	}
 
 	if err := s.repo.CreateFile(ctx, file); err != nil {
-		_ = s.minioClient.Delete(ctx, objectName)
+		_ = s.fileStorage.Delete(ctx, objectName)
 		return nil, err
 	}
 
@@ -194,8 +193,7 @@ func (s *FileService) DeleteFile(ctx context.Context, id uuid.UUID) error {
 		return err
 	}
 
-	// 删除存储中的文件
-	if err := s.minioClient.Delete(ctx, file.Path); err != nil {
+	if err := s.fileStorage.Delete(ctx, file.Path); err != nil {
 		return fmt.Errorf("failed to delete file from storage: %w", err)
 	}
 

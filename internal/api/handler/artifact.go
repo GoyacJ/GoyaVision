@@ -6,6 +6,7 @@ import (
 	"goyavision/config"
 	"goyavision/internal/api/dto"
 	"goyavision/internal/app"
+	appport "goyavision/internal/app/port"
 	"goyavision/internal/domain/workflow"
 
 	"github.com/google/uuid"
@@ -15,8 +16,9 @@ import (
 func RegisterArtifact(g *echo.Group, h *Handlers) {
 	svc := app.NewArtifactService(h.Repo)
 	ah := artifactHandler{
-		svc: svc,
-		cfg: h.Cfg,
+		svc:    svc,
+		cfg:    h.Cfg,
+		urlCfg: h.StorageURLConfig,
 	}
 	g.GET("/artifacts", ah.List)
 	g.POST("/artifacts", ah.Create)
@@ -26,8 +28,9 @@ func RegisterArtifact(g *echo.Group, h *Handlers) {
 }
 
 type artifactHandler struct {
-	svc *app.ArtifactService
-	cfg *config.Config
+	svc    *app.ArtifactService
+	cfg    *config.Config
+	urlCfg appport.StorageURLConfig
 }
 
 func (h *artifactHandler) List(c echo.Context) error {
@@ -68,7 +71,7 @@ func (h *artifactHandler) List(c echo.Context) error {
 	}
 
 	return c.JSON(200, dto.ArtifactListResponse{
-		Items: dto.ArtifactsToResponse(artifacts, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL),
+		Items: dto.ArtifactsToResponse(artifacts, h.urlCfg.Endpoint, h.urlCfg.BucketName, h.urlCfg.UseSSL),
 		Total: total,
 	})
 }
@@ -94,7 +97,7 @@ func (h *artifactHandler) Create(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(201, dto.ArtifactToResponse(artifact, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL))
+	return c.JSON(201, dto.ArtifactToResponse(artifact, h.urlCfg.Endpoint, h.urlCfg.BucketName, h.urlCfg.UseSSL))
 }
 
 func (h *artifactHandler) Get(c echo.Context) error {
@@ -112,7 +115,7 @@ func (h *artifactHandler) Get(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(200, dto.ArtifactToResponse(artifact, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL))
+	return c.JSON(200, dto.ArtifactToResponse(artifact, h.urlCfg.Endpoint, h.urlCfg.BucketName, h.urlCfg.UseSSL))
 }
 
 func (h *artifactHandler) Delete(c echo.Context) error {
@@ -148,7 +151,7 @@ func (h *artifactHandler) ListByTask(c echo.Context) error {
 		if err != nil {
 			return err
 		}
-		return c.JSON(200, dto.ArtifactsToResponse(artifacts, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL))
+		return c.JSON(200, dto.ArtifactsToResponse(artifacts, h.urlCfg.Endpoint, h.urlCfg.BucketName, h.urlCfg.UseSSL))
 	}
 
 	artifacts, err := h.svc.ListByTask(c.Request().Context(), taskID)
@@ -156,5 +159,5 @@ func (h *artifactHandler) ListByTask(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(200, dto.ArtifactsToResponse(artifacts, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL))
+	return c.JSON(200, dto.ArtifactsToResponse(artifacts, h.urlCfg.Endpoint, h.urlCfg.BucketName, h.urlCfg.UseSSL))
 }

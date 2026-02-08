@@ -4,6 +4,7 @@ go 1.24.0
 
 require (
 	github.com/go-co-op/gocron/v2 v2.5.0
+	github.com/go-pay/gopay v1.5.115
 	github.com/go-playground/validator/v10 v10.30.1
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
@@ -15,7 +16,9 @@ require (
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/crypto v0.46.0
 	gorm.io/datatypes v1.2.0
+	gorm.io/driver/mysql v1.4.7
 	gorm.io/driver/postgres v1.5.9
+	gorm.io/driver/sqlite v1.5.6
 	gorm.io/gorm v1.25.12
 )
 
@@ -27,7 +30,6 @@ require (
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-pay/crypto v0.0.1 // indirect
 	github.com/go-pay/errgroup v0.0.3 // indirect
-	github.com/go-pay/gopay v1.5.115 // indirect
 	github.com/go-pay/smap v0.0.2 // indirect
 	github.com/go-pay/util v0.0.4 // indirect
 	github.com/go-pay/xlog v0.0.3 // indirect
@@ -52,6 +54,7 @@ require (
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/mattn/go-sqlite3 v1.14.22 // indirect
 	github.com/minio/crc64nvme v1.1.1 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
@@ -82,5 +85,4 @@ require (
 	golang.org/x/time v0.5.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	gorm.io/driver/mysql v1.4.7 // indirect
 )

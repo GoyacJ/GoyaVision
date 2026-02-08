@@ -11,8 +11,8 @@ import (
 	"goyavision/internal/api/middleware"
 	"goyavision/internal/app"
 	appdto "goyavision/internal/app/dto"
+	appport "goyavision/internal/app/port"
 	"goyavision/internal/domain/media"
-	"goyavision/pkg/storage"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -20,19 +20,19 @@ import (
 
 func RegisterUpload(g *echo.Group, h *Handlers) {
 	uh := uploadHandler{
-		h:           h,
-		fileSvc:     app.NewFileService(h.Repo, h.MinIOClient),
-		minioClient: h.MinIOClient,
-		cfg:         h.Cfg,
+		h:       h,
+		fileSvc: app.NewFileService(h.Repo, h.FileStorage),
+		cfg:     h.Cfg,
+		urlCfg:  h.StorageURLConfig,
 	}
 	g.POST("/upload", uh.Upload)
 }
 
 type uploadHandler struct {
-	h           *Handlers
-	fileSvc     *app.FileService
-	minioClient *storage.MinIOClient
-	cfg         *config.Config
+	h       *Handlers
+	fileSvc *app.FileService
+	cfg     *config.Config
+	urlCfg  appport.StorageURLConfig
 }
 
 func (h *uploadHandler) Upload(c echo.Context) error {
@@ -134,5 +134,5 @@ func (h *uploadHandler) Upload(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(201, dto.AssetToResponse(asset, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.PublicBase, h.cfg.MinIO.UseSSL))
+	return c.JSON(201, dto.AssetToResponse(asset, h.urlCfg.Endpoint, h.urlCfg.BucketName, h.urlCfg.PublicBase, h.urlCfg.UseSSL))
 }

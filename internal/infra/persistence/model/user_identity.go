@@ -13,7 +13,7 @@ type UserIdentityModel struct {
 	IdentityType string         `gorm:"type:varchar(20);not null;index:idx_user_identities_type_identifier"`
 	Identifier   string         `gorm:"type:varchar(255);not null;index:idx_user_identities_type_identifier"`
 	Credential   string         `gorm:"type:varchar(255)"`
-	Meta         datatypes.JSON `gorm:"type:jsonb"`
+	Meta         datatypes.JSON `gorm:"serializer:json"`
 	CreatedAt    time.Time      `gorm:"autoCreateTime"`
 	UpdatedAt    time.Time      `gorm:"autoUpdateTime"`
 }

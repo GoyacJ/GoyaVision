@@ -12,8 +12,6 @@ import (
 	"goyavision/internal/app/query"
 	infraauth "goyavision/internal/infra/auth"
 	"goyavision/internal/port"
-	"goyavision/pkg/storage"
-
 	"gorm.io/gorm"
 )
 
@@ -95,10 +93,11 @@ type Handlers struct {
 	RechargeHandler                 *command.RechargeHandler
 	CheckInHandler                  *command.CheckInHandler
 	SubscribeHandler                *command.SubscribeHandler
-	Cfg                      *config.Config
-	MtxCli                   *mediamtx.Client
-	MinIOClient              *storage.MinIOClient
-	WorkflowScheduler        *app.WorkflowScheduler
+	Cfg               *config.Config
+	MtxCli            *mediamtx.Client
+	FileStorage       appport.FileStorage
+	StorageURLConfig  appport.StorageURLConfig
+	WorkflowScheduler *app.WorkflowScheduler
 	DB                       *gorm.DB
 	Repo                     port.Repository      // For middleware and non-migrated handlers
 	TokenService             appport.TokenService // For auth handlers
@@ -107,9 +106,10 @@ type Handlers struct {
 
 // Deps 依赖注入结构
 type Deps struct {
-	Repo        port.Repository
-	Cfg         *config.Config
-	MinIOClient *storage.MinIOClient
+	Repo             port.Repository
+	Cfg              *config.Config
+	FileStorage      appport.FileStorage
+	StorageURLConfig appport.StorageURLConfig
 }
 
 func NewHandlers(
@@ -122,7 +122,8 @@ func NewHandlers(
 	db *gorm.DB,
 	cfg *config.Config,
 	mtxCli *mediamtx.Client,
-	minioClient *storage.MinIOClient,
+	fileStorage appport.FileStorage,
+	storageURLConfig appport.StorageURLConfig,
 	workflowScheduler *app.WorkflowScheduler,
 	repo port.Repository,
 	eventBus appport.EventBus,
@@ -225,10 +226,11 @@ func NewHandlers(
 		RechargeHandler:                 command.NewRechargeHandler(uow, paymentAdapter),
 		CheckInHandler:                  command.NewCheckInHandler(uow),
 		SubscribeHandler:                command.NewSubscribeHandler(uow),
-		Cfg:                      cfg,
-		MtxCli:                   mtxCli,
-		MinIOClient:              minioClient,
-		WorkflowScheduler:        workflowScheduler,
+		Cfg:               cfg,
+		MtxCli:            mtxCli,
+		FileStorage:       fileStorage,
+		StorageURLConfig:  storageURLConfig,
+		WorkflowScheduler: workflowScheduler,
 		DB:                       db,
 		Repo:                     repo,
 		TokenService:             tokenService,

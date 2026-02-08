@@ -16,9 +16,9 @@ type TaskModel struct {
 	Status            string         `gorm:"type:varchar(20);not null;default:'pending';index:idx_tasks_status"`
 	Progress          int            `gorm:"not null;default:0"`
 	CurrentNode       string         `gorm:"type:varchar(100)"`
-	InputParams       datatypes.JSON `gorm:"type:jsonb"`
+	InputParams       datatypes.JSON `gorm:"serializer:json"`
 	Error             string         `gorm:"type:text"`
-	NodeExecutions    datatypes.JSON `gorm:"type:jsonb"`
+	NodeExecutions    datatypes.JSON `gorm:"serializer:json"`
 	StartedAt         *time.Time
 	CompletedAt       *time.Time
 	CreatedAt         time.Time `gorm:"autoCreateTime;index:idx_tasks_created_at"`

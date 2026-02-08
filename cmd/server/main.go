@@ -17,6 +17,7 @@ import (
 	mcpadapter "goyavision/internal/adapter/mcp"
 	"goyavision/internal/adapter/mediamtx"
 	"goyavision/internal/adapter/persistence"
+	adapterstorage "goyavision/internal/adapter/storage"
 	"goyavision/internal/adapter/schema"
 	"goyavision/internal/api"
 	"goyavision/internal/app"
@@ -26,10 +27,8 @@ import (
 	inframediamtx "goyavision/internal/infra/mediamtx"
 	infrapersistence "goyavision/internal/infra/persistence"
 	"goyavision/internal/port"
-	"goyavision/pkg/storage"
 
 	"github.com/labstack/echo/v4"
-	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
@@ -41,7 +40,11 @@ func main() {
 
 	var db *gorm.DB
 	if cfg.DB.DSN != "" {
-		db, err = gorm.Open(postgres.Open(cfg.DB.DSN), &gorm.Config{})
+		driver := cfg.DB.Driver
+		if driver == "" {
+			driver = "postgres"
+		}
+		db, err = persistence.OpenDB(driver, cfg.DB.DSN)
 		if err != nil {
 			log.Fatalf("open db: %v", err)
 		}
@@ -50,6 +53,7 @@ func main() {
 		if err := persistence.AutoMigrate(db); err != nil {
 			log.Fatalf("migrate: %v", err)
 		}
+		log.Printf("db connected: driver=%s", driver)
 	} else {
 		log.Print("db.dsn empty, skip database")
 	}
@@ -78,17 +82,11 @@ func main() {
 		log.Printf("mediamtx connected: %s", cfg.MediaMTX.APIAddress)
 	}
 
-	minioClient, err := storage.NewMinIOClient(
-		cfg.MinIO.Endpoint,
-		cfg.MinIO.AccessKey,
-		cfg.MinIO.SecretKey,
-		cfg.MinIO.BucketName,
-		cfg.MinIO.UseSSL,
-	)
+	fileStorage, storageURLConfig, err := adapterstorage.NewFileStorageFromConfig(cfg)
 	if err != nil {
-		log.Fatalf("create minio client: %v", err)
+		log.Fatalf("create file storage: %v", err)
 	}
-	log.Printf("minio connected: %s/%s", cfg.MinIO.Endpoint, cfg.MinIO.BucketName)
+	log.Printf("storage connected: type=%s", cfg.Storage.Type)
 
 	mcpClient := mcpadapter.NewStaticClientWithoutDefaults()
 	for i := range cfg.MCP.Servers {
@@ -163,7 +161,8 @@ func main() {
 		db,
 		cfg,
 		mtxCli,
-		minioClient,
+		fileStorage,
+		storageURLConfig,
 		workflowScheduler,
 		repo,
 		eventBus,

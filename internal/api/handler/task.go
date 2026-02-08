@@ -122,7 +122,7 @@ func (h *taskHandler) Create(c echo.Context) error {
 		asset, _ = h.h.GetAsset.Handle(c.Request().Context(), appdto.GetAssetQuery{ID: *task.AssetID})
 	}
 
-	return c.JSON(http.StatusCreated, dto.TaskToResponseWithRelations(task, wf, asset, h.h.Cfg.MinIO.Endpoint, h.h.Cfg.MinIO.BucketName, h.h.Cfg.MinIO.PublicBase, h.h.Cfg.MinIO.UseSSL))
+	return c.JSON(http.StatusCreated, dto.TaskToResponseWithRelations(task, wf, asset, h.h.StorageURLConfig.Endpoint, h.h.StorageURLConfig.BucketName, h.h.StorageURLConfig.PublicBase, h.h.StorageURLConfig.UseSSL))
 }
 
 func (h *taskHandler) Get(c echo.Context) error {
@@ -148,7 +148,7 @@ func (h *taskHandler) Get(c echo.Context) error {
 			asset, _ = h.h.GetAsset.Handle(c.Request().Context(), appdto.GetAssetQuery{ID: *task.AssetID})
 		}
 
-		return c.JSON(http.StatusOK, dto.TaskToResponseWithRelations(task, wf, asset, h.h.Cfg.MinIO.Endpoint, h.h.Cfg.MinIO.BucketName, h.h.Cfg.MinIO.PublicBase, h.h.Cfg.MinIO.UseSSL))
+		return c.JSON(http.StatusOK, dto.TaskToResponseWithRelations(task, wf, asset, h.h.StorageURLConfig.Endpoint, h.h.StorageURLConfig.BucketName, h.h.StorageURLConfig.PublicBase, h.h.StorageURLConfig.UseSSL))
 	}
 
 	task, err := h.h.GetTask.Handle(c.Request().Context(), appdto.GetTaskQuery{ID: id})

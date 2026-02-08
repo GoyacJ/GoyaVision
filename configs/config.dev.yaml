@@ -2,6 +2,7 @@ server:
   port: 8080
 
 db:
+  driver: "postgres"
   dsn: "host=localhost user=goyavision password=goyavision dbname=goyavision port=5432 sslmode=disable"
 
 ffmpeg:
@@ -41,6 +42,12 @@ mediamtx:
   segment_duration: "1h"
   username: "goyavision"
   password: "goyavision-dev"
+
+storage:
+  type: "minio"
+  local:
+    base_path: "./data/files"
+    base_url: "http://localhost:8080/files"
 
 minio:
   endpoint: "localhost:9000"

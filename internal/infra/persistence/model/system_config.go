@@ -9,7 +9,7 @@ import (
 // SystemConfigModel GORM model for system_configs table
 type SystemConfigModel struct {
 	Key         string         `gorm:"primaryKey;type:varchar(255)"`
-	Value       datatypes.JSON `gorm:"type:jsonb;not null"`
+	Value       datatypes.JSON `gorm:"not null"`
 	Description string         `gorm:"type:text"`
 	CreatedAt   time.Time
 	UpdatedAt   time.Time

@@ -2,6 +2,11 @@ server:
   port: 8080
 
 db:
+  # postgres | mysql | sqlite3
+  driver: "${GOYAVISION_DB_DRIVER:-postgres}"
+  # Postgres: "host=... user=... password=... dbname=... port=5432 sslmode=disable"
+  # MySQL: "user:pass@tcp(host:3306)/dbname?charset=utf8mb4&parseTime=True"
+  # SQLite: "file:./data/goyavision.db?mode=rwc"
   dsn: "${GOYAVISION_DB_DSN}"
 
 ffmpeg:
@@ -39,6 +44,21 @@ mediamtx:
   record_path: "${GOYAVISION_MEDIAMTX_RECORD_PATH}"
   record_format: "fmp4"
   segment_duration: "1h"
+
+# 文件存储：minio | s3 | local（未配置或 minio 时使用下方 minio 段）
+storage:
+  type: "${GOYAVISION_STORAGE_TYPE:-minio}"
+  s3:
+    region: "${GOYAVISION_S3_REGION}"
+    bucket: "${GOYAVISION_S3_BUCKET}"
+    endpoint: "${GOYAVISION_S3_ENDPOINT}"
+    access_key: "${GOYAVISION_S3_ACCESS_KEY}"
+    secret_key: "${GOYAVISION_S3_SECRET_KEY}"
+    use_ssl: true
+    public_base: "${GOYAVISION_S3_PUBLIC_BASE}"
+  local:
+    base_path: "${GOYAVISION_LOCAL_STORAGE_PATH:-./data/files}"
+    base_url: "${GOYAVISION_LOCAL_STORAGE_BASE_URL:-http://localhost:8080/files}"
 
 minio:
   endpoint: "${GOYAVISION_MINIO_ENDPOINT}"

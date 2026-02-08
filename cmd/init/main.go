@@ -14,7 +14,6 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/datatypes"
-	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -47,12 +46,15 @@ func main() {
 		log.Fatal("数据库 DSN 未配置")
 	}
 
-	db, err := gorm.Open(postgres.Open(cfg.DB.DSN), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
-	})
+	driver := cfg.DB.Driver
+	if driver == "" {
+		driver = "postgres"
+	}
+	db, err := persistence.OpenDB(driver, cfg.DB.DSN)
 	if err != nil {
 		log.Fatalf("连接数据库失败: %v", err)
 	}
+	db = db.Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Info)})
 
 	ctx := context.Background()
 

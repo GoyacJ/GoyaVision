@@ -25,7 +25,7 @@
 | **媒体源管理** | 深度集成 MediaMTX，支持拉流（RTSP/RTMP）、推流、实时状态监控 |
 | **媒体资产** | 统一管理视频、图片、音频资产，支持租户可见性、多标签搜索与派生追踪 |
 | **录制与点播** | 集成 MediaMTX 录制 API，支持 fMP4/MPEG-TS 分段录制、HLS/MP4 点播 |
-| **存储配置** | 支持本地存储与 MinIO 接入，集中管理生命周期策略与存储限额 |
+| **存储配置** | 支持 MinIO、S3、本地文件系统三种后端（`storage.type`），集中管理存储与展示 URL |
 
 ### 🧩 算子中心（Operator Hub）
 
@@ -127,7 +127,7 @@ docker-compose up -d
 
 ### 方式二：本地开发
 
-1. **环境准备**: Go 1.22+, Node.js 20+, PostgreSQL 14+, FFmpeg, MediaMTX。
+1. **环境准备**: Go 1.22+, Node.js 20+，数据库（PostgreSQL/MySQL/SQLite 任选），FFmpeg, MediaMTX。
 2. **初始化配置**: 复制 `configs/config.example.yaml` 为 `configs/config.dev.yaml`。
 3. **启动后端**: `go build -o bin/server ./cmd/server && ./bin/server`
 4. **启动前端**: `cd web && pnpm install && pnpm dev`
@@ -137,9 +137,9 @@ docker-compose up -d
 系统支持按环境加载 YAML 配置文件，并可使用环境变量进行覆盖（前缀 `GOYAVISION_`）。
 
 核心配置项包括：
-- `db`: PostgreSQL 连接串。
+- `db`: 数据库驱动（`db.driver`: postgres/mysql/sqlite3）与连接串（`db.dsn`），详见 [部署指南](docs/DEPLOYMENT.md#多数据库支持)。
+- `storage`: 文件存储类型（`storage.type`: minio/s3/local）及对应 `minio`/`storage.s3`/`storage.local` 配置，详见 [部署指南](docs/DEPLOYMENT.md#多文件存储支持)。
 - `mediamtx`: API 与各协议访问基址。
-- `minio`: 对象存储连接与 Bucket 配置。
 - `jwt`: 认证密钥与过期策略。
 - `mcp`: 远程 MCP Server 注册清单。
 

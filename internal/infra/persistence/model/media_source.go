@@ -12,7 +12,7 @@ type MediaSourceModel struct {
 	TenantID       uuid.UUID      `gorm:"type:uuid;not null;index:idx_media_sources_tenant_id"`
 	OwnerID        uuid.UUID      `gorm:"type:uuid;index:idx_media_sources_owner_id"`
 	Visibility     int            `gorm:"default:0;index:idx_media_sources_visibility"`
-	VisibleRoleIDs datatypes.JSON `gorm:"type:jsonb"`
+	VisibleRoleIDs datatypes.JSON `gorm:"serializer:json"`
 	Name           string         `gorm:"type:varchar(255);not null"`
 	PathName      string    `gorm:"type:varchar(255);not null;uniqueIndex:idx_media_sources_path_name"`
 	Type          string    `gorm:"type:varchar(20);not null;index:idx_media_sources_type"`

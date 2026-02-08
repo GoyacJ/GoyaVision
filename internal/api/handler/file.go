@@ -7,6 +7,7 @@ import (
 	"goyavision/internal/api/dto"
 	"goyavision/internal/api/middleware"
 	"goyavision/internal/app"
+	appport "goyavision/internal/app/port"
 	"goyavision/internal/domain/storage"
 
 	"github.com/google/uuid"
@@ -14,10 +15,11 @@ import (
 )
 
 func RegisterFile(g *echo.Group, h *Handlers) {
-	svc := app.NewFileService(h.Repo, h.MinIOClient)
+	svc := app.NewFileService(h.Repo, h.FileStorage)
 	fh := fileHandler{
-		svc: svc,
-		cfg: h.Cfg,
+		svc:    svc,
+		cfg:    h.Cfg,
+		urlCfg: h.StorageURLConfig,
 	}
 	g.POST("/files", fh.Upload)
 	g.GET("/files", fh.List)
@@ -28,8 +30,9 @@ func RegisterFile(g *echo.Group, h *Handlers) {
 }
 
 type fileHandler struct {
-	svc *app.FileService
-	cfg *config.Config
+	svc    *app.FileService
+	cfg    *config.Config
+	urlCfg appport.StorageURLConfig
 }
 
 // Upload 上传文件
@@ -65,7 +68,7 @@ func (h *fileHandler) Upload(c echo.Context) error {
 		})
 	}
 
-	return c.JSON(201, dto.FileToResponse(uploadedFile, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL))
+	return c.JSON(201, dto.FileToResponse(uploadedFile, h.urlCfg.Endpoint, h.urlCfg.BucketName, h.urlCfg.UseSSL))
 }
 
 // List 列出文件
@@ -110,7 +113,7 @@ func (h *fileHandler) List(c echo.Context) error {
 	}
 
 	return c.JSON(200, dto.FileListResponse{
-		Items: dto.FilesToResponse(files, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL),
+		Items: dto.FilesToResponse(files, h.urlCfg.Endpoint, h.urlCfg.BucketName, h.urlCfg.UseSSL),
 		Total: total,
 	})
 }
@@ -131,7 +134,7 @@ func (h *fileHandler) Get(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(200, dto.FileToResponse(file, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL))
+	return c.JSON(200, dto.FileToResponse(file, h.urlCfg.Endpoint, h.urlCfg.BucketName, h.urlCfg.UseSSL))
 }
 
 // Update 更新文件
@@ -168,7 +171,7 @@ func (h *fileHandler) Update(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(200, dto.FileToResponse(file, h.cfg.MinIO.Endpoint, h.cfg.MinIO.BucketName, h.cfg.MinIO.UseSSL))
+	return c.JSON(200, dto.FileToResponse(file, h.urlCfg.Endpoint, h.urlCfg.BucketName, h.urlCfg.UseSSL))
 }
 
 // Delete 删除文件
@@ -205,12 +208,19 @@ func (h *fileHandler) Download(c echo.Context) error {
 		return err
 	}
 
-	// 生成文件 URL
-	protocol := "http"
-	if h.cfg.MinIO.UseSSL {
-		protocol = "https"
+	var url string
+	if h.urlCfg.PublicBase != "" {
+		if h.urlCfg.BucketName != "" {
+			url = h.urlCfg.PublicBase + "/" + h.urlCfg.BucketName + "/" + file.Path
+		} else {
+			url = h.urlCfg.PublicBase + "/" + file.Path
+		}
+	} else {
+		protocol := "http"
+		if h.urlCfg.UseSSL {
+			protocol = "https"
+		}
+		url = protocol + "://" + h.urlCfg.Endpoint + "/" + h.urlCfg.BucketName + "/" + file.Path
 	}
-	url := protocol + "://" + h.cfg.MinIO.Endpoint + "/" + h.cfg.MinIO.BucketName + "/" + file.Path
-
 	return c.Redirect(302, url)
 }

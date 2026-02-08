@@ -8,6 +8,8 @@
 ## [未发布]
 
 ### 新增
+- **多数据库支持**：除 PostgreSQL 外支持 MySQL、SQLite。配置项 `db.driver`（postgres/mysql/sqlite3）与 `db.dsn`；`cmd/server` 与 `cmd/init` 按驱动打开连接；持久层 JSON 列改为 `serializer:json` 以兼容各驱动。
+- **多文件存储支持**：除 MinIO 外支持 S3、本地文件系统。新增 `port.FileStorage` 与 `port.StorageURLConfig`；适配器 `internal/adapter/storage` 提供 MinIO、S3、Local 实现及 `NewFileStorageFromConfig` 工厂；配置 `storage.type`（minio/s3/local）与对应 `storage.s3`/`storage.local` 段；FileService 与相关 Handler 改为依赖 FileStorage + StorageURLConfig，DTO 使用统一 URL 配置生成展示链接。
 - **事件触发与 EventBus 集成**：WorkflowScheduler 支持事件驱动触发。
   - 注入 EventBus，启动时订阅 `asset_new`、`asset_done`；收到事件后按触发器类型筛选启用的工作流并自动创建任务执行。
   - 新增 `internal/app/event` 包，定义 `AssetCreatedEvent`、`AssetDoneEvent`，与领域触发器类型对齐。
@@ -21,8 +23,10 @@
 - **前端 Artifact 类型与后端一致**：`web/src/api/artifact.ts` 中产物类型由 `diagnostic` 改为 `report`，与领域 `ArtifactTypeReport` 一致，避免按类型过滤不匹配。
 - **ArtifactService 错误风格统一**：`internal/app/artifact.go` 全部改为使用 `pkg/apperr`（InvalidInput、NotFound、Internal），与其余 Command/Query 一致，便于 API 层统一映射。
 - **DAG 层内并行错误汇总**：`internal/infra/engine/dag_engine.go` 中层内多节点并行执行时不再只返回首个错误，改为收集全部错误后通过 `errors.Join` 返回，便于排查多节点同时失败。
+- **FileService 端口引用**：`internal/app/file.go` 中 `FileStorage` 改为使用 `internal/app/port`（appport），修复 `undefined: port.FileStorage` 编译错误。
 
 ### 变更
+- **配置与校验**：`config.Validate()` 按 `db.dsn` 是否为空决定是否校验 driver；按 `storage.type` 仅校验当前存储类型必填项（minio/s3/local）。
 - **WorkflowScheduler 构造函数**：`NewWorkflowScheduler(repo, engine, eventBus)` 增加可选参数 `eventBus`，为 nil 时不启用事件触发。
 - **CreateAssetHandler 构造函数**：`NewCreateAssetHandler(uow, eventBus)` 增加可选参数 `eventBus`，用于资产创建后发布 `asset_new` 事件。
 - **API/Handler 装配**：`api.NewHandlers`、`handler.NewHandlers` 增加 `eventBus` 参数；`cmd/server/main.go` 创建 `LocalEventBus` 并注入 Scheduler 与 Handlers。

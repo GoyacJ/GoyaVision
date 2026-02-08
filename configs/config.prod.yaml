@@ -2,6 +2,7 @@ server:
   port: 8080
 
 db:
+  driver: "${GOYAVISION_DB_DRIVER:-postgres}"
   dsn: "${GOYAVISION_DB_DSN}"
 
 ffmpeg:
@@ -41,6 +42,20 @@ mediamtx:
   segment_duration: "${GOYAVISION_MEDIAMTX_SEGMENT_DURATION}"
   username: "${GOYAVISION_MEDIAMTX_USERNAME}"
   password: "${GOYAVISION_MEDIAMTX_PASSWORD}"
+
+storage:
+  type: "${GOYAVISION_STORAGE_TYPE:-minio}"
+  s3:
+    region: "${GOYAVISION_S3_REGION}"
+    bucket: "${GOYAVISION_S3_BUCKET}"
+    endpoint: "${GOYAVISION_S3_ENDPOINT}"
+    access_key: "${GOYAVISION_S3_ACCESS_KEY}"
+    secret_key: "${GOYAVISION_S3_SECRET_KEY}"
+    use_ssl: true
+    public_base: "${GOYAVISION_S3_PUBLIC_BASE}"
+  local:
+    base_path: "${GOYAVISION_LOCAL_STORAGE_PATH}"
+    base_url: "${GOYAVISION_LOCAL_STORAGE_BASE_URL}"
 
 minio:
   endpoint: "${GOYAVISION_MINIO_ENDPOINT}"

@@ -15,12 +15,12 @@ type OperatorTemplateModel struct {
 	Category    string         `gorm:"type:varchar(50);not null;index:idx_operator_templates_category"`
 	Type        string         `gorm:"type:varchar(50);not null;index:idx_operator_templates_type"`
 	ExecMode    string         `gorm:"type:varchar(20);not null;index:idx_operator_templates_exec_mode"`
-	ExecConfig  datatypes.JSON `gorm:"type:jsonb"`
-	InputSchema datatypes.JSON `gorm:"type:jsonb"`
-	OutputSpec  datatypes.JSON `gorm:"type:jsonb"`
-	Config      datatypes.JSON `gorm:"type:jsonb"`
+	ExecConfig  datatypes.JSON `gorm:"serializer:json"`
+	InputSchema datatypes.JSON `gorm:"serializer:json"`
+	OutputSpec  datatypes.JSON `gorm:"serializer:json"`
+	Config      datatypes.JSON `gorm:"serializer:json"`
 	Author      string         `gorm:"type:varchar(255)"`
-	Tags        datatypes.JSON `gorm:"type:jsonb"`
+	Tags        datatypes.JSON `gorm:"serializer:json"`
 	IconURL     string         `gorm:"type:varchar(1024)"`
 	Downloads   int64          `gorm:"not null;default:0"`
 	CreatedAt   time.Time      `gorm:"autoCreateTime;index:idx_operator_templates_created_at"`

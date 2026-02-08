@@ -23,7 +23,7 @@
 | 媒体资产管理 | CRUD、搜索过滤、标签管理 | ✅ 已完成 | 支持 video/image/audio 三种类型，来源类型 upload/generated/operator_output，标签系统；流媒体功能已迁移至媒体源模块 |
 | 录制管理 | 启停录制、文件索引 | ✅ 已完成 | 集成 MediaMTX 录制 API |
 | 点播服务 | 录制段查询、URL 生成 | ✅ 已完成 | 集成 MediaMTX Playback |
-| 存储配置 | 存储路径配置、访问基址 | ✅ 已完成 | 支持本地存储及 MinIO 公网访问基址配置 |
+| 存储配置 | 存储路径配置、访问基址 | ✅ 已完成 | 支持 MinIO、S3、本地文件系统三种后端（`storage.type`），统一 FileStorage 端口与 StorageURLConfig |
 | **算子中心** | | | |
 | 算子管理 | CRUD、分类、关联 AI 模型 | ✅ 已完成 | 包含 Operator、OperatorVersion 等 |
 | AI 模型管理 | CRUD、连接配置 | ✅ 已完成 | 支持 OpenAI/Anthropic/Ollama/Local/Custom 及千问(Qwen)、豆包(Doubao)、智谱(Zhipu)、vLLM；前端提供商选项与类型已同步 |
@@ -628,6 +628,7 @@
 
 | 日期 | 版本 | 变更内容 |
 |------|------|----------|
+| 2026-02-08 | V1.0 | **多数据库与多文件存储支持**：数据库支持 PostgreSQL、MySQL、SQLite（`db.driver` + `db.dsn`），持久层 JSON 列改为 `serializer:json` 以兼容各驱动；文件存储支持 MinIO、S3、本地文件系统（`storage.type` + 对应配置），新增 `port.FileStorage` 与 `StorageURLConfig`，适配器与工厂见 `internal/adapter/storage`，配置示例与部署说明见 `docs/DEPLOYMENT.md`。 |
 | 2026-02-08 | V1.0 | **个人中心深度重构与功能扩展**：
 - **UI/UX 焕新**：采用现代简约设计重构顶部 Banner，引入 `Gv` 系列自研基础组件（Input, Button, Card, Tag, Table）替换原有原生组件。
 - **模块化架构**：将个人中心拆分为个人资料、安全中心、支付管理、积分管理、订阅管理、使用统计六大独立子组件，增强可维护性。

@@ -12,15 +12,15 @@ type WorkflowModel struct {
 	TenantID       uuid.UUID      `gorm:"type:uuid;not null;index:idx_workflows_tenant_id"`
 	OwnerID        uuid.UUID      `gorm:"type:uuid;index:idx_workflows_owner_id"`
 	Visibility     int            `gorm:"default:0;index:idx_workflows_visibility"`
-	VisibleRoleIDs datatypes.JSON `gorm:"type:jsonb"`
+	VisibleRoleIDs datatypes.JSON `gorm:"serializer:json"`
 	Code           string         `gorm:"type:varchar(100);not null;uniqueIndex"`
 	Name           string         `gorm:"type:varchar(255);not null"`
 	Description string         `gorm:"type:text"`
 	Version     string         `gorm:"type:varchar(50);not null;default:'1.0.0'"`
 	TriggerType string         `gorm:"type:varchar(50);not null;index:idx_workflows_trigger_type"`
-	TriggerConf datatypes.JSON `gorm:"type:jsonb"`
+	TriggerConf datatypes.JSON `gorm:"serializer:json"`
 	Status      string         `gorm:"type:varchar(20);not null;default:'draft';index:idx_workflows_status"`
-	Tags        datatypes.JSON `gorm:"type:jsonb"`
+	Tags        datatypes.JSON `gorm:"serializer:json"`
 	CreatedAt   time.Time      `gorm:"autoCreateTime;index:idx_workflows_created_at"`
 	UpdatedAt   time.Time      `gorm:"autoUpdateTime"`
 
@@ -36,8 +36,8 @@ type WorkflowNodeModel struct {
 	NodeKey    string         `gorm:"type:varchar(100);not null"`
 	NodeType   string         `gorm:"type:varchar(50);not null"`
 	OperatorID *uuid.UUID     `gorm:"type:uuid;index:idx_workflow_nodes_operator_id"`
-	Config     datatypes.JSON `gorm:"type:jsonb"`
-	Position   datatypes.JSON `gorm:"type:jsonb"`
+	Config     datatypes.JSON `gorm:"serializer:json"`
+	Position   datatypes.JSON `gorm:"serializer:json"`
 	CreatedAt  time.Time      `gorm:"autoCreateTime"`
 	UpdatedAt  time.Time      `gorm:"autoUpdateTime"`
 
@@ -51,7 +51,7 @@ type WorkflowEdgeModel struct {
 	WorkflowID uuid.UUID      `gorm:"type:uuid;not null;index:idx_workflow_edges_workflow_id"`
 	SourceKey  string         `gorm:"type:varchar(100);not null"`
 	TargetKey  string         `gorm:"type:varchar(100);not null"`
-	Condition  datatypes.JSON `gorm:"type:jsonb"`
+	Condition  datatypes.JSON `gorm:"serializer:json"`
 	CreatedAt  time.Time      `gorm:"autoCreateTime"`
 	UpdatedAt  time.Time      `gorm:"autoUpdateTime"`
 }

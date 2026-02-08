@@ -10,7 +10,6 @@ import (
 	"goyavision/internal/app"
 	"goyavision/internal/app/port"
 	portrepo "goyavision/internal/port"
-	"goyavision/pkg/storage"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
@@ -28,7 +27,8 @@ func NewHandlers(
 	db *gorm.DB,
 	cfg *config.Config,
 	mtxCli *mediamtx.Client,
-	minioClient *storage.MinIOClient,
+	fileStorage port.FileStorage,
+	storageURLConfig port.StorageURLConfig,
 	workflowScheduler *app.WorkflowScheduler,
 	repo portrepo.Repository,
 	eventBus port.EventBus,
@@ -43,7 +43,8 @@ func NewHandlers(
 		db,
 		cfg,
 		mtxCli,
-		minioClient,
+		fileStorage,
+		storageURLConfig,
 		workflowScheduler,
 		repo,
 		eventBus,

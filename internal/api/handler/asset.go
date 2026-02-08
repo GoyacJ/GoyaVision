@@ -88,7 +88,7 @@ func (h *assetHandler) List(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, dto.AssetListResponse{
-		Items: dto.AssetsToResponse(result.Items, h.h.Cfg.MinIO.Endpoint, h.h.Cfg.MinIO.BucketName, h.h.Cfg.MinIO.PublicBase, h.h.Cfg.MinIO.UseSSL),
+		Items: dto.AssetsToResponse(result.Items, h.h.StorageURLConfig.Endpoint, h.h.StorageURLConfig.BucketName, h.h.StorageURLConfig.PublicBase, h.h.StorageURLConfig.UseSSL),
 		Total: result.Total,
 	})
 }
@@ -141,7 +141,7 @@ func (h *assetHandler) Create(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(http.StatusCreated, dto.AssetToResponse(asset, h.h.Cfg.MinIO.Endpoint, h.h.Cfg.MinIO.BucketName, h.h.Cfg.MinIO.PublicBase, h.h.Cfg.MinIO.UseSSL))
+	return c.JSON(http.StatusCreated, dto.AssetToResponse(asset, h.h.StorageURLConfig.Endpoint, h.h.StorageURLConfig.BucketName, h.h.StorageURLConfig.PublicBase, h.h.StorageURLConfig.UseSSL))
 }
 
 func (h *assetHandler) Get(c echo.Context) error {
@@ -156,7 +156,7 @@ func (h *assetHandler) Get(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, dto.AssetToResponse(asset, h.h.Cfg.MinIO.Endpoint, h.h.Cfg.MinIO.BucketName, h.h.Cfg.MinIO.PublicBase, h.h.Cfg.MinIO.UseSSL))
+	return c.JSON(http.StatusOK, dto.AssetToResponse(asset, h.h.StorageURLConfig.Endpoint, h.h.StorageURLConfig.BucketName, h.h.StorageURLConfig.PublicBase, h.h.StorageURLConfig.UseSSL))
 }
 
 func (h *assetHandler) Update(c echo.Context) error {
@@ -205,7 +205,7 @@ func (h *assetHandler) Update(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, dto.AssetToResponse(asset, h.h.Cfg.MinIO.Endpoint, h.h.Cfg.MinIO.BucketName, h.h.Cfg.MinIO.PublicBase, h.h.Cfg.MinIO.UseSSL))
+	return c.JSON(http.StatusOK, dto.AssetToResponse(asset, h.h.StorageURLConfig.Endpoint, h.h.StorageURLConfig.BucketName, h.h.StorageURLConfig.PublicBase, h.h.StorageURLConfig.UseSSL))
 }
 
 func (h *assetHandler) Delete(c echo.Context) error {
@@ -235,7 +235,7 @@ func (h *assetHandler) ListChildren(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, dto.AssetsToResponse(result.Assets, h.h.Cfg.MinIO.Endpoint, h.h.Cfg.MinIO.BucketName, h.h.Cfg.MinIO.PublicBase, h.h.Cfg.MinIO.UseSSL))
+	return c.JSON(http.StatusOK, dto.AssetsToResponse(result.Assets, h.h.StorageURLConfig.Endpoint, h.h.StorageURLConfig.BucketName, h.h.StorageURLConfig.PublicBase, h.h.StorageURLConfig.UseSSL))
 }
 
 func (h *assetHandler) GetAllTags(c echo.Context) error {

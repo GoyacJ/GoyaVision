@@ -12,7 +12,7 @@ type OperatorModel struct {
 	TenantID       uuid.UUID      `gorm:"type:uuid;not null;index:idx_operators_tenant_id"`
 	OwnerID        uuid.UUID      `gorm:"type:uuid;index:idx_operators_owner_id"`
 	Visibility     int            `gorm:"default:0;index:idx_operators_visibility"`
-	VisibleRoleIDs datatypes.JSON `gorm:"type:jsonb"`
+	VisibleRoleIDs datatypes.JSON `gorm:"serializer:json"`
 	Code           string         `gorm:"type:varchar(100);not null;uniqueIndex"`
 	Name           string         `gorm:"type:varchar(255);not null"`
 	Description string         `gorm:"type:text"`
@@ -22,7 +22,7 @@ type OperatorModel struct {
 
 	ActiveVersionID *uuid.UUID `gorm:"type:uuid;index:idx_operators_active_version_id"`
 	Status      string         `gorm:"type:varchar(20);not null;default:'draft';index:idx_operators_status"`
-	Tags        datatypes.JSON `gorm:"type:jsonb"`
+	Tags        datatypes.JSON `gorm:"serializer:json"`
 	CreatedAt   time.Time      `gorm:"autoCreateTime;index:idx_operators_created_at"`
 	UpdatedAt   time.Time      `gorm:"autoUpdateTime"`
 

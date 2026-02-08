@@ -41,6 +41,7 @@ GoyaVision 采用**分层架构**（Clean Architecture / Hexagonal Architecture�
 
 **关键接口**:
 - `Repository`：持久化抽象。
+- `FileStorage`：文件存储抽象（上传、删除、生成展示 URL），由配置选择 MinIO/S3/本地实现。
 - `ExecutorRegistry/OperatorExecutor`：算子执行器路由与实现接口。
 - `SchemaValidator`：基于 JSON Schema 的 I/O 校验接口。
 - `MCPClient/MCPRegistry`：MCP 协议工具发现与调用接口。
@@ -60,7 +61,8 @@ GoyaVision 采用**分层架构**（Clean Architecture / Hexagonal Architecture�
 **职责**: 实现 Port 定义的接口，处理基础设施细节。
 
 **主要适配器**:
-- **Persistence**：GORM + PostgreSQL 实现，集成租户/可见性隔离 Scopes。
+- **Persistence**：GORM 多驱动实现（PostgreSQL、MySQL、SQLite），集成租户/可见性隔离 Scopes；通过 `db.driver` 与 `db.dsn` 配置选择。
+- **Storage**：文件存储适配器（MinIO、S3、本地文件系统），实现 `FileStorage` 与 `StorageURLConfig`，通过 `storage.type` 配置选择。
 - **Engine**：基于 Kahn 算法的 DAG 引擎，支持并行 goroutine 执行。
 - **Executors**：
   - `HTTPOperatorExecutor`：Restful 调用。
