@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"goyavision/internal/app/event"
+	appport "goyavision/internal/app/port"
 	"goyavision/internal/domain/workflow"
 	"goyavision/internal/port"
 
@@ -20,13 +21,13 @@ type WorkflowScheduler struct {
 	scheduler gocron.Scheduler
 	repo      port.Repository
 	engine    port.WorkflowEngine
-	eventBus  port.EventBus
+	eventBus  appport.EventBus
 	jobs      map[uuid.UUID]gocron.Job
 	jobsMu    sync.RWMutex
 }
 
 // NewWorkflowScheduler 创建工作流调度器。eventBus 可选，为 nil 时不启用事件触发。
-func NewWorkflowScheduler(repo port.Repository, engine port.WorkflowEngine, eventBus port.EventBus) (*WorkflowScheduler, error) {
+func NewWorkflowScheduler(repo port.Repository, engine port.WorkflowEngine, eventBus appport.EventBus) (*WorkflowScheduler, error) {
 	s, err := gocron.NewScheduler()
 	if err != nil {
 		return nil, fmt.Errorf("create scheduler: %w", err)
@@ -248,7 +249,7 @@ func (s *WorkflowScheduler) TriggerWorkflow(ctx context.Context, workflowID uuid
 	return task, nil
 }
 
-func (s *WorkflowScheduler) handleAssetNew(ctx context.Context, ev port.Event) error {
+func (s *WorkflowScheduler) handleAssetNew(ctx context.Context, ev appport.Event) error {
 	e, ok := ev.(*event.AssetCreatedEvent)
 	if !ok {
 		return nil
@@ -256,7 +257,7 @@ func (s *WorkflowScheduler) handleAssetNew(ctx context.Context, ev port.Event) e
 	return s.triggerWorkflowsByEvent(ctx, e.AssetID, workflow.TriggerTypeAssetNew)
 }
 
-func (s *WorkflowScheduler) handleAssetDone(ctx context.Context, ev port.Event) error {
+func (s *WorkflowScheduler) handleAssetDone(ctx context.Context, ev appport.Event) error {
 	e, ok := ev.(*event.AssetDoneEvent)
 	if !ok {
 		return nil

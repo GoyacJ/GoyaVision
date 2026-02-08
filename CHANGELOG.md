@@ -14,6 +14,8 @@
   - 资产创建（CreateAssetHandler）成功后发布 `asset_new` 事件，便于「资产上传后自动触发工作流」场景。
 
 ### 修复
+- **事件结构体字段与接口方法同名**：`AssetCreatedEvent`/`AssetDoneEvent` 的 `OccurredAt` 字段改为 `At`，`OccurredAt()` 方法返回 `e.At`，消除与 `port.Event` 接口同名导致的编译错误。
+- **WorkflowScheduler 端口引用**：`EventBus`/`Event` 改为使用 `internal/app/port`（appport）而非 `internal/port`，修复 undefined 编译错误。
 - **Scheduler goroutine 错误处理**：`runWorkflow` 与 `TriggerWorkflow` 中引擎执行失败或 `UpdateTask` 失败时不再静默丢弃，统一打日志 `[WorkflowScheduler]`。
 - **Scheduler 使用可追溯 context**：手动触发（`TriggerWorkflow`）时 goroutine 内改用 `context.WithoutCancel(ctx)`，保留调用方 TenantID/追踪等信息；定时触发的 `runWorkflow` 仍使用 `Background` 并补充注释说明。
 - **前端 Artifact 类型与后端一致**：`web/src/api/artifact.ts` 中产物类型由 `diagnostic` 改为 `report`，与领域 `ArtifactTypeReport` 一致，避免按类型过滤不匹配。
