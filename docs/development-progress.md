@@ -36,7 +36,7 @@
 | 复杂工作流 | DAG 引擎 | ✅ 已完成 | DAGWorkflowEngine 实现，支持并行执行与条件分支 (always/on_success/on_failure) |
 | 任务管理 | 创建、查询、控制 | ✅ 已完成 | Task 实体与服务已实现，支持 NodeExecutions 追踪 |
 | 任务进度推送 | SSE 实时推送 | ✅ 已完成 | GET /tasks/:id/progress/stream 端点实现 |
-| 任务调度 | 定时调度、事件触发 | ✅ 已完成 | WorkflowScheduler 已实现 |
+| 任务调度 | 定时调度、事件触发 | ✅ 已完成 | WorkflowScheduler 已实现；EventBus 集成，支持 asset_new/asset_done 事件触发工作流 |
 | 产物管理 | 查询、关联 | ✅ 已完成 | Artifact 实体与服务已实现，支持按节点 (node_key) 过滤 |
 | **控制台** | | | |
 | 认证服务 | 登录、Token 刷新、OAuth、注册 | ✅ 已完成 | JWT 双 Token 机制；支持 OAuth 第三方登录与账号绑定；**新增用户自主注册功能** |

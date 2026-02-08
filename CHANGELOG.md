@@ -5,6 +5,26 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [未发布]
+
+### 新增
+- **事件触发与 EventBus 集成**：WorkflowScheduler 支持事件驱动触发。
+  - 注入 EventBus，启动时订阅 `asset_new`、`asset_done`；收到事件后按触发器类型筛选启用的工作流并自动创建任务执行。
+  - 新增 `internal/app/event` 包，定义 `AssetCreatedEvent`、`AssetDoneEvent`，与领域触发器类型对齐。
+  - 资产创建（CreateAssetHandler）成功后发布 `asset_new` 事件，便于「资产上传后自动触发工作流」场景。
+
+### 修复
+- **Scheduler goroutine 错误处理**：`runWorkflow` 与 `TriggerWorkflow` 中引擎执行失败或 `UpdateTask` 失败时不再静默丢弃，统一打日志 `[WorkflowScheduler]`。
+- **Scheduler 使用可追溯 context**：手动触发（`TriggerWorkflow`）时 goroutine 内改用 `context.WithoutCancel(ctx)`，保留调用方 TenantID/追踪等信息；定时触发的 `runWorkflow` 仍使用 `Background` 并补充注释说明。
+- **前端 Artifact 类型与后端一致**：`web/src/api/artifact.ts` 中产物类型由 `diagnostic` 改为 `report`，与领域 `ArtifactTypeReport` 一致，避免按类型过滤不匹配。
+- **ArtifactService 错误风格统一**：`internal/app/artifact.go` 全部改为使用 `pkg/apperr`（InvalidInput、NotFound、Internal），与其余 Command/Query 一致，便于 API 层统一映射。
+- **DAG 层内并行错误汇总**：`internal/infra/engine/dag_engine.go` 中层内多节点并行执行时不再只返回首个错误，改为收集全部错误后通过 `errors.Join` 返回，便于排查多节点同时失败。
+
+### 变更
+- **WorkflowScheduler 构造函数**：`NewWorkflowScheduler(repo, engine, eventBus)` 增加可选参数 `eventBus`，为 nil 时不启用事件触发。
+- **CreateAssetHandler 构造函数**：`NewCreateAssetHandler(uow, eventBus)` 增加可选参数 `eventBus`，用于资产创建后发布 `asset_new` 事件。
+- **API/Handler 装配**：`api.NewHandlers`、`handler.NewHandlers` 增加 `eventBus` 参数；`cmd/server/main.go` 创建 `LocalEventBus` 并注入 Scheduler 与 Handlers。
+
 ## [1.0.1] - 2026-02-08
 
 ### 移除

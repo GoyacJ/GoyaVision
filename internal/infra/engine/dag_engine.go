@@ -342,13 +342,15 @@ func (e *DAGWorkflowEngine) executeLayer(
 	wg.Wait()
 	close(errChan)
 
-	// Check for errors
+	var errs []error
 	for err := range errChan {
 		if err != nil {
-			return err
+			errs = append(errs, err)
 		}
 	}
-
+	if len(errs) > 0 {
+		return errors.Join(errs...)
+	}
 	return nil
 }
 

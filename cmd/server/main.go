@@ -20,6 +20,7 @@ import (
 	"goyavision/internal/adapter/schema"
 	"goyavision/internal/api"
 	"goyavision/internal/app"
+	infraeventbus "goyavision/internal/infra/eventbus"
 	infraauth "goyavision/internal/infra/auth"
 	infraengine "goyavision/internal/infra/engine"
 	inframediamtx "goyavision/internal/infra/mediamtx"
@@ -55,6 +56,7 @@ func main() {
 
 	repo := persistence.NewRepository(db)
 	uow := infrapersistence.NewUnitOfWork(db)
+	eventBus := infraeventbus.NewLocalEventBus(100)
 	mediaGateway := inframediamtx.NewGateway(
 		cfg.MediaMTX.APIAddress,
 		cfg.MediaMTX.Username,
@@ -132,7 +134,7 @@ func main() {
 		routingExecutor := engine.NewRoutingOperatorExecutor(registry)
 
 		workflowEngine := infraengine.NewDAGWorkflowEngine(uow, routingExecutor, schemaValidator)
-		workflowScheduler, err = app.NewWorkflowScheduler(repo, workflowEngine)
+		workflowScheduler, err = app.NewWorkflowScheduler(repo, workflowEngine, eventBus)
 		if err != nil {
 			log.Fatalf("create workflow scheduler: %v", err)
 		}
@@ -164,6 +166,7 @@ func main() {
 		minioClient,
 		workflowScheduler,
 		repo,
+		eventBus,
 	)
 	api.RegisterRouter(e, handlers, webDist)
 

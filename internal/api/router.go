@@ -31,6 +31,7 @@ func NewHandlers(
 	minioClient *storage.MinIOClient,
 	workflowScheduler *app.WorkflowScheduler,
 	repo portrepo.Repository,
+	eventBus port.EventBus,
 ) *handler.Handlers {
 	return handler.NewHandlers(
 		uow,
@@ -45,6 +46,7 @@ func NewHandlers(
 		minioClient,
 		workflowScheduler,
 		repo,
+		eventBus,
 	)
 }
 

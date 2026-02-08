@@ -5,7 +5,7 @@ import type { MediaAsset } from './asset'
 export interface Artifact {
   id: string
   task_id: string
-  type: 'asset' | 'result' | 'timeline' | 'diagnostic'
+  type: 'asset' | 'result' | 'timeline' | 'report'
   asset_id?: string
   data?: Record<string, any>
   created_at: string
@@ -17,7 +17,7 @@ export interface Artifact {
 export interface ArtifactListQuery {
   task_id?: string
   node_key?: string
-  type?: 'asset' | 'result' | 'timeline' | 'diagnostic'
+  type?: 'asset' | 'result' | 'timeline' | 'report'
   asset_id?: string
   page?: number
   page_size?: number
@@ -25,7 +25,7 @@ export interface ArtifactListQuery {
 
 export interface ArtifactCreateReq {
   task_id: string
-  type: 'asset' | 'result' | 'timeline' | 'diagnostic'
+  type: 'asset' | 'result' | 'timeline' | 'report'
   asset_id?: string
   data?: Record<string, any>
 }

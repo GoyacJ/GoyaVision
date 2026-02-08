@@ -7,6 +7,7 @@ import (
 
 	"goyavision/internal/domain/workflow"
 	"goyavision/internal/port"
+	"goyavision/pkg/apperr"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -45,32 +46,32 @@ func NewArtifactService(repo port.Repository) *ArtifactService {
 // Create 创建产物
 func (s *ArtifactService) Create(ctx context.Context, req *CreateArtifactRequest) (*workflow.Artifact, error) {
 	if req.TaskID == uuid.Nil {
-		return nil, errors.New("task_id is required")
+		return nil, apperr.InvalidInput("task_id is required")
 	}
 	if req.Type == "" {
-		return nil, errors.New("type is required")
+		return nil, apperr.InvalidInput("type is required")
 	}
 
 	if req.Type != workflow.ArtifactTypeAsset &&
 		req.Type != workflow.ArtifactTypeResult &&
 		req.Type != workflow.ArtifactTypeTimeline &&
 		req.Type != workflow.ArtifactTypeReport {
-		return nil, errors.New("invalid artifact type")
+		return nil, apperr.InvalidInput("invalid artifact type")
 	}
 
 	if _, err := s.repo.GetTask(ctx, req.TaskID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("task not found")
+			return nil, apperr.NotFound("task", req.TaskID)
 		}
-		return nil, err
+		return nil, apperr.Internal("get task", err)
 	}
 
 	if req.AssetID != nil {
 		if _, err := s.repo.GetMediaAsset(ctx, *req.AssetID); err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return nil, errors.New("asset not found")
+				return nil, apperr.NotFound("asset", *req.AssetID)
 			}
-			return nil, err
+			return nil, apperr.Internal("get asset", err)
 		}
 	}
 
@@ -81,10 +82,17 @@ func (s *ArtifactService) Create(ctx context.Context, req *CreateArtifactRequest
 	}
 
 	if err := s.repo.CreateArtifact(ctx, artifact); err != nil {
-		return nil, err
+		return nil, apperr.Internal("create artifact", err)
 	}
 
-	return s.repo.GetArtifact(ctx, artifact.ID)
+	out, err := s.repo.GetArtifact(ctx, artifact.ID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperr.NotFound("artifact", artifact.ID)
+		}
+		return nil, apperr.Internal("get artifact", err)
+	}
+	return out, nil
 }
 
 // Get 获取产物
@@ -92,9 +100,9 @@ func (s *ArtifactService) Get(ctx context.Context, id uuid.UUID) (*workflow.Arti
 	artifact, err := s.repo.GetArtifact(ctx, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("artifact not found")
+			return nil, apperr.NotFound("artifact", id)
 		}
-		return nil, err
+		return nil, apperr.Internal("get artifact", err)
 	}
 	return artifact, nil
 }
@@ -118,8 +126,11 @@ func (s *ArtifactService) List(ctx context.Context, req *ListArtifactsRequest) (
 		Limit:   req.Limit,
 		Offset:  req.Offset,
 	}
-
-	return s.repo.ListArtifacts(ctx, filter)
+	list, total, err := s.repo.ListArtifacts(ctx, filter)
+	if err != nil {
+		return nil, 0, apperr.Internal("list artifacts", err)
+	}
+	return list, total, nil
 }
 
 // Delete 删除产物
@@ -127,30 +138,38 @@ func (s *ArtifactService) Delete(ctx context.Context, id uuid.UUID) error {
 	if _, err := s.Get(ctx, id); err != nil {
 		return err
 	}
-
-	return s.repo.DeleteArtifact(ctx, id)
+	if err := s.repo.DeleteArtifact(ctx, id); err != nil {
+		return apperr.Internal("delete artifact", err)
+	}
+	return nil
 }
 
 // ListByTask 列出指定任务的所有产物
 func (s *ArtifactService) ListByTask(ctx context.Context, taskID uuid.UUID) ([]*workflow.Artifact, error) {
 	if _, err := s.repo.GetTask(ctx, taskID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("task not found")
+			return nil, apperr.NotFound("task", taskID)
 		}
-		return nil, err
+		return nil, apperr.Internal("get task", err)
 	}
-
-	return s.repo.ListArtifactsByTask(ctx, taskID)
+	list, err := s.repo.ListArtifactsByTask(ctx, taskID)
+	if err != nil {
+		return nil, apperr.Internal("list artifacts by task", err)
+	}
+	return list, nil
 }
 
 // ListByType 列出指定任务的指定类型产物
 func (s *ArtifactService) ListByType(ctx context.Context, taskID uuid.UUID, artifactType workflow.ArtifactType) ([]*workflow.Artifact, error) {
 	if _, err := s.repo.GetTask(ctx, taskID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("task not found")
+			return nil, apperr.NotFound("task", taskID)
 		}
-		return nil, err
+		return nil, apperr.Internal("get task", err)
 	}
-
-	return s.repo.ListArtifactsByType(ctx, taskID, artifactType)
+	list, err := s.repo.ListArtifactsByType(ctx, taskID, artifactType)
+	if err != nil {
+		return nil, apperr.Internal("list artifacts by type", err)
+	}
+	return list, nil
 }

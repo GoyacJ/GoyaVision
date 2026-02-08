@@ -4,17 +4,19 @@ import (
 	"context"
 
 	"goyavision/internal/app/dto"
+	"goyavision/internal/app/event"
 	"goyavision/internal/app/port"
 	"goyavision/internal/domain/media"
 	"goyavision/pkg/apperr"
 )
 
 type CreateAssetHandler struct {
-	uow port.UnitOfWork
+	uow      port.UnitOfWork
+	eventBus port.EventBus
 }
 
-func NewCreateAssetHandler(uow port.UnitOfWork) *CreateAssetHandler {
-	return &CreateAssetHandler{uow: uow}
+func NewCreateAssetHandler(uow port.UnitOfWork, eventBus port.EventBus) *CreateAssetHandler {
+	return &CreateAssetHandler{uow: uow, eventBus: eventBus}
 }
 
 func (h *CreateAssetHandler) Handle(ctx context.Context, cmd dto.CreateAssetCommand) (*media.Asset, error) {
@@ -76,5 +78,8 @@ func (h *CreateAssetHandler) Handle(ctx context.Context, cmd dto.CreateAssetComm
 		return nil, err
 	}
 
+	if h.eventBus != nil {
+		_ = h.eventBus.Publish(ctx, event.NewAssetCreatedEvent(asset.ID))
+	}
 	return asset, nil
 }

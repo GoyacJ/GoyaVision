@@ -125,6 +125,7 @@ func NewHandlers(
 	minioClient *storage.MinIOClient,
 	workflowScheduler *app.WorkflowScheduler,
 	repo port.Repository,
+	eventBus appport.EventBus,
 ) *Handlers {
 	authProviderFactory := infraauth.NewProviderFactory(cfg)
 	userService := app.NewUserService(repo)
@@ -150,7 +151,7 @@ func NewHandlers(
 		CreateSource:             command.NewCreateSourceHandler(uow, mediaGateway),
 		UpdateSource:             command.NewUpdateSourceHandler(uow, mediaGateway),
 		DeleteSource:             command.NewDeleteSourceHandler(uow, mediaGateway),
-		CreateAsset:              command.NewCreateAssetHandler(uow),
+		CreateAsset:              command.NewCreateAssetHandler(uow, eventBus),
 		UpdateAsset:              command.NewUpdateAssetHandler(uow),
 		DeleteAsset:              command.NewDeleteAssetHandler(uow),
 		Login:                    command.NewLoginHandler(uow, tokenService),
