@@ -6,20 +6,22 @@
     >
       <template #actions>
         <GvSpace>
-          <GvSelect
-            v-model="filterProvider"
-            placeholder="提供商"
-            :options="[{ label: '全部提供商', value: '' }, ...providerOptions]"
-            class="w-44"
-            @change="refreshTable"
-          />
-          <GvSelect
-            v-model="filterStatus"
-            placeholder="状态"
-            :options="[{ label: '全部状态', value: '' }, ...statusOptions]"
-            class="w-32"
-            @change="refreshTable"
-          />
+          <div class="w-[220px] shrink-0">
+            <GvSelect
+              v-model="filterProvider"
+              placeholder="供应商"
+              :options="[{ label: '全部供应商', value: '' }, ...providerOptions]"
+              @change="refreshTable"
+            />
+          </div>
+          <div class="w-[160px] shrink-0">
+            <GvSelect
+              v-model="filterStatus"
+              placeholder="状态"
+              :options="[{ label: '全部状态', value: '' }, ...statusOptions]"
+              @change="refreshTable"
+            />
+          </div>
           <SearchBar
             v-model="searchKeyword"
             placeholder="搜索模型"
