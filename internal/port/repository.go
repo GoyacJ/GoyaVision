@@ -2,7 +2,9 @@ package port
 
 import (
 	"context"
+	"time"
 
+	"goyavision/internal/domain"
 	"goyavision/internal/domain/ai_model"
 	"goyavision/internal/domain/identity"
 	"goyavision/internal/domain/media"
@@ -149,4 +151,22 @@ type Repository interface {
 	ListSystemConfigs(ctx context.Context) ([]*system.SystemConfig, error)
 	SaveSystemConfig(ctx context.Context, config *system.SystemConfig) error
 	DeleteSystemConfig(ctx context.Context, key string) error
+
+	UserAssetRepository
+}
+
+type UserAssetRepository interface {
+	GetUserBalance(ctx context.Context, userID uuid.UUID) (*domain.UserBalance, error)
+	UpdateUserBalance(ctx context.Context, ub *domain.UserBalance) error
+	CreateTransactionRecord(ctx context.Context, tr *domain.TransactionRecord) error
+	GetTransactionRecord(ctx context.Context, id string) (*domain.TransactionRecord, error)
+	UpdateTransactionRecord(ctx context.Context, tr *domain.TransactionRecord) error
+	ListTransactionRecords(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*domain.TransactionRecord, int64, error)
+	CreatePointRecord(ctx context.Context, pr *domain.PointRecord) error
+	ListPointRecords(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*domain.PointRecord, int64, error)
+	GetUserSubscription(ctx context.Context, userID uuid.UUID) (*domain.UserSubscription, error)
+	UpdateUserSubscription(ctx context.Context, us *domain.UserSubscription) error
+	GetUsageStats(ctx context.Context, userID uuid.UUID, date time.Time) (*domain.UsageStats, error)
+	UpdateUsageStats(ctx context.Context, us *domain.UsageStats) error
+	ListUsageStats(ctx context.Context, userID uuid.UUID, start, end time.Time) ([]*domain.UsageStats, error)
 }

@@ -3,7 +3,9 @@ package persistence
 import (
 	"context"
 	"errors"
+	"time"
 
+	"goyavision/internal/domain"
 	"goyavision/internal/domain/ai_model"
 	"goyavision/internal/domain/identity"
 	"goyavision/internal/domain/media"
@@ -44,6 +46,7 @@ type repository struct {
 	aiModels       *repo.AIModelRepo
 	userIdentities *repo.UserIdentityRepo
 	systemConfigs  *repo.SystemConfigRepo
+	userAssets     *repo.UserAssetRepo
 }
 
 func NewRepository(db *gorm.DB) *repository {
@@ -63,6 +66,7 @@ func NewRepository(db *gorm.DB) *repository {
 		aiModels:       repo.NewAIModelRepo(db),
 		userIdentities: repo.NewUserIdentityRepo(db),
 		systemConfigs:  repo.NewSystemConfigRepo(db),
+		userAssets:     repo.NewUserAssetRepo(db),
 	}
 }
 
@@ -98,6 +102,11 @@ func AutoMigrate(db *gorm.DB) error {
 		&model.AIModelModel{},
 		&model.UserIdentityModel{},
 		&model.SystemConfigModel{},
+		&model.UserBalance{},
+		&model.UserSubscription{},
+		&model.TransactionRecord{},
+		&model.PointRecord{},
+		&model.UsageStat{},
 	)
 }
 
@@ -836,4 +845,96 @@ func (r *repository) DeleteSystemConfig(ctx context.Context, key string) error {
 		return err
 	}
 	return r.systemConfigs.Delete(ctx, key)
+}
+
+// UserAsset methods
+func (r *repository) GetUserBalance(ctx context.Context, userID uuid.UUID) (*domain.UserBalance, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	return r.userAssets.GetUserBalance(ctx, userID)
+}
+
+func (r *repository) UpdateUserBalance(ctx context.Context, ub *domain.UserBalance) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.userAssets.UpdateUserBalance(ctx, ub)
+}
+
+func (r *repository) CreateTransactionRecord(ctx context.Context, tr *domain.TransactionRecord) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.userAssets.CreateTransactionRecord(ctx, tr)
+}
+
+func (r *repository) GetTransactionRecord(ctx context.Context, id string) (*domain.TransactionRecord, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	return r.userAssets.GetTransactionRecord(ctx, id)
+}
+
+func (r *repository) UpdateTransactionRecord(ctx context.Context, tr *domain.TransactionRecord) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.userAssets.UpdateTransactionRecord(ctx, tr)
+}
+
+func (r *repository) ListTransactionRecords(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*domain.TransactionRecord, int64, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, 0, err
+	}
+	return r.userAssets.ListTransactionRecords(ctx, userID, limit, offset)
+}
+
+func (r *repository) CreatePointRecord(ctx context.Context, pr *domain.PointRecord) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.userAssets.CreatePointRecord(ctx, pr)
+}
+
+func (r *repository) ListPointRecords(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*domain.PointRecord, int64, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, 0, err
+	}
+	return r.userAssets.ListPointRecords(ctx, userID, limit, offset)
+}
+
+func (r *repository) GetUserSubscription(ctx context.Context, userID uuid.UUID) (*domain.UserSubscription, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	return r.userAssets.GetUserSubscription(ctx, userID)
+}
+
+func (r *repository) UpdateUserSubscription(ctx context.Context, us *domain.UserSubscription) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.userAssets.UpdateUserSubscription(ctx, us)
+}
+
+func (r *repository) GetUsageStats(ctx context.Context, userID uuid.UUID, date time.Time) (*domain.UsageStats, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	return r.userAssets.GetUsageStats(ctx, userID, date)
+}
+
+func (r *repository) UpdateUsageStats(ctx context.Context, us *domain.UsageStats) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.userAssets.UpdateUsageStats(ctx, us)
+}
+
+func (r *repository) ListUsageStats(ctx context.Context, userID uuid.UUID, start, end time.Time) ([]*domain.UsageStats, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	return r.userAssets.ListUsageStats(ctx, userID, start, end)
 }

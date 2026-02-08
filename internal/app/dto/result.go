@@ -1,6 +1,8 @@
 package dto
 
 import (
+	"time"
+
 	"goyavision/internal/domain/identity"
 	"goyavision/internal/domain/media"
 	"goyavision/internal/domain/operator"
@@ -63,6 +65,8 @@ type UserInfo struct {
 	Roles       []string
 	Permissions []string
 	Menus       []*identity.Menu
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 // Operator Results

@@ -31,7 +31,9 @@
         <template v-if="userStore.isLoggedIn">
           <el-dropdown @command="handleCommand">
             <span class="user-info">
-              <el-avatar :size="32" icon="UserFilled" />
+              <el-avatar :size="32" :src="userStore.avatar">
+                <el-icon><UserFilled /></el-icon>
+              </el-avatar>
               <span class="username">{{ userStore.nickname }}</span>
               <el-icon><ArrowDown /></el-icon>
             </span>
@@ -173,13 +175,11 @@ function handleLogin() {
 function handleCommand(command: string) {
   switch (command) {
     case 'profile':
-      ElMessage.info('个人信息功能开发中')
+      router.push('/profile')
       break
     case 'password':
-      passwordDialogVisible.value = true
-      passwordForm.old_password = ''
-      passwordForm.new_password = ''
-      passwordForm.confirm_password = ''
+      // 跳转到个人中心的安全设置标签
+      router.push({ path: '/profile', query: { tab: 'security' } })
       break
     case 'logout':
       handleLogout()

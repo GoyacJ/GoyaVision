@@ -32,17 +32,18 @@
 | 内置算子 | 抽帧、目标检测 | ✅ 部分完成 | 已有抽帧和推理，需要重构为算子 |
 | **任务中心** | | | |
 | 工作流管理 | CRUD | ✅ 已完成 | 工作流实体与服务已实现 |
-| 简化工作流 | 单算子任务 | ✅ 已完成 | SimpleWorkflowEngine 已实现 |
+| 简化工作流 | 单算子任务 | 🔄 已合并 | 已删除 SimpleWorkflowEngine，功能由 DAGWorkflowEngine 完全覆盖 |
 | 复杂工作流 | DAG 引擎 | ✅ 已完成 | DAGWorkflowEngine 实现，支持并行执行与条件分支 (always/on_success/on_failure) |
 | 任务管理 | 创建、查询、控制 | ✅ 已完成 | Task 实体与服务已实现，支持 NodeExecutions 追踪 |
 | 任务进度推送 | SSE 实时推送 | ✅ 已完成 | GET /tasks/:id/progress/stream 端点实现 |
 | 任务调度 | 定时调度、事件触发 | ✅ 已完成 | WorkflowScheduler 已实现 |
 | 产物管理 | 查询、关联 | ✅ 已完成 | Artifact 实体与服务已实现，支持按节点 (node_key) 过滤 |
 | **控制台** | | | |
-| 认证服务 | 登录、Token 刷新、OAuth | ✅ 已完成 | JWT 双 Token 机制；支持 OAuth 第三方登录与账号绑定 |
-| 用户管理 | CRUD、角色分配 | ✅ 已完成 | RBAC 权限模型；支持 UserIdentity 管理 |
+| 认证服务 | 登录、Token 刷新、OAuth、注册 | ✅ 已完成 | JWT 双 Token 机制；支持 OAuth 第三方登录与账号绑定；**新增用户自主注册功能** |
+| 用户管理 | CRUD、角色分配、个人资料修改 | ✅ 已完成 | RBAC 权限模型；支持 UserIdentity 管理；**新增个人中心(Profile)页面，支持修改基本信息与密码** |
 | 角色管理 | CRUD、权限分配、自动分配 | ✅ 已完成 | 支持基于条件的自动角色分配（AutoAssignConfig） |
 | 菜单管理 | CRUD、树形结构 | ✅ 已完成 | 动态菜单 |
+| 个人资产管理 | 余额、积分、订阅管理 | ✅ 已完成 | 实现支付宝、微信、银联支付接入，支持积分签到与订阅计划变更 |
 | 仪表盘 | 系统概览 | ⏸️ 待开始 | |
 | 审计日志 | 操作日志 | ⏸️ 待开始 | |
 | **多租户** | | | |
@@ -58,7 +59,7 @@
 | 任务管理 | 任务详情监控 | ✅ 已完成 | 支持只读 DAG 视图、SSE 实时状态着色、节点产物查看器 |
 | 产物页面 | 产物列表 | ✅ 已完成 | 已支持列表与详情 |
 | 系统管理页面 | 用户、角色、菜单、文件管理 | ✅ 已完成 | 文件管理已迁移至系统管理子菜单 |
-| 登录与鉴权体验 | Token 自动刷新、动态路由加载 | ✅ 已完成 | 统一 token_type 字段；自动刷新并重放请求；菜单驱动动态路由；修复登录后路由未注册导致的空白页面问题 |
+| 登录与鉴权体验 | Token 自动刷新、动态路由加载、注册、个人资料管理 | ✅ 已完成 | 统一 token_type 字段；自动刷新并重放请求；菜单驱动动态路由；修复登录后路由未注册导致的空白页面问题；**新增注册流程与个人中心管理** |
 | UI 样式统一 | 输入框、按钮、搜索栏样式优化 | ✅ 已完成 | 移除所有输入框/按钮聚焦样式变化；搜索栏隐藏多余按钮；任务统计紧凑化；修复菜单操作列和文件上传按钮宽度 |
 | 响应式重构 | 全站移动端适配 | ✅ 已完成 | 全局导航（抽屉式）、资产库（响应式网格+筛选栏堆叠）、GvTable（水平滚动+分页简化）、算子中心（头部换行） |
 | **数据迁移** | | | |
@@ -375,13 +376,7 @@
     - 支持超时控制（5 分钟）
     - 标准化输入输出协议
     - 完整的错误处理
-  - [x] SimpleWorkflowEngine 实现（engine/simple_engine.go）
-    - 支持单算子顺序执行
-    - 支持进度跟踪（按节点数计算）
-    - 支持取消执行（Context 取消）
-    - 自动保存产物（Assets、Results、Timeline）
-    - 完整的任务状态管理
-    - 并发安全（sync.RWMutex）
+  - [x] ~~SimpleWorkflowEngine 实现（engine/simple_engine.go）~~ — 已删除，功能由 DAGWorkflowEngine 完全覆盖
 
 - [x] **应用层（App）**
   - [x] WorkflowScheduler 实现（workflow_scheduler.go）
@@ -607,7 +602,7 @@
 
 ### 本周（Week 1）
 
-1. 完成核心实体定义（MediaAsset、Operator、Workflow、Task、Artifact）
+1. 完成核心实体定义（MediaAsset、Operator、Workflow、Task、Artifact、UserAsset）
 2. 实现 Repository 接口和 GORM 持久化
 3. 数据库迁移方案设计
 
@@ -633,6 +628,13 @@
 
 | 日期 | 版本 | 变更内容 |
 |------|------|----------|
+| 2026-02-08 | V1.0 | **个人中心深度重构与功能扩展**：
+- **UI/UX 焕新**：采用现代简约设计重构顶部 Banner，引入 `Gv` 系列自研基础组件（Input, Button, Card, Tag, Table）替换原有原生组件。
+- **模块化架构**：将个人中心拆分为个人资料、安全中心、支付管理、积分管理、订阅管理、使用统计六大独立子组件，增强可维护性。
+- **核心功能落地**：新增支付流水（银联/微信/支付宝支持）、积分余额系统、多级订阅计划对比及算子/AI 模型调用多维度统计统计（Mock 实现）。
+- **后端 API 扩展**：定义 `UserAsset` 领域 DTO，实现 `/api/v1/user/assets` 系列 Mock 接口并完成路由注册。 |
+| 2026-02-08 | V1.0 | **个人中心 UI 优化与 Bug 修复**：优化个人中心顶部样式为浅色透明设计；修复后端获取 Profile 时 CreatedAt/UpdatedAt 丢失导致显示错误的问题；修复顶部导航栏头像不显示实际头像的问题。 |
+| 2026-02-08 | V1.0 | **用户注册与个人中心功能实现**：后端新增 `/auth/register` (POST) 和 `/auth/profile` (PUT) 接口；前端重构登录页支持注册模式，移除默认账号提示，并新增个人中心页面 (`/profile`) 支持修改资料与安全设置。 |
 | 2026-02-08 | V1.0 | **工作流编辑器修复**：修复拖拽落位失效（修正 DOM 绑定）、无限更新循环（移除冗余 v-model）、连线不可用（激活连线监听）及状态同步问题。 |
 | 2026-02-08 | V1.0 | **文件管理页 500 修复**：修复系统管理-文件管理页打开报错 `column "visibility" does not exist`。原因：文件列表查询使用 `ScopeTenant`，该 scope 会附加 `visibility` 条件，但 `files` 表此前无该列。已为 `FileModel` 增加 `Visibility` 字段（默认 0），并在 `cmd/init/main.go` 中为已有 `files` 表增加兼容性迁移（`ALTER TABLE files ADD COLUMN IF NOT EXISTS visibility ...`）。 |
 | 2026-02-08 | V1.0 | **可见性参数传递修复**：修复所有涉及页面可见性设置参数传递失效的问题。改进了 `GvSelect` 基础组件的 `v-model` 绑定逻辑（改用 computed getter/setter 模式），并统一前端 visibility 字段为 Number 类型，彻底解决类型冲突导致的绑定失效。 |

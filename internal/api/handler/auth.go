@@ -17,6 +17,7 @@ import (
 func RegisterAuth(g *echo.Group, h *Handlers) {
 	handler := &authHandler{h: h}
 	g.POST("/login", handler.Login)
+	g.POST("/register", handler.Register)
 	g.POST("/refresh", handler.RefreshToken)
 	g.GET("/oauth/login", handler.Authorize)
 	g.POST("/oauth/login", handler.LoginOAuth)
@@ -25,6 +26,7 @@ func RegisterAuth(g *echo.Group, h *Handlers) {
 func RegisterAuthProtected(g *echo.Group, h *Handlers) {
 	handler := &authHandler{h: h}
 	g.GET("/profile", handler.GetProfile)
+	g.PUT("/profile", handler.UpdateProfile)
 	g.PUT("/password", handler.ChangePassword)
 	g.POST("/logout", handler.Logout)
 	g.POST("/bind", handler.BindIdentity)
@@ -70,6 +72,42 @@ func (h *authHandler) Login(c echo.Context) error {
 	})
 }
 
+func (h *authHandler) Register(c echo.Context) error {
+	var req dto.RegisterRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
+	}
+
+	if err := c.Validate(&req); err != nil {
+		return err
+	}
+
+	userSvc := app.NewUserService(h.h.Repo)
+	user, err := userSvc.Create(c.Request().Context(), &app.CreateUserRequest{
+		Username: req.Username,
+		Password: req.Password,
+		Nickname: req.Nickname,
+		Email:    req.Email,
+		Status:   identity.UserStatusEnabled,
+	})
+	if err != nil {
+		if err == app.ErrUsernameExists {
+			return echo.NewHTTPError(http.StatusConflict, "username already exists")
+		}
+		return err
+	}
+
+	return c.JSON(http.StatusCreated, dto.UserInfoFromApp(&dto.AppUserInfo{
+		ID:       user.ID,
+		Username: user.Username,
+		Nickname: user.Nickname,
+		Email:    user.Email,
+		Phone:    user.Phone,
+		Avatar:   user.Avatar,
+		Roles:    dto.RolesToCodes(user.Roles),
+	}))
+}
+
 func (h *authHandler) RefreshToken(c echo.Context) error {
 	var req dto.RefreshTokenRequest
 	if err := c.Bind(&req); err != nil {
@@ -113,6 +151,45 @@ func (h *authHandler) GetProfile(c echo.Context) error {
 		Roles:       result.Roles,
 		Permissions: result.Permissions,
 		Menus:       result.Menus,
+		CreatedAt:   result.CreatedAt,
+		UpdatedAt:   result.UpdatedAt,
+	}))
+}
+
+func (h *authHandler) UpdateProfile(c echo.Context) error {
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "user not authenticated")
+	}
+
+	var req dto.UpdateProfileRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
+	}
+
+	if err := c.Validate(&req); err != nil {
+		return err
+	}
+
+	userSvc := app.NewUserService(h.h.Repo)
+	user, err := userSvc.Update(c.Request().Context(), userID, &app.UpdateUserRequest{
+		Nickname: req.Nickname,
+		Email:    &req.Email,
+		Phone:    req.Phone,
+		Avatar:   req.Avatar,
+	})
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, dto.UserInfoFromApp(&dto.AppUserInfo{
+		ID:       user.ID,
+		Username: user.Username,
+		Nickname: user.Nickname,
+		Email:    user.Email,
+		Phone:    user.Phone,
+		Avatar:   user.Avatar,
+		Roles:    dto.RolesToCodes(user.Roles),
 	}))
 }
 

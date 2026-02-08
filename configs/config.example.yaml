@@ -58,6 +58,29 @@ oauth:
     client_secret: ""
     redirect_uri: "http://localhost:5173/login"
 
+# 支付配置
+payment:
+  alipay:
+    app_id: ""
+    private_key: ""
+    public_key: ""
+    notify_url: "http://your-domain.com/api/v1/payment/notify/alipay"
+    return_url: "http://your-domain.com/profile?tab=payment"
+    is_prod: false
+  wechat:
+    app_id: ""
+    mch_id: ""
+    api_key: ""
+    cert_path: "configs/certs/wechat_cert.pem"
+    key_path: "configs/certs/wechat_key.pem"
+    notify_url: "http://your-domain.com/api/v1/payment/notify/wechat"
+    is_prod: false
+  union:
+    mer_id: ""
+    cert_path: "configs/certs/unionpay_cert.pfx"
+    notify_url: "http://your-domain.com/api/v1/payment/notify/unionpay"
+    is_prod: false
+
 mcp:
   servers:
     - id: "default"

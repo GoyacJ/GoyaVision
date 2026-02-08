@@ -23,7 +23,40 @@ type Config struct {
 	MinIO      MinIO
 	MCP        MCP
 	OAuth      OAuth
+	Payment    Payment
 	EncryptKey string
+}
+
+type Payment struct {
+	Alipay AlipayConfig `mapstructure:"alipay"`
+	Wechat WechatConfig `mapstructure:"wechat"`
+	Union  UnionConfig  `mapstructure:"union"`
+}
+
+type AlipayConfig struct {
+	AppID      string `mapstructure:"app_id"`
+	PrivateKey string `mapstructure:"private_key"`
+	PublicKey  string `mapstructure:"public_key"`
+	NotifyURL  string `mapstructure:"notify_url"`
+	ReturnURL  string `mapstructure:"return_url"`
+	IsProd     bool   `mapstructure:"is_prod"`
+}
+
+type WechatConfig struct {
+	AppID     string `mapstructure:"app_id"`
+	MchID     string `mapstructure:"mch_id"`
+	APIKey    string `mapstructure:"api_key"`
+	CertPath  string `mapstructure:"cert_path"`
+	KeyPath   string `mapstructure:"key_path"`
+	NotifyURL string `mapstructure:"notify_url"`
+	IsProd    bool   `mapstructure:"is_prod"`
+}
+
+type UnionConfig struct {
+	MerID     string `mapstructure:"mer_id"`
+	CertPath  string `mapstructure:"cert_path"`
+	NotifyURL string `mapstructure:"notify_url"`
+	IsProd    bool   `mapstructure:"is_prod"`
 }
 
 type OAuth struct {
@@ -235,6 +268,7 @@ func Load() (*Config, error) {
 
 	_ = v.UnmarshalKey("mcp", &cfg.MCP)
 	_ = v.UnmarshalKey("oauth", &cfg.OAuth)
+	_ = v.UnmarshalKey("payment", &cfg.Payment)
 	return cfg, nil
 }
 

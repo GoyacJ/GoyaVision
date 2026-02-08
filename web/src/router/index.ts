@@ -65,6 +65,12 @@ export const constantRoutes: RouteRecordRaw[] = [
         name: 'TaskDetail',
         component: () => import('../views/task/detail.vue'),
         meta: { title: '任务详情', hidden: true }
+      },
+      {
+        path: '/profile',
+        name: 'Profile',
+        component: () => import('../views/profile/index.vue'),
+        meta: { title: '个人中心', hidden: true }
       }
     ]
   }

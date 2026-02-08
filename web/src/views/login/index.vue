@@ -11,78 +11,95 @@
           <el-icon :size="48"><VideoCameraFilled /></el-icon>
         </div>
         <h1>GoyaVision</h1>
-        <p>AI 多媒体资源分析处理平台</p>
+        <p>{{ isRegister ? '创建您的账号' : 'AI 多媒体资源分析处理平台' }}</p>
         <div class="header-divider"></div>
       </div>
       <el-form
-        ref="loginFormRef"
-        :model="loginForm"
-        :rules="loginRules"
+        ref="formRef"
+        :model="formData"
+        :rules="formRules"
         class="login-form"
-        @keyup.enter="handleLogin"
+        @keyup.enter="handleSubmit"
       >
         <el-form-item prop="username">
-          <el-input
-            v-model="loginForm.username"
+          <gv-input
+            v-model="formData.username"
             placeholder="用户名"
             size="large"
+            prefix-icon="User"
             clearable
-          >
-            <template #prefix>
-              <el-icon class="input-icon"><User /></el-icon>
-            </template>
-          </el-input>
+          />
         </el-form-item>
         <el-form-item prop="password">
-          <el-input
-            v-model="loginForm.password"
+          <gv-input
+            v-model="formData.password"
             type="password"
             placeholder="密码"
             size="large"
+            prefix-icon="Lock"
             show-password
-          >
-            <template #prefix>
-              <el-icon class="input-icon"><Lock /></el-icon>
-            </template>
-          </el-input>
+          />
         </el-form-item>
+
+        <!-- 注册模式下的额外字段 -->
+        <template v-if="isRegister">
+          <el-form-item prop="nickname">
+            <gv-input
+              v-model="formData.nickname"
+              placeholder="昵称"
+              size="large"
+              prefix-icon="Edit"
+              clearable
+            />
+          </el-form-item>
+          <el-form-item prop="email">
+            <gv-input
+              v-model="formData.email"
+              placeholder="邮箱 (可选)"
+              size="large"
+              prefix-icon="Message"
+              clearable
+            />
+          </el-form-item>
+        </template>
+
         <el-form-item>
-          <el-button
-            type="primary"
+          <gv-button
             size="large"
             :loading="loading"
-            class="login-btn"
-            @click="handleLogin"
+            block
+            class="submit-btn"
+            @click="handleSubmit"
           >
-            <span v-if="!loading">立即登录</span>
-            <span v-else>登录中...</span>
-          </el-button>
+            {{ isRegister ? '立即注册' : '立即登录' }}
+          </gv-button>
         </el-form-item>
       </el-form>
 
-      <div class="mt-6 mb-4 flex items-center gap-3">
-        <div class="h-px bg-gray-200 flex-1"></div>
-        <span class="text-xs text-gray-400">其他登录方式</span>
-        <div class="h-px bg-gray-200 flex-1"></div>
-      </div>
-      <div class="flex justify-center gap-6 mb-6">
-        <div 
-          v-for="item in loginMethods" 
-          :key="item.key"
-          class="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors border border-gray-200"
-          @click="handleOtherLogin(item.key)"
-          :title="item.label"
-        >
-          <span class="text-sm font-bold text-gray-600">{{ item.icon }}</span>
-        </div>
+      <div class="mode-switch">
+        <el-button link type="primary" @click="toggleMode">
+          {{ isRegister ? '已有账号？立即登录' : '没有账号？申请注册' }}
+        </el-button>
       </div>
 
-      <div class="login-footer">
-        <div class="footer-tip">
-          <el-icon><InfoFilled /></el-icon>
-          <span>默认账号: admin / admin123</span>
+      <template v-if="!isRegister">
+        <div class="mt-6 mb-4 flex items-center gap-3">
+          <div class="h-px bg-gray-200 flex-1"></div>
+          <span class="text-xs text-gray-400">其他登录方式</span>
+          <div class="h-px bg-gray-200 flex-1"></div>
         </div>
-      </div>
+        <div class="flex justify-center gap-6 mb-2">
+          <div 
+            v-for="item in loginMethods" 
+            :key="item.key"
+            class="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors border border-gray-200"
+            @click="handleOtherLogin(item.key)"
+            :title="item.label"
+          >
+            <span class="text-sm font-bold text-gray-600">{{ item.icon }}</span>
+          </div>
+        </div>
+      </template>
     </div>
     <div class="login-footer-text">
       <p>© 2026 GoyaVision. Powered by AI</p>
@@ -91,21 +108,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
-import { useUserStore } from '../../store/user'
+import { useUserStore } from '@/store/user'
+import GvInput from '@/components/base/GvInput/index.vue'
+import GvButton from '@/components/base/GvButton/index.vue'
+import { authApi } from '@/api/auth'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 
-const loginFormRef = ref<FormInstance>()
+const formRef = ref<FormInstance>()
 const loading = ref(false)
+const isRegister = ref(false)
 
-const loginForm = reactive({
+const formData = reactive({
   username: '',
-  password: ''
+  password: '',
+  nickname: '',
+  email: ''
 })
 
 onMounted(async () => {
@@ -136,21 +159,42 @@ onMounted(async () => {
   }
 })
 
-const loginRules: FormRules = {
-  username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' }
-  ],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度至少6位', trigger: 'blur' }
-  ]
-}
+const formRules = computed<FormRules>(() => {
+  const rules: FormRules = {
+    username: [
+      { required: true, message: '请输入用户名', trigger: 'blur' },
+      { min: 4, message: '用户名至少4位', trigger: 'blur' }
+    ],
+    password: [
+      { required: true, message: '请输入密码', trigger: 'blur' },
+      { min: 6, message: '密码长度至少6位', trigger: 'blur' }
+    ]
+  }
+
+  if (isRegister.value) {
+    rules.nickname = [
+      { required: true, message: '请输入昵称', trigger: 'blur' }
+    ]
+    rules.email = [
+      { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
+    ]
+  }
+
+  return rules
+})
 
 const loginMethods = [
   { key: 'github', label: 'Github', icon: 'G' },
   { key: 'wechat', label: '微信', icon: 'W' },
   { key: 'phone', label: '手机号', icon: 'P' }
 ]
+
+function toggleMode() {
+  isRegister.value = !isRegister.value
+  if (formRef.value) {
+    formRef.value.clearValidate()
+  }
+}
 
 function handleOtherLogin(type: string) {
   if (type === 'phone') {
@@ -163,26 +207,37 @@ function handleOtherLogin(type: string) {
   window.location.href = `/api/v1/auth/oauth/login?provider=${type}`
 }
 
-async function handleLogin() {
-  if (!loginFormRef.value) return
+async function handleSubmit() {
+  if (!formRef.value) return
 
-  await loginFormRef.value.validate(async (valid) => {
+  await formRef.value.validate(async (valid) => {
     if (!valid) return
 
     loading.value = true
     try {
-      await userStore.login({
-        username: loginForm.username,
-        password: loginForm.password
-      })
-      ElMessage.success('登录成功')
-      
-      const redirect = route.query.redirect as string
-      const targetPath = redirect || '/assets'
-      
-      await router.push(targetPath)
+      if (isRegister.value) {
+        await authApi.register({
+          username: formData.username,
+          password: formData.password,
+          nickname: formData.nickname,
+          email: formData.email
+        })
+        ElMessage.success('注册成功，请登录')
+        isRegister.value = false
+      } else {
+        await userStore.login({
+          username: formData.username,
+          password: formData.password
+        })
+        ElMessage.success('登录成功')
+        
+        const redirect = route.query.redirect as string
+        const targetPath = redirect || '/assets'
+        
+        await router.push(targetPath)
+      }
     } catch (error: any) {
-      ElMessage.error(error.response?.data?.message || '登录失败')
+      ElMessage.error(error.response?.data?.message || (isRegister.value ? '注册失败' : '登录失败'))
     } finally {
       loading.value = false
     }
@@ -339,67 +394,32 @@ async function handleLogin() {
   margin-bottom: 24px;
 }
 
-.login-form :deep(.el-input__wrapper) {
-  border-radius: 12px;
-  padding: 12px 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s;
-}
-
-.login-form :deep(.el-input__wrapper:hover) {
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
-}
-
-.login-form :deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.25);
-}
-
-.input-icon {
-  color: #667eea;
-}
-
-.login-btn {
+.submit-btn {
   width: 100%;
-  height: 48px;
-  font-size: 16px;
-  font-weight: 600;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border: none;
-  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
-  transition: all 0.3s;
+  height: 48px !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: none !important;
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4) !important;
+  transition: all 0.3s !important;
   margin-top: 8px;
+  color: white !important;
 }
 
-.login-btn:hover {
+.submit-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 32px rgba(102, 126, 234, 0.5);
+  box-shadow: 0 12px 32px rgba(102, 126, 234, 0.5) !important;
 }
 
-.login-btn:active {
+.submit-btn:active {
   transform: translateY(0);
 }
 
-.login-footer {
+.mode-switch {
   text-align: center;
-  margin-top: 24px;
-  padding-top: 24px;
-  border-top: 1px solid #e8e8e8;
-}
-
-.footer-tip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: #f5f7fa;
-  border-radius: 8px;
-  font-size: 13px;
-  color: #666;
-}
-
-.footer-tip .el-icon {
-  color: #409eff;
+  margin-top: 12px;
 }
 
 .login-footer-text {

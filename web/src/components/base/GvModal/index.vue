@@ -78,7 +78,7 @@
 <script setup lang="ts">
 import { computed, watch, onMounted, onUnmounted } from 'vue'
 import { cn } from '@/utils/cn'
-import { GvButton } from '@/components'
+import GvButton from '../GvButton/index.vue'
 import type { ModalProps, ModalEmits } from './types'
 
 const props = withDefaults(defineProps<ModalProps>(), {

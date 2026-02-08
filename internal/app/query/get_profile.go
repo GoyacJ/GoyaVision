@@ -100,6 +100,8 @@ func (h *GetProfileHandler) Handle(ctx context.Context, query dto.GetProfileQuer
 		Roles:       roleCodes,
 		Permissions: permissions,
 		Menus:       menus,
+		CreatedAt:   user.CreatedAt,
+		UpdatedAt:   user.UpdatedAt,
 	}, nil
 }
 

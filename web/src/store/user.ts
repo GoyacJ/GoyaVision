@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authApi, type UserInfo, type MenuInfo, type LoginRequest, type LoginOAuthRequest } from '../api/auth'
 import { getToken, setToken, getRefreshToken, setRefreshToken, clearTokens } from '../utils/auth'
-import router from '../router'
 import { buildRoutesFromMenus, hasRouteComponent } from '../utils/dynamic-routes'
 
 export const useUserStore = defineStore('user', () => {
@@ -14,6 +13,7 @@ export const useUserStore = defineStore('user', () => {
   const isLoggedIn = computed(() => !!token.value)
   const username = computed(() => userInfo.value?.username || '')
   const nickname = computed(() => userInfo.value?.nickname || userInfo.value?.username || '')
+  const avatar = computed(() => userInfo.value?.avatar || '')
   const roles = computed(() => userInfo.value?.roles || [])
   const permissions = computed(() => userInfo.value?.permissions || [])
   const menus = computed(() => userInfo.value?.menus || [])
@@ -89,7 +89,8 @@ export const useUserStore = defineStore('user', () => {
     return response.data
   }
 
-  function registerDynamicRoutes() {
+  async function registerDynamicRoutes() {
+    const { default: router } = await import('../router')
     const rootRouteName = 'Root'
     const menus = userInfo.value?.menus || []
     
@@ -151,6 +152,7 @@ export const useUserStore = defineStore('user', () => {
     routesLoaded.value = false
     clearTokens()
 
+    const { default: router } = await import('../router')
     router.push('/login')
   }
 
@@ -169,6 +171,7 @@ export const useUserStore = defineStore('user', () => {
     isLoggedIn,
     username,
     nickname,
+    avatar,
     roles,
     permissions,
     menus,

@@ -140,6 +140,7 @@ func createTables(db *gorm.DB) error {
 	log.Println("    - files")
 	log.Println("    - user_identities")
 	log.Println("    - system_configs")
+	log.Println("    - user_balances, user_subscriptions, transaction_records, point_records, usage_stats")
 
 	// 兼容性处理：删除旧版本的 legacy 字段
 	// 由于 operator 重设计去除了这些字段，如果数据库中残留会导致 GORM 插入失败（因旧字段可能为 NOT NULL）
@@ -672,6 +673,15 @@ func initAdminUser(ctx context.Context, db *gorm.DB) error {
 			).Error; err != nil {
 				log.Printf("  ⚠️  分配角色失败: %v", err)
 			}
+
+			// 初始化或更新管理员余额
+			db.WithContext(ctx).Where("user_id = ?", existingUser.ID).FirstOrCreate(&model.UserBalance{
+				UserID:  existingUser.ID,
+				Balance: 9999.99,
+				Points:  100000,
+				Level:   "Administrator",
+			})
+
 			log.Println("  ✓ 已更新管理员用户")
 		} else {
 			log.Println("  ⊙ 管理员用户已存在，跳过创建")
@@ -704,6 +714,16 @@ func initAdminUser(ctx context.Context, db *gorm.DB) error {
 		user.ID, roleID,
 	).Error; err != nil {
 		return fmt.Errorf("分配角色失败: %w", err)
+	}
+
+	// 初始化管理员余额
+	if err := db.WithContext(ctx).Create(&model.UserBalance{
+		UserID:  user.ID,
+		Balance: 9999.99,
+		Points:  100000,
+		Level:   "Administrator",
+	}).Error; err != nil {
+		log.Printf("  ⚠️  初始化管理员余额失败: %v", err)
 	}
 
 	log.Println("  ✓ 已创建管理员用户")

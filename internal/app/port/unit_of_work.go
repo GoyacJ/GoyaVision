@@ -9,6 +9,7 @@ import (
 	"goyavision/internal/domain/operator"
 	"goyavision/internal/domain/storage"
 	"goyavision/internal/domain/workflow"
+	portrepo "goyavision/internal/port"
 )
 
 // UnitOfWork 工作单元接口，提供事务边界和仓储访问
@@ -53,4 +54,5 @@ type Repositories struct {
 	Files       storage.FileRepository
 	AIModels       ai_model.Repository
 	UserIdentities identity.UserIdentityRepository
+	UserAssets     portrepo.UserAssetRepository
 }

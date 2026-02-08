@@ -42,6 +42,7 @@ func newRepositories(db *gorm.DB) *appport.Repositories {
 		Files:          repo.NewFileRepo(db),
 		AIModels:       repo.NewAIModelRepo(db),
 		UserIdentities: repo.NewUserIdentityRepo(db),
+		UserAssets:     repo.NewUserAssetRepo(db),
 	}
 }
 

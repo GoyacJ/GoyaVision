@@ -4,6 +4,7 @@ import (
 	"goyavision/config"
 	"goyavision/internal/adapter/crypto"
 	"goyavision/internal/adapter/engine"
+	"goyavision/internal/adapter/payment"
 	"goyavision/internal/adapter/mediamtx"
 	"goyavision/internal/app"
 	"goyavision/internal/app/command"
@@ -87,6 +88,13 @@ type Handlers struct {
 	ListTasks                *query.ListTasksHandler
 	GetTaskStats             *query.GetTaskStatsHandler
 	ListRunningTasks         *query.ListRunningTasksHandler
+	GetUserAssetSummaryHandler      *query.GetUserAssetSummaryHandler
+	ListUserTransactionsHandler     *query.ListUserTransactionsHandler
+	ListUserPointRecordsHandler     *query.ListUserPointRecordsHandler
+	GetUserUsageStatsHandler        *query.GetUserUsageStatsHandler
+	RechargeHandler                 *command.RechargeHandler
+	CheckInHandler                  *command.CheckInHandler
+	SubscribeHandler                *command.SubscribeHandler
 	Cfg                      *config.Config
 	MtxCli                   *mediamtx.Client
 	MinIOClient              *storage.MinIOClient
@@ -135,6 +143,8 @@ func NewHandlers(
 	executorRegistry.Register(cliExecutor.Mode(), cliExecutor)
 	executorRegistry.Register(mcpExecutor.Mode(), mcpExecutor)
 	executorRegistry.Register(aiModelExecutor.Mode(), aiModelExecutor)
+
+	paymentAdapter, _ := payment.NewGoPayAdapter(cfg.Payment)
 
 	return &Handlers{
 		CreateSource:             command.NewCreateSourceHandler(uow, mediaGateway),
@@ -207,6 +217,13 @@ func NewHandlers(
 		ListTasks:                query.NewListTasksHandler(uow),
 		GetTaskStats:             query.NewGetTaskStatsHandler(uow),
 		ListRunningTasks:         query.NewListRunningTasksHandler(uow),
+		GetUserAssetSummaryHandler:      query.NewGetUserAssetSummaryHandler(uow),
+		ListUserTransactionsHandler:     query.NewListUserTransactionsHandler(uow),
+		ListUserPointRecordsHandler:     query.NewListUserPointRecordsHandler(uow),
+		GetUserUsageStatsHandler:        query.NewGetUserUsageStatsHandler(uow),
+		RechargeHandler:                 command.NewRechargeHandler(uow, paymentAdapter),
+		CheckInHandler:                  command.NewCheckInHandler(uow),
+		SubscribeHandler:                command.NewSubscribeHandler(uow),
 		Cfg:                      cfg,
 		MtxCli:                   mtxCli,
 		MinIOClient:              minioClient,

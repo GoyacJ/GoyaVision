@@ -53,7 +53,8 @@
 </template>
 
 <script setup lang="ts">
-import { GvFlex, GvButton } from '@/components'
+import GvFlex from '../../layout/GvFlex/index.vue'
+import GvButton from '../../base/GvButton/index.vue'
 import { ArrowLeft } from '@element-plus/icons-vue'
 import type { PageHeaderProps, PageHeaderEmits } from './types'
 

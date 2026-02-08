@@ -48,6 +48,22 @@ type ChangePasswordRequest struct {
 	NewPassword string `json:"new_password" validate:"required,min=6"`
 }
 
+// RegisterRequest 注册请求
+type RegisterRequest struct {
+	Username string `json:"username" validate:"required,min=4"`
+	Password string `json:"password" validate:"required,min=6"`
+	Nickname string `json:"nickname"`
+	Email    string `json:"email" validate:"omitempty,email"`
+}
+
+// UpdateProfileRequest 更新个人信息请求
+type UpdateProfileRequest struct {
+	Nickname *string `json:"nickname"`
+	Email    string  `json:"email" validate:"omitempty,email"`
+	Phone    *string `json:"phone"`
+	Avatar   *string `json:"avatar"`
+}
+
 // UserInfo 用户信息
 type UserInfo struct {
 	ID          uuid.UUID     `json:"id"`
@@ -59,6 +75,8 @@ type UserInfo struct {
 	Roles       []string      `json:"roles"`
 	Permissions []string      `json:"permissions"`
 	Menus       []*MenuSimple `json:"menus"`
+	CreatedAt   time.Time     `json:"created_at"`
+	UpdatedAt   time.Time     `json:"updated_at"`
 }
 
 // MenuSimple 简化的菜单信息
@@ -88,6 +106,8 @@ type AppUserInfo struct {
 	Roles       []string
 	Permissions []string
 	Menus       []*identity.Menu
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 // UserInfoFromApp 从 AppUserInfo 转换
@@ -105,6 +125,8 @@ func UserInfoFromApp(u *AppUserInfo) *UserInfo {
 		Roles:       u.Roles,
 		Permissions: u.Permissions,
 		Menus:       menusToSimple(u.Menus),
+		CreatedAt:   u.CreatedAt,
+		UpdatedAt:   u.UpdatedAt,
 	}
 }
 

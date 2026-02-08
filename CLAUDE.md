@@ -310,7 +310,7 @@ Execution flow:
 4. Each node: Fetch input asset → Call Operator → Save Artifact → Pass to downstream
 5. All nodes complete → Task success; any node fails → Retry or mark failed
 
-Engine implementation: `internal/adapter/engine/simple_engine.go`
+Engine implementation: `internal/infra/engine/dag_engine.go`
 
 **DAG execution details**:
 - Uses Kahn's algorithm for topological sorting

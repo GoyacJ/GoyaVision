@@ -152,6 +152,8 @@ func (h *LoginHandler) getUserInfo(ctx context.Context, userID uuid.UUID) (*dto.
 		Roles:       roleCodes,
 		Permissions: permissions,
 		Menus:       menus,
+		CreatedAt:   user.CreatedAt,
+		UpdatedAt:   user.UpdatedAt,
 	}, nil
 }
 

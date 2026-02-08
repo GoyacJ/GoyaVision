@@ -320,7 +320,7 @@ type Repositories struct {
 | `http_executor.go` | 修改 | 从 `version.ExecConfig.HTTP` 读取配置 |
 | `cli_executor.go` | 新增 | 本地命令执行 |
 | `mcp_executor.go` | 新增 | 调用 MCP Tool |
-| `simple_engine.go` | 修改 | 使用 `ExecutorRegistry` 按 `ExecMode` 路由 |
+| ~~`simple_engine.go`~~ | 已删除 | 已被 DAGWorkflowEngine 完全替代，使用 `ExecutorRegistry` 按 `ExecMode` 路由 |
 
 > 本期不实现：`docker_executor.go`、`grpc_executor.go`。
 
@@ -465,7 +465,7 @@ type Repositories struct {
 - `internal/app/query/get_operator.go`
 - `internal/app/query/list_operators.go`
 - `internal/adapter/engine/http_executor.go`
-- `internal/adapter/engine/simple_engine.go`
+- ~~`internal/adapter/engine/simple_engine.go`~~（已删除，功能由 DAGWorkflowEngine 覆盖）
 - `internal/infra/persistence/model/operator.go`
 - `internal/infra/persistence/mapper/operator.go`
 - `internal/infra/persistence/repo/operator.go`

@@ -30,6 +30,8 @@ export interface UserInfo {
   roles: string[]
   permissions: string[]
   menus: MenuInfo[]
+  created_at: string
+  updated_at: string
 }
 
 export interface LoginResponse {
@@ -46,6 +48,20 @@ export interface RefreshTokenRequest {
 export interface ChangePasswordRequest {
   old_password: string
   new_password: string
+}
+
+export interface RegisterRequest {
+  username: string
+  password: string
+  nickname?: string
+  email?: string
+}
+
+export interface UpdateProfileRequest {
+  nickname?: string
+  email?: string
+  phone?: string
+  avatar?: string
 }
 
 export interface LoginOAuthRequest {
@@ -69,6 +85,14 @@ export const authApi = {
 
   getProfile() {
     return apiClient.get<UserInfo>('/auth/profile')
+  },
+
+  updateProfile(data: UpdateProfileRequest) {
+    return apiClient.put<UserInfo>('/auth/profile', data)
+  },
+
+  register(data: RegisterRequest) {
+    return apiClient.post<UserInfo>('/auth/register', data)
   },
 
   changePassword(data: ChangePasswordRequest) {

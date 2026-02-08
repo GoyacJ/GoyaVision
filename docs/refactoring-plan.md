@@ -43,7 +43,7 @@
 | 13 | **单文件 Repository 实现 1277 行**：`adapter/persistence/repository.go` 所有表的 CRUD 塞在一个文件 | 可维护性 | 中 | 低 |
 | 14 | **无统一 API 响应信封**：列表接口返回 `{items, total}`，错误返回 `{error, message}`，缺少 `code`/`request_id`/`trace_id` | API 质量 | 中 | 低 |
 | 15 | **无测试基础设施**：仅发现 `media_source_test.go` 一个测试文件，无 mock、无 fixture、无集成测试 | 质量保障 | 极高 | 低 |
-| 16 | **工作流引擎顺序执行**：`SimpleWorkflowEngine` 只做顺序遍历 nodes，无拓扑排序、无并行节点、无条件分支 | 功能完整性 | 中 | 中 |
+| 16 | ~~**工作流引擎顺序执行**~~：`SimpleWorkflowEngine` 已删除，由 `DAGWorkflowEngine` 完全替代（支持拓扑排序、并行执行、条件分支） | 功能完整性 | ✅ 已解决 | — |
 
 ---
 

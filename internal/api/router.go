@@ -12,6 +12,7 @@ import (
 	portrepo "goyavision/internal/port"
 	"goyavision/pkg/storage"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 	"github.com/labstack/echo/v4/middleware"
@@ -47,8 +48,20 @@ func NewHandlers(
 	)
 }
 
+type customValidator struct {
+	validator *validator.Validate
+}
+
+func (cv *customValidator) Validate(i interface{}) error {
+	if err := cv.validator.Struct(i); err != nil {
+		return err
+	}
+	return nil
+}
+
 func RegisterRouter(e *echo.Echo, h *handler.Handlers, webFS fs.FS) {
 	e.HTTPErrorHandler = ErrorHandler
+	e.Validator = &customValidator{validator: validator.New()}
 	e.Use(middleware.Logger(), middleware.Recover())
 
 	authGroup := e.Group("/api/v1/auth")
@@ -73,6 +86,7 @@ func RegisterRouter(e *echo.Echo, h *handler.Handlers, webFS fs.FS) {
 	handler.RegisterTaskRoutes(optionalApi, api, h)
 	handler.RegisterArtifact(api, h)
 	handler.RegisterAIModelRoutes(optionalApi, api, h)
+	handler.RegisterUserAssetRoutes(api, h)
 
 	admin := api.Group("")
 	handler.RegisterUser(admin, h)
