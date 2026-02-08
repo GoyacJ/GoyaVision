@@ -2,6 +2,14 @@
 
 创建符合 Conventional Commits 规范的 Git 提交。
 
+## 分支管理规范
+
+在提交前，请确保您在正确的分支上工作：
+- **新功能**：`feature/*` (拉自 `develop`)
+- **普通修复**：`fix/*` (拉自 `develop`)
+- **紧急修复**：`hotfix/*` (拉自 `main`)
+- **重构**：`refactor/*` (拉自 `develop`)
+
 ## 提交格式
 
 ```
