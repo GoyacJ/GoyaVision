@@ -46,3 +46,4 @@
 ### 变更
 - 资产管理与预览流程优化，移除废弃的算法绑定（AlgorithmBinding）相关代码，全面转向工作流驱动。
 - 全面更新项目核心文档（README, requirements, architecture, api），对齐算子版本化、DAG 工作流、MCP 集成与多租户隔离等最新设计实现。
+- 完善 Git 规范，新增 `docs/git-workflow.md`，并同步更新 `.clinerules`, `.cursor`, `.cline`, `.claude` 配置文件。

@@ -12,14 +12,13 @@
 - API 可依赖 App + Port + Domain（禁止直接依赖 Adapter）
 
 ## 开发工作流要求（每次开发必须执行）
-- 开始前查阅：docs/requirements.md、docs/architecture.md、docs/development-progress.md、docs/api.md、CHANGELOG.md。
-- 开发中遵循本规则与对应的条件规则。
-- 完成后必须更新：
-  - docs/development-progress.md
-  - CHANGELOG.md（[未发布] 章节，按新增/变更/修复/弃用/移除/安全分类）
-  - 如 API 变更：docs/api.md
-  - 如设计/需求变更：docs/architecture.md 或 docs/requirements.md
-- 提交遵循 Conventional Commits：<type>(<scope>): <subject>（提交信息需使用中文描述）
+- **查阅规范**：开始前查阅 `docs/git-workflow.md`、`docs/requirements.md`、`docs/architecture.md`、`docs/development-progress.md`、`docs/api.md` 和 `CHANGELOG.md`。
+- **分支管理**：严格遵循 Git Flow 简化版，新功能使用 `feature/` 分支，修复使用 `fix/` 分支，从 `develop` 分支拉取并合并回 `develop`。
+- **文档同步**：开发完成后必须同步更新：
+  - `docs/development-progress.md`
+  - `CHANGELOG.md`（[未发布] 章节，按新增/变更/修复/弃用/移除/安全分类）
+  - 如有 API 变更需同步更新 `docs/api.md`。
+- **提交规范**：遵循 Conventional Commits：`<type>(<scope>): <subject>`（提交信息需使用中文描述）。
 
 ## 信息完整性与提问规范
 - 在执行用户请求前，请进行信息完整性检查：

@@ -2,7 +2,14 @@
 
 用于生成符合 Conventional Commits 的提交信息并进行简单检查（提交信息需使用中文描述）。
 
-## 1. 查看当前变更
+## 1. 检查分支命名
+
+```bash
+git branch --show-current
+```
+确认分支名符合 `feature/*`, `fix/*`, `hotfix/*`, `refactor/*` 或 `release/*` 规范。
+
+## 2. 查看当前变更
 
 ```bash
 git status -sb

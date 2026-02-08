@@ -53,6 +53,8 @@ alwaysApply: true
 
 每次完成功能开发或问题修复后，**必须**按顺序完成：
 
+0. **确认分支命名**
+   - 确认当前分支符合 `feature/*`, `fix/*`, `hotfix/*`, `refactor/*` 或 `release/*` 规范。
 1. **更新开发进度**
    - 编辑 `docs/development-progress.md`：更新对应功能状态（✅/🚧/⏸️）、说明与迭代进度。
 2. **更新变更日志**

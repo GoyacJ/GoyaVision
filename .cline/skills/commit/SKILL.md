@@ -25,6 +25,7 @@ description: Git 提交规范指导（Conventional Commits）。用于提交前�
 - asset / operator / workflow / task / auth / api / ui
 
 ## 提交前检查
-- 代码已测试、已格式化
-- 文档已同步（进度、CHANGELOG、API）
-- 无调试代码
+- **分支命名验证**：确认当前分支名符合 `feature/*`, `fix/*`, `hotfix/*`, `refactor/*` 或 `release/*` 规范。
+- **代码状态**：代码已测试、已格式化。
+- **文档同步**：文档已同步（进度、CHANGELOG、API）。
+- **清理工作**：无调试代码（fmt.Println, console.log 等）。
