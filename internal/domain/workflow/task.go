@@ -16,6 +16,25 @@ const (
 	TaskStatusCancelled TaskStatus = "cancelled"
 )
 
+type NodeExecutionStatus string
+
+const (
+	NodeExecPending NodeExecutionStatus = "pending"
+	NodeExecRunning NodeExecutionStatus = "running"
+	NodeExecSuccess NodeExecutionStatus = "success"
+	NodeExecFailed  NodeExecutionStatus = "failed"
+	NodeExecSkipped NodeExecutionStatus = "skipped"
+)
+
+type NodeExecution struct {
+	NodeKey     string              `json:"node_key"`
+	Status      NodeExecutionStatus `json:"status"`
+	Error       string              `json:"error,omitempty"`
+	StartedAt   *time.Time          `json:"started_at,omitempty"`
+	CompletedAt *time.Time          `json:"completed_at,omitempty"`
+	ArtifactIDs []uuid.UUID         `json:"artifact_ids,omitempty"`
+}
+
 type Task struct {
 	ID                uuid.UUID
 	TenantID          uuid.UUID
@@ -23,14 +42,15 @@ type Task struct {
 	WorkflowID        uuid.UUID
 	AssetID           *uuid.UUID
 	Status            TaskStatus
-	Progress    int
-	CurrentNode string
-	InputParams map[string]interface{}
-	Error       string
-	StartedAt   *time.Time
-	CompletedAt *time.Time
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	Progress          int
+	CurrentNode       string
+	InputParams       map[string]interface{}
+	Error             string
+	NodeExecutions    []NodeExecution
+	StartedAt         *time.Time
+	CompletedAt       *time.Time
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 func (t *Task) IsPending() bool {

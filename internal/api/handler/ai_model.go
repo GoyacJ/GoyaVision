@@ -12,14 +12,17 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func RegisterAIModel(g *echo.Group, h *Handlers) {
+func RegisterAIModelRoutes(public *echo.Group, protected *echo.Group, h *Handlers) {
 	handler := &aiModelHandler{h: h}
-	g.GET("/ai-models", handler.List)
-	g.POST("/ai-models", handler.Create)
-	g.GET("/ai-models/:id", handler.Get)
-	g.PUT("/ai-models/:id", handler.Update)
-	g.DELETE("/ai-models/:id", handler.Delete)
-	g.POST("/ai-models/:id/test-connection", handler.TestConnection)
+	// Public
+	public.GET("/ai-models", handler.List)
+	public.GET("/ai-models/:id", handler.Get)
+
+	// Protected
+	protected.POST("/ai-models", handler.Create)
+	protected.PUT("/ai-models/:id", handler.Update)
+	protected.DELETE("/ai-models/:id", handler.Delete)
+	protected.POST("/ai-models/:id/test-connection", handler.TestConnection)
 }
 
 type aiModelHandler struct {

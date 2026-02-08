@@ -184,6 +184,47 @@ func contextWithAuth(ctx context.Context, claims *JWTClaims) context.Context {
 	return ctx
 }
 
+// OptionalJWTAuth 可选的 JWT 认证中间件
+// 如果提供了有效的 Token，则解析并设置上下文；否则直接放行
+func OptionalJWTAuth(cfg config.JWT) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			authHeader := c.Request().Header.Get("Authorization")
+			if authHeader == "" {
+				return next(c)
+			}
+
+			parts := strings.SplitN(authHeader, " ", 2)
+			if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+				return next(c)
+			}
+
+			claims, err := ParseToken(cfg, parts[1])
+			if err != nil {
+				return next(c)
+			}
+
+			tokenType := claims.TokenType
+			if tokenType == "" {
+				tokenType = claims.LegacyType
+			}
+			if tokenType != TokenTypeAccess {
+				return next(c)
+			}
+
+			// Store in Echo context
+			c.Set(ContextKeyUserID, claims.UserID)
+			c.Set(ContextKeyTenantID, claims.TenantID)
+			c.Set(ContextKeyUsername, claims.Username)
+
+			// Update Request Context
+			c.SetRequest(c.Request().WithContext(contextWithAuth(c.Request().Context(), claims)))
+
+			return next(c)
+		}
+	}
+}
+
 // RequirePermission 权限校验中间件
 func RequirePermission(repo port.Repository, requiredPermissions ...string) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {

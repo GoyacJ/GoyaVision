@@ -355,7 +355,7 @@ function handleView(row: Workflow) {
 }
 
 function handleEdit(row: Workflow) {
-  ElMessage.info('编辑功能开发中')
+  router.push(`/workflows/${row.id}/edit`)
 }
 
 function handleTrigger(row: Workflow) {

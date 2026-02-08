@@ -12,6 +12,7 @@ import (
 // ArtifactListQuery 列出产物查询参数
 type ArtifactListQuery struct {
 	TaskID  *uuid.UUID `query:"task_id"`
+	NodeKey *string    `query:"node_key"`
 	Type    *string    `query:"type"`
 	AssetID *uuid.UUID `query:"asset_id"`
 	From    *int64     `query:"from"`

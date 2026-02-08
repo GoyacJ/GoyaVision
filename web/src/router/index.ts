@@ -31,10 +31,40 @@ export const constantRoutes: RouteRecordRaw[] = [
     component: Layout,
     children: [
       {
+        path: '/assets',
+        name: 'Assets',
+        component: () => import('../views/asset/index.vue'),
+        meta: { title: '媒体资产库' }
+      },
+      {
         path: '/operator-marketplace',
         name: 'OperatorMarketplace',
         component: OperatorMarketplace,
         meta: { title: '算子模板市场', hidden: true }
+      },
+      {
+        path: '/workflows',
+        name: 'Workflows',
+        component: () => import('../views/workflow/index.vue'),
+        meta: { title: '工作流管理' }
+      },
+      {
+        path: '/workflows/:id/edit',
+        name: 'WorkflowEditor',
+        component: () => import('../views/workflow/editor/index.vue'),
+        meta: { title: '编辑工作流', hidden: true }
+      },
+      {
+        path: '/tasks',
+        name: 'Tasks',
+        component: () => import('../views/task/index.vue'),
+        meta: { title: '任务管理' }
+      },
+      {
+        path: '/tasks/:id',
+        name: 'TaskDetail',
+        component: () => import('../views/task/detail.vue'),
+        meta: { title: '任务详情', hidden: true }
       }
     ]
   }

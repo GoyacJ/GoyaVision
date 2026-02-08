@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -14,18 +16,22 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func RegisterTask(g *echo.Group, h *Handlers) {
+func RegisterTaskRoutes(public *echo.Group, protected *echo.Group, h *Handlers) {
 	handler := &taskHandler{h: h}
-	g.GET("/tasks", handler.List)
-	g.POST("/tasks", handler.Create)
-	g.GET("/tasks/:id", handler.Get)
-	g.PUT("/tasks/:id", handler.Update)
-	g.DELETE("/tasks/:id", handler.Delete)
-	g.POST("/tasks/:id/start", handler.Start)
-	g.POST("/tasks/:id/complete", handler.Complete)
-	g.POST("/tasks/:id/fail", handler.Fail)
-	g.POST("/tasks/:id/cancel", handler.Cancel)
-	g.GET("/tasks/stats", handler.Stats)
+	// Public
+	public.GET("/tasks", handler.List)
+	public.GET("/tasks/stats", handler.Stats)
+	public.GET("/tasks/:id", handler.Get)
+	public.GET("/tasks/:id/progress/stream", handler.ProgressStream)
+
+	// Protected
+	protected.POST("/tasks", handler.Create)
+	protected.PUT("/tasks/:id", handler.Update)
+	protected.DELETE("/tasks/:id", handler.Delete)
+	protected.POST("/tasks/:id/start", handler.Start)
+	protected.POST("/tasks/:id/complete", handler.Complete)
+	protected.POST("/tasks/:id/fail", handler.Fail)
+	protected.POST("/tasks/:id/cancel", handler.Cancel)
 }
 
 type taskHandler struct {
@@ -63,7 +69,7 @@ func (h *taskHandler) List(c echo.Context) error {
 	}
 
 	// 权限过滤：非超级管理员只能查看自己触发的任务
-	userID, _ := authmiddleware.GetUserID(c)
+	userID, ok := authmiddleware.GetUserID(c)
 	roles := c.Get(authmiddleware.ContextKeyRoles)
 	isSuperAdmin := false
 	if roleList, ok := roles.([]string); ok {
@@ -75,7 +81,7 @@ func (h *taskHandler) List(c echo.Context) error {
 		}
 	}
 
-	if !isSuperAdmin {
+	if !isSuperAdmin && ok {
 		q.TriggeredByUserID = &userID
 	}
 
@@ -283,4 +289,49 @@ func (h *taskHandler) Stats(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, dto.TaskStatsToResponse(stats))
+}
+
+// ProgressStream SSE 实时推送任务执行进度
+func (h *taskHandler) ProgressStream(c echo.Context) error {
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid task id")
+	}
+
+	c.Response().Header().Set("Content-Type", "text/event-stream")
+	c.Response().Header().Set("Cache-Control", "no-cache")
+	c.Response().Header().Set("Connection", "keep-alive")
+	c.Response().Header().Set("X-Accel-Buffering", "no")
+	c.Response().WriteHeader(http.StatusOK)
+
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-c.Request().Context().Done():
+			return nil
+		case <-ticker.C:
+			task, err := h.h.GetTask.Handle(c.Request().Context(), appdto.GetTaskQuery{ID: id})
+			if err != nil {
+				return nil
+			}
+
+			event := map[string]interface{}{
+				"status":          string(task.Status),
+				"progress":        task.Progress,
+				"current_node":    task.CurrentNode,
+				"node_executions": dto.TaskToResponse(task).NodeExecutions,
+				"error":           task.Error,
+			}
+			data, _ := json.Marshal(event)
+			fmt.Fprintf(c.Response(), "data: %s\n\n", data)
+			c.Response().Flush()
+
+			if task.IsCompleted() {
+				return nil
+			}
+		}
+	}
 }

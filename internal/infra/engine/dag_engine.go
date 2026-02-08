@@ -27,12 +27,13 @@ type DAGWorkflowEngine struct {
 }
 
 type taskExecution struct {
-	ctx         context.Context
-	cancel      context.CancelFunc
-	progress    int
-	currentNode string
-	nodeResults map[string]*operator.Output
-	mu          sync.RWMutex
+	ctx            context.Context
+	cancel         context.CancelFunc
+	progress       int
+	currentNode    string
+	nodeResults    map[string]*operator.Output
+	nodeExecutions map[string]*workflow.NodeExecution
+	mu             sync.RWMutex
 }
 
 // NewDAGWorkflowEngine creates a new DAG workflow engine
@@ -73,10 +74,19 @@ func (e *DAGWorkflowEngine) Execute(ctx context.Context, wf *workflow.Workflow, 
 	defer cancel()
 
 	exec := &taskExecution{
-		ctx:         execCtx,
-		cancel:      cancel,
-		progress:    0,
-		nodeResults: make(map[string]*operator.Output),
+		ctx:            execCtx,
+		cancel:         cancel,
+		progress:       0,
+		nodeResults:    make(map[string]*operator.Output),
+		nodeExecutions: make(map[string]*workflow.NodeExecution),
+	}
+
+	// Initialize node executions
+	for _, node := range wf.Nodes {
+		exec.nodeExecutions[node.NodeKey] = &workflow.NodeExecution{
+			NodeKey: node.NodeKey,
+			Status:  workflow.NodeExecPending,
+		}
 	}
 
 	e.mu.Lock()
@@ -111,7 +121,7 @@ func (e *DAGWorkflowEngine) Execute(ctx context.Context, wf *workflow.Workflow, 
 		default:
 		}
 
-		if err := e.executeLayer(execCtx, layer, nodeMap, task, exec); err != nil {
+		if err := e.executeLayer(execCtx, layer, nodeMap, wf.Edges, task, exec); err != nil {
 			e.updateTaskStatus(ctx, task, workflow.TaskStatusFailed, err.Error())
 			return fmt.Errorf("layer %d execution failed: %w", i+1, err)
 		}
@@ -275,6 +285,7 @@ func (e *DAGWorkflowEngine) executeLayer(
 	ctx context.Context,
 	layer []string,
 	nodeMap map[string]*workflow.Node,
+	edges []workflow.Edge,
 	task *workflow.Task,
 	exec *taskExecution,
 ) error {
@@ -282,16 +293,43 @@ func (e *DAGWorkflowEngine) executeLayer(
 		return nil
 	}
 
+	// Check conditions for all nodes in layer first
+	nodesToExecute := []string{}
+	for _, nodeKey := range layer {
+		node := nodeMap[nodeKey]
+		if e.shouldExecuteNode(node, edges, exec) {
+			nodesToExecute = append(nodesToExecute, nodeKey)
+		} else {
+			// Mark as skipped
+			exec.mu.Lock()
+			if execNode, ok := exec.nodeExecutions[nodeKey]; ok {
+				execNode.Status = workflow.NodeExecSkipped
+			}
+			exec.mu.Unlock()
+		}
+	}
+	
+	// Sync skipped status
+	if len(nodesToExecute) < len(layer) {
+		if err := e.syncTaskNodeExecutions(ctx, task, exec); err != nil {
+			return err
+		}
+	}
+
+	if len(nodesToExecute) == 0 {
+		return nil
+	}
+
 	// For single node, execute directly
-	if len(layer) == 1 {
-		return e.executeNode(ctx, nodeMap[layer[0]], task, exec)
+	if len(nodesToExecute) == 1 {
+		return e.executeNode(ctx, nodeMap[nodesToExecute[0]], task, exec)
 	}
 
 	// Parallel execution for multiple nodes
 	var wg sync.WaitGroup
-	errChan := make(chan error, len(layer))
+	errChan := make(chan error, len(nodesToExecute))
 
-	for _, nodeKey := range layer {
+	for _, nodeKey := range nodesToExecute {
 		wg.Add(1)
 		go func(nk string) {
 			defer wg.Done()
@@ -321,20 +359,32 @@ func (e *DAGWorkflowEngine) executeNode(
 	task *workflow.Task,
 	exec *taskExecution,
 ) error {
-	// Update current node
+	// Update node execution status to running
 	exec.mu.Lock()
 	exec.currentNode = node.NodeKey
+	if execNode, ok := exec.nodeExecutions[node.NodeKey]; ok {
+		now := time.Now()
+		execNode.Status = workflow.NodeExecRunning
+		execNode.StartedAt = &now
+	}
 	exec.mu.Unlock()
 
-	// Update task current node in database
-	e.uow.Do(ctx, func(ctx context.Context, repos *port.Repositories) error {
-		task.CurrentNode = node.NodeKey
-		return repos.Tasks.Update(ctx, task)
-	})
+	// Sync task state
+	if err := e.syncTaskNodeExecutions(ctx, task, exec); err != nil {
+		return err
+	}
 
 	// Skip if no operator
 	if node.OperatorID == nil {
-		return nil
+		// Mark as success immediately
+		exec.mu.Lock()
+		if execNode, ok := exec.nodeExecutions[node.NodeKey]; ok {
+			now := time.Now()
+			execNode.Status = workflow.NodeExecSuccess
+			execNode.CompletedAt = &now
+		}
+		exec.mu.Unlock()
+		return e.syncTaskNodeExecutions(ctx, task, exec)
 	}
 
 	// Get operator using UnitOfWork
@@ -345,17 +395,17 @@ func (e *DAGWorkflowEngine) executeNode(
 		return err
 	})
 	if err != nil {
-		return fmt.Errorf("failed to get operator: %w", err)
+		return e.failNode(ctx, task, exec, node.NodeKey, fmt.Errorf("failed to get operator: %w", err))
 	}
 
 	if op.ActiveVersion == nil {
-		return fmt.Errorf("operator %s has no active version", op.Code)
+		return e.failNode(ctx, task, exec, node.NodeKey, fmt.Errorf("operator %s has no active version", op.Code))
 	}
 
 	// Prepare input (merge task input + node config + previous outputs)
 	input := e.prepareNodeInput(task, node, exec)
 	if err := e.validateNodeInput(ctx, op.ActiveVersion, input); err != nil {
-		return err
+		return e.failNode(ctx, task, exec, node.NodeKey, err)
 	}
 
 	// Apply timeout if configured
@@ -386,11 +436,11 @@ func (e *DAGWorkflowEngine) executeNode(
 	}
 
 	if lastErr != nil {
-		return fmt.Errorf("node %s failed after %d attempts: %w", node.NodeKey, retryCount, lastErr)
+		return e.failNode(ctx, task, exec, node.NodeKey, fmt.Errorf("node %s failed after %d attempts: %w", node.NodeKey, retryCount, lastErr))
 	}
 
 	if err := e.validateNodeOutput(nodeCtx, op.ActiveVersion, output); err != nil {
-		return err
+		return e.failNode(ctx, task, exec, node.NodeKey, err)
 	}
 
 	// Store output for downstream nodes
@@ -399,11 +449,107 @@ func (e *DAGWorkflowEngine) executeNode(
 	exec.mu.Unlock()
 
 	// Save artifacts
-	if err := e.saveArtifacts(ctx, task.ID, node.NodeKey, output); err != nil {
-		return fmt.Errorf("failed to save artifacts: %w", err)
+	var artifactIDs []uuid.UUID
+	if output != nil {
+		artifactIDs, err = e.saveArtifactsWithIDs(ctx, task.ID, node.NodeKey, output)
+		if err != nil {
+			return e.failNode(ctx, task, exec, node.NodeKey, fmt.Errorf("failed to save artifacts: %w", err))
+		}
 	}
 
-	return nil
+	// Mark as success
+	exec.mu.Lock()
+	if execNode, ok := exec.nodeExecutions[node.NodeKey]; ok {
+		now := time.Now()
+		execNode.Status = workflow.NodeExecSuccess
+		execNode.CompletedAt = &now
+		execNode.ArtifactIDs = artifactIDs
+	}
+	exec.mu.Unlock()
+
+	return e.syncTaskNodeExecutions(ctx, task, exec)
+}
+
+func (e *DAGWorkflowEngine) failNode(ctx context.Context, task *workflow.Task, exec *taskExecution, nodeKey string, err error) error {
+	exec.mu.Lock()
+	if execNode, ok := exec.nodeExecutions[nodeKey]; ok {
+		now := time.Now()
+		execNode.Status = workflow.NodeExecFailed
+		execNode.Error = err.Error()
+		execNode.CompletedAt = &now
+	}
+	exec.mu.Unlock()
+	_ = e.syncTaskNodeExecutions(ctx, task, exec)
+	return err
+}
+
+func (e *DAGWorkflowEngine) shouldExecuteNode(
+	node *workflow.Node,
+	edges []workflow.Edge,
+	exec *taskExecution,
+) bool {
+	// Find all incoming edges
+	incoming := []workflow.Edge{}
+	for _, edge := range edges {
+		if edge.TargetKey == node.NodeKey {
+			incoming = append(incoming, edge)
+		}
+	}
+
+	if len(incoming) == 0 {
+		return true // No dependencies
+	}
+
+	// Check conditions
+	for _, edge := range incoming {
+		upstreamNodeKey := edge.SourceKey
+		exec.mu.RLock()
+		upstreamExec, ok := exec.nodeExecutions[upstreamNodeKey]
+		exec.mu.RUnlock()
+
+		if !ok || upstreamExec == nil {
+			return false // Upstream not executed (should not happen in DAG if sorted correctly)
+		}
+
+		// Default condition: always execute if upstream success
+		conditionType := "always"
+		if edge.Condition != nil && edge.Condition.Type != "" {
+			conditionType = edge.Condition.Type
+		}
+
+		switch conditionType {
+		case "always":
+			if upstreamExec.Status != workflow.NodeExecSuccess && upstreamExec.Status != workflow.NodeExecFailed {
+				return false // Upstream skipped or not finished
+			}
+		case "on_success":
+			if upstreamExec.Status != workflow.NodeExecSuccess {
+				return false
+			}
+		case "on_failure":
+			if upstreamExec.Status != workflow.NodeExecFailed {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
+func (e *DAGWorkflowEngine) syncTaskNodeExecutions(ctx context.Context, task *workflow.Task, exec *taskExecution) error {
+	exec.mu.RLock()
+	executions := make([]workflow.NodeExecution, 0, len(exec.nodeExecutions))
+	for _, v := range exec.nodeExecutions {
+		executions = append(executions, *v)
+	}
+	currentNode := exec.currentNode
+	exec.mu.RUnlock()
+
+	return e.uow.Do(ctx, func(ctx context.Context, repos *port.Repositories) error {
+		task.NodeExecutions = executions
+		task.CurrentNode = currentNode
+		return repos.Tasks.Update(ctx, task)
+	})
 }
 
 func (e *DAGWorkflowEngine) validateNodeInput(ctx context.Context, version *operator.OperatorVersion, input *operator.Input) error {
@@ -510,18 +656,20 @@ func (e *DAGWorkflowEngine) prepareNodeInput(
 	return input
 }
 
-// saveArtifacts saves operator output as artifacts
-func (e *DAGWorkflowEngine) saveArtifacts(
+// saveArtifactsWithIDs saves operator output as artifacts and returns their IDs
+func (e *DAGWorkflowEngine) saveArtifactsWithIDs(
 	ctx context.Context,
 	taskID uuid.UUID,
 	nodeKey string,
 	output *operator.Output,
-) error {
+) ([]uuid.UUID, error) {
 	if output == nil {
-		return nil
+		return nil, nil
 	}
 
-	return e.uow.Do(ctx, func(ctx context.Context, repos *port.Repositories) error {
+	var artifactIDs []uuid.UUID
+
+	err := e.uow.Do(ctx, func(ctx context.Context, repos *port.Repositories) error {
 		// Save output assets
 		for _, asset := range output.OutputAssets {
 			data := &workflow.ArtifactData{
@@ -546,6 +694,7 @@ func (e *DAGWorkflowEngine) saveArtifacts(
 			if err := repos.Artifacts.Create(ctx, artifact); err != nil {
 				return fmt.Errorf("failed to create asset artifact: %w", err)
 			}
+			artifactIDs = append(artifactIDs, artifact.ID)
 		}
 
 		// Save analysis results
@@ -576,6 +725,7 @@ func (e *DAGWorkflowEngine) saveArtifacts(
 			if err := repos.Artifacts.Create(ctx, artifact); err != nil {
 				return fmt.Errorf("failed to create result artifact: %w", err)
 			}
+			artifactIDs = append(artifactIDs, artifact.ID)
 		}
 
 		// Save timeline events
@@ -608,6 +758,7 @@ func (e *DAGWorkflowEngine) saveArtifacts(
 			if err := repos.Artifacts.Create(ctx, artifact); err != nil {
 				return fmt.Errorf("failed to create timeline artifact: %w", err)
 			}
+			artifactIDs = append(artifactIDs, artifact.ID)
 		}
 
 		// Save diagnostics if present
@@ -629,10 +780,13 @@ func (e *DAGWorkflowEngine) saveArtifacts(
 			if err := repos.Artifacts.Create(ctx, artifact); err != nil {
 				return fmt.Errorf("failed to create diagnostics artifact: %w", err)
 			}
+			artifactIDs = append(artifactIDs, artifact.ID)
 		}
 
 		return nil
 	})
+
+	return artifactIDs, err
 }
 
 // updateTaskProgress updates task progress

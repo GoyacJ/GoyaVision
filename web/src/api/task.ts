@@ -17,6 +17,7 @@ export interface Task {
   updated_at: string
   workflow?: Workflow
   asset?: MediaAsset
+  node_executions?: any[]
 }
 
 export interface TaskListQuery {

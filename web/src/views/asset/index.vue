@@ -96,7 +96,7 @@
               </button>
             </div>
           </div>
-          <GvButton @click="showUploadDialog = true" class="w-full sm:w-auto">
+          <GvButton v-if="canEditPermission" @click="showUploadDialog = true" class="w-full sm:w-auto">
             <template #icon>
               <el-icon><Upload /></el-icon>
             </template>

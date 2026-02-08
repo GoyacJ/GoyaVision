@@ -34,7 +34,7 @@ func (r *TaskRepo) Create(ctx context.Context, t *workflow.Task) error {
 
 func (r *TaskRepo) Get(ctx context.Context, id uuid.UUID) (*workflow.Task, error) {
 	var m model.TaskModel
-	if err := r.db.WithContext(ctx).Scopes(scope.ScopeTenant(ctx)).Where("id = ?", id).First(&m).Error; err != nil {
+	if err := r.db.WithContext(ctx).Scopes(scope.ScopeTenantOnly(ctx)).Where("id = ?", id).First(&m).Error; err != nil {
 		return nil, err
 	}
 	return mapper.TaskToDomain(&m), nil
@@ -43,7 +43,7 @@ func (r *TaskRepo) Get(ctx context.Context, id uuid.UUID) (*workflow.Task, error
 func (r *TaskRepo) GetWithRelations(ctx context.Context, id uuid.UUID) (*workflow.Task, error) {
 	var m model.TaskModel
 	if err := r.db.WithContext(ctx).
-		Scopes(scope.ScopeTenant(ctx)).
+		Scopes(scope.ScopeTenantOnly(ctx)).
 		Preload("Workflow").
 		Preload("Asset").
 		Preload("Artifacts").
@@ -55,7 +55,7 @@ func (r *TaskRepo) GetWithRelations(ctx context.Context, id uuid.UUID) (*workflo
 }
 
 func (r *TaskRepo) List(ctx context.Context, filter workflow.TaskFilter) ([]*workflow.Task, int64, error) {
-	q := r.db.WithContext(ctx).Model(&model.TaskModel{}).Scopes(scope.ScopeTenant(ctx))
+	q := r.db.WithContext(ctx).Model(&model.TaskModel{}).Scopes(scope.ScopeTenantOnly(ctx))
 
 	if filter.WorkflowID != nil {
 		q = q.Where("workflow_id = ?", *filter.WorkflowID)
@@ -95,15 +95,15 @@ func (r *TaskRepo) List(ctx context.Context, filter workflow.TaskFilter) ([]*wor
 
 func (r *TaskRepo) Update(ctx context.Context, t *workflow.Task) error {
 	m := mapper.TaskToModel(t)
-	return r.db.WithContext(ctx).Scopes(scope.ScopeTenant(ctx)).Where("id = ?", t.ID).Updates(m).Error
+	return r.db.WithContext(ctx).Scopes(scope.ScopeTenantOnly(ctx)).Where("id = ?", t.ID).Updates(m).Error
 }
 
 func (r *TaskRepo) Delete(ctx context.Context, id uuid.UUID) error {
-	return r.db.WithContext(ctx).Scopes(scope.ScopeTenant(ctx)).Where("id = ?", id).Delete(&model.TaskModel{}).Error
+	return r.db.WithContext(ctx).Scopes(scope.ScopeTenantOnly(ctx)).Where("id = ?", id).Delete(&model.TaskModel{}).Error
 }
 
 func (r *TaskRepo) GetStats(ctx context.Context, workflowID *uuid.UUID) (*workflow.TaskStats, error) {
-	q := r.db.WithContext(ctx).Model(&model.TaskModel{}).Scopes(scope.ScopeTenant(ctx))
+	q := r.db.WithContext(ctx).Model(&model.TaskModel{}).Scopes(scope.ScopeTenantOnly(ctx))
 	if workflowID != nil {
 		q = q.Where("workflow_id = ?", *workflowID)
 	}
@@ -120,7 +120,7 @@ func (r *TaskRepo) GetStats(ctx context.Context, workflowID *uuid.UUID) (*workfl
 		Count  int64
 	}
 	var counts []statusCount
-	sq := r.db.WithContext(ctx).Model(&model.TaskModel{}).Scopes(scope.ScopeTenant(ctx)).
+	sq := r.db.WithContext(ctx).Model(&model.TaskModel{}).Scopes(scope.ScopeTenantOnly(ctx)).
 		Select("status, COUNT(*) as count").
 		Group("status")
 	if workflowID != nil {
@@ -151,7 +151,7 @@ func (r *TaskRepo) GetStats(ctx context.Context, workflowID *uuid.UUID) (*workfl
 func (r *TaskRepo) ListRunning(ctx context.Context) ([]*workflow.Task, error) {
 	var models []*model.TaskModel
 	if err := r.db.WithContext(ctx).
-		Scopes(scope.ScopeTenant(ctx)).
+		Scopes(scope.ScopeTenantOnly(ctx)).
 		Where("status = ?", "running").
 		Order("created_at ASC").
 		Find(&models).Error; err != nil {
@@ -185,7 +185,7 @@ func (r *ArtifactRepo) Create(ctx context.Context, a *workflow.Artifact) error {
 func (r *ArtifactRepo) Get(ctx context.Context, id uuid.UUID) (*workflow.Artifact, error) {
 	var m model.ArtifactModel
 	if err := r.db.WithContext(ctx).
-		Scopes(scope.ScopeTenant(ctx)).
+		Scopes(scope.ScopeTenantOnly(ctx)).
 		Preload("Task").
 		Preload("Asset").
 		Where("id = ?", id).
@@ -196,10 +196,13 @@ func (r *ArtifactRepo) Get(ctx context.Context, id uuid.UUID) (*workflow.Artifac
 }
 
 func (r *ArtifactRepo) List(ctx context.Context, filter workflow.ArtifactFilter) ([]*workflow.Artifact, int64, error) {
-	q := r.db.WithContext(ctx).Model(&model.ArtifactModel{}).Scopes(scope.ScopeTenant(ctx))
+	q := r.db.WithContext(ctx).Model(&model.ArtifactModel{}).Scopes(scope.ScopeTenantOnly(ctx))
 
 	if filter.TaskID != nil {
 		q = q.Where("task_id = ?", *filter.TaskID)
+	}
+	if filter.NodeKey != nil {
+		q = q.Where("data -> 'metadata' ->> 'node_key' = ?", *filter.NodeKey)
 	}
 	if filter.Type != nil {
 		q = q.Where("type = ?", string(*filter.Type))
@@ -232,13 +235,13 @@ func (r *ArtifactRepo) List(ctx context.Context, filter workflow.ArtifactFilter)
 }
 
 func (r *ArtifactRepo) Delete(ctx context.Context, id uuid.UUID) error {
-	return r.db.WithContext(ctx).Scopes(scope.ScopeTenant(ctx)).Where("id = ?", id).Delete(&model.ArtifactModel{}).Error
+	return r.db.WithContext(ctx).Scopes(scope.ScopeTenantOnly(ctx)).Where("id = ?", id).Delete(&model.ArtifactModel{}).Error
 }
 
 func (r *ArtifactRepo) ListByTask(ctx context.Context, taskID uuid.UUID) ([]*workflow.Artifact, error) {
 	var models []*model.ArtifactModel
 	if err := r.db.WithContext(ctx).
-		Scopes(scope.ScopeTenant(ctx)).
+		Scopes(scope.ScopeTenantOnly(ctx)).
 		Preload("Asset").
 		Where("task_id = ?", taskID).
 		Order("created_at DESC").
@@ -255,7 +258,7 @@ func (r *ArtifactRepo) ListByTask(ctx context.Context, taskID uuid.UUID) ([]*wor
 func (r *ArtifactRepo) ListByType(ctx context.Context, taskID uuid.UUID, artifactType workflow.ArtifactType) ([]*workflow.Artifact, error) {
 	var models []*model.ArtifactModel
 	if err := r.db.WithContext(ctx).
-		Scopes(scope.ScopeTenant(ctx)).
+		Scopes(scope.ScopeTenantOnly(ctx)).
 		Preload("Asset").
 		Where("task_id = ? AND type = ?", taskID, string(artifactType)).
 		Order("created_at DESC").

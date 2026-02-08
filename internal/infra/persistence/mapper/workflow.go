@@ -181,6 +181,10 @@ func TaskToModel(t *workflow.Task) *model.TaskModel {
 		data, _ := json.Marshal(t.InputParams)
 		m.InputParams = datatypes.JSON(data)
 	}
+	if t.NodeExecutions != nil {
+		data, _ := json.Marshal(t.NodeExecutions)
+		m.NodeExecutions = datatypes.JSON(data)
+	}
 	return m
 }
 
@@ -202,6 +206,9 @@ func TaskToDomain(m *model.TaskModel) *workflow.Task {
 	}
 	if m.InputParams != nil {
 		_ = json.Unmarshal(m.InputParams, &t.InputParams)
+	}
+	if m.NodeExecutions != nil {
+		_ = json.Unmarshal(m.NodeExecutions, &t.NodeExecutions)
 	}
 	return t
 }

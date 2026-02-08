@@ -5,6 +5,17 @@ import { ElMessage } from 'element-plus'
 const whiteList = ['/login']
 
 router.beforeEach(async (to, _from, next) => {
+  const { useAppStore } = await import('../store/app')
+  const appStore = useAppStore()
+  
+  // Ensure config is loaded
+  if (!appStore.configLoaded) {
+    await appStore.fetchPublicConfig()
+    // Restart navigation to ensure dynamic routes are picked up
+    next({ ...to, replace: true })
+    return
+  }
+
   const token = getToken()
 
   if (token) {
@@ -16,7 +27,7 @@ router.beforeEach(async (to, _from, next) => {
 
       if (userStore.userInfo && userStore.routesLoaded) {
         if (to.path === '/') {
-          next({ path: '/assets', replace: true })
+          next({ path: appStore.defaultHome, replace: true })
         } else {
           next()
         }
@@ -25,7 +36,7 @@ router.beforeEach(async (to, _from, next) => {
           await userStore.getProfile()
 
           if (to.path === '/') {
-            next({ path: '/assets', replace: true })
+            next({ path: appStore.defaultHome, replace: true })
           } else {
             next({ ...to, replace: true })
           }
@@ -37,7 +48,25 @@ router.beforeEach(async (to, _from, next) => {
       }
     }
   } else {
+    // Not logged in
     if (whiteList.includes(to.path)) {
+      next()
+      return
+    }
+    
+    // Redirect root to default home
+    if (to.path === '/') {
+       next({ path: appStore.defaultHome, replace: true })
+       return
+    }
+    
+    // Check if path is in public menus
+    const { flattenMenus } = await import('../store/user')
+    const flatPublic = flattenMenus(appStore.publicMenus)
+    // Simple check: exact match
+    const isPublic = flatPublic.some(m => m.path === to.path)
+    
+    if (isPublic) {
       next()
     } else {
       next(`/login?redirect=${to.path}`)

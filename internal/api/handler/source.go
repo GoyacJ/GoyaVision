@@ -13,14 +13,17 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func RegisterSource(g *echo.Group, h *Handlers) {
+func RegisterSourceRoutes(public *echo.Group, protected *echo.Group, h *Handlers) {
 	handler := &sourceHandler{h: h}
-	g.GET("/sources", handler.List)
-	g.POST("/sources", handler.Create)
-	g.GET("/sources/:id", handler.Get)
-	g.PUT("/sources/:id", handler.Update)
-	g.DELETE("/sources/:id", handler.Delete)
-	g.GET("/sources/:id/preview", handler.GetPreview)
+	// Public (Optional Auth)
+	public.GET("/sources", handler.List)
+	public.GET("/sources/:id", handler.Get)
+	public.GET("/sources/:id/preview", handler.GetPreview)
+
+	// Protected
+	protected.POST("/sources", handler.Create)
+	protected.PUT("/sources/:id", handler.Update)
+	protected.DELETE("/sources/:id", handler.Delete)
 }
 
 type sourceHandler struct {

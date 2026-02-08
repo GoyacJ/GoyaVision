@@ -23,6 +23,7 @@ type CreateArtifactRequest struct {
 // ListArtifactsRequest 列出产物请求
 type ListArtifactsRequest struct {
 	TaskID  *uuid.UUID
+	NodeKey *string
 	Type    *workflow.ArtifactType
 	AssetID *uuid.UUID
 	From    *time.Time
@@ -109,6 +110,7 @@ func (s *ArtifactService) List(ctx context.Context, req *ListArtifactsRequest) (
 
 	filter := workflow.ArtifactFilter{
 		TaskID:  req.TaskID,
+		NodeKey: req.NodeKey,
 		Type:    req.Type,
 		AssetID: req.AssetID,
 		From:    req.From,

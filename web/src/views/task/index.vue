@@ -180,6 +180,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
 import { taskApi, type Task, type TaskStats } from '@/api/task'
@@ -196,6 +197,8 @@ import StatusBadge from '@/components/business/StatusBadge/index.vue'
 import { ErrorState, EmptyState } from '@/components/common'
 import type { TableColumn } from '@/components/base/GvTable/types'
 import type { FilterField } from '@/components/business/FilterBar/types'
+
+const router = useRouter()
 
 // UI 状态
 const showViewDialog = ref(false)
@@ -300,12 +303,11 @@ function handleResetFilter() {
 }
 
 function handleView(row: Task) {
-  currentTask.value = row
-  showViewDialog.value = true
+  router.push(`/tasks/${row.id}`)
 }
 
 function handleViewArtifacts(row: Task) {
-  ElMessage.info('产物查看功能开发中')
+  router.push(`/tasks/${row.id}`)
 }
 
 async function handleCancel(row: Task) {

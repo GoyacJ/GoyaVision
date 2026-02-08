@@ -79,6 +79,8 @@ func (h *UpdateWorkflowHandler) Handle(ctx context.Context, cmd dto.UpdateWorkfl
 					NodeKey:    nodeInput.NodeKey,
 					NodeType:   nodeInput.NodeType,
 					OperatorID: nodeInput.OperatorID,
+					Config:     parseNodeConfig(nodeInput.Config),
+					Position:   parseNodePosition(nodeInput.Position),
 				}
 				if err := repos.Workflows.CreateNode(ctx, node); err != nil {
 					return apperr.Wrap(err, apperr.CodeDBError, "failed to create workflow node")
@@ -91,6 +93,7 @@ func (h *UpdateWorkflowHandler) Handle(ctx context.Context, cmd dto.UpdateWorkfl
 						WorkflowID: wf.ID,
 						SourceKey:  edgeInput.SourceKey,
 						TargetKey:  edgeInput.TargetKey,
+						Condition:  parseEdgeCondition(edgeInput.Condition),
 					}
 					if err := repos.Workflows.CreateEdge(ctx, edge); err != nil {
 						return apperr.Wrap(err, apperr.CodeDBError, "failed to create workflow edge")

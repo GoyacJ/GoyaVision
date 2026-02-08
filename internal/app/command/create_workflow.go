@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"goyavision/internal/app/dto"
@@ -91,6 +92,8 @@ func (h *CreateWorkflowHandler) Handle(ctx context.Context, cmd dto.CreateWorkfl
 					NodeKey:    nodeInput.NodeKey,
 					NodeType:   nodeInput.NodeType,
 					OperatorID: nodeInput.OperatorID,
+					Config:     parseNodeConfig(nodeInput.Config),
+					Position:   parseNodePosition(nodeInput.Position),
 				}
 				if err := repos.Workflows.CreateNode(ctx, node); err != nil {
 					return apperr.Wrap(err, apperr.CodeDBError, "failed to create workflow node")
@@ -104,6 +107,7 @@ func (h *CreateWorkflowHandler) Handle(ctx context.Context, cmd dto.CreateWorkfl
 					WorkflowID: wf.ID,
 					SourceKey:  edgeInput.SourceKey,
 					TargetKey:  edgeInput.TargetKey,
+					Condition:  parseEdgeCondition(edgeInput.Condition),
 				}
 				if err := repos.Workflows.CreateEdge(ctx, edge); err != nil {
 					return apperr.Wrap(err, apperr.CodeDBError, "failed to create workflow edge")
@@ -120,4 +124,49 @@ func (h *CreateWorkflowHandler) Handle(ctx context.Context, cmd dto.CreateWorkfl
 	})
 
 	return result, err
+}
+
+func parseNodeConfig(raw map[string]interface{}) *workflow.NodeConfig {
+	if len(raw) == 0 {
+		return nil
+	}
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return nil
+	}
+	var cfg workflow.NodeConfig
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return nil
+	}
+	return &cfg
+}
+
+func parseNodePosition(raw map[string]interface{}) *workflow.NodePosition {
+	if len(raw) == 0 {
+		return nil
+	}
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return nil
+	}
+	var pos workflow.NodePosition
+	if err := json.Unmarshal(data, &pos); err != nil {
+		return nil
+	}
+	return &pos
+}
+
+func parseEdgeCondition(raw map[string]interface{}) *workflow.EdgeCondition {
+	if len(raw) == 0 {
+		return nil
+	}
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return nil
+	}
+	var cond workflow.EdgeCondition
+	if err := json.Unmarshal(data, &cond); err != nil {
+		return nil
+	}
+	return &cond
 }

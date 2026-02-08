@@ -2,25 +2,18 @@ import apiClient from './client'
 
 export interface WorkflowNode {
   id: string
-  workflow_id: string
   node_key: string
-  name: string
+  node_type: string
   operator_id?: string
   config?: Record<string, any>
-  position_x: number
-  position_y: number
-  created_at: string
-  updated_at: string
+  position?: Record<string, any>
 }
 
 export interface WorkflowEdge {
   id: string
-  workflow_id: string
-  source_node: string
-  target_node: string
+  source_key: string
+  target_key: string
   condition?: Record<string, any>
-  created_at: string
-  updated_at: string
 }
 
 export interface Workflow {
@@ -33,6 +26,8 @@ export interface Workflow {
   trigger_conf?: Record<string, any>
   status: 'draft' | 'testing' | 'published' | 'archived'
   tags?: string[]
+  visibility?: number
+  visible_role_ids?: string[]
   created_at: string
   updated_at: string
   nodes?: WorkflowNode[]
@@ -48,6 +43,20 @@ export interface WorkflowListQuery {
   page_size?: number
 }
 
+export interface WorkflowNodeInput {
+  node_key: string
+  node_type: string
+  operator_id?: string
+  config?: Record<string, any>
+  position?: Record<string, any>
+}
+
+export interface WorkflowEdgeInput {
+  source_key: string
+  target_key: string
+  condition?: Record<string, any>
+}
+
 export interface WorkflowCreateReq {
   code: string
   name: string
@@ -55,10 +64,11 @@ export interface WorkflowCreateReq {
   version?: string
   trigger_type: 'manual' | 'schedule' | 'event'
   trigger_conf?: Record<string, any>
+  status?: string
   tags?: string[]
   visibility?: number
-  nodes?: Omit<WorkflowNode, 'id' | 'workflow_id' | 'created_at' | 'updated_at'>[]
-  edges?: Omit<WorkflowEdge, 'id' | 'workflow_id' | 'created_at' | 'updated_at'>[]
+  nodes?: WorkflowNodeInput[]
+  edges?: WorkflowEdgeInput[]
 }
 
 export interface WorkflowUpdateReq {
@@ -67,10 +77,11 @@ export interface WorkflowUpdateReq {
   version?: string
   trigger_type?: 'manual' | 'schedule' | 'event'
   trigger_conf?: Record<string, any>
+  status?: string
   tags?: string[]
   visibility?: number
-  nodes?: Omit<WorkflowNode, 'id' | 'workflow_id' | 'created_at' | 'updated_at'>[]
-  edges?: Omit<WorkflowEdge, 'id' | 'workflow_id' | 'created_at' | 'updated_at'>[]
+  nodes?: WorkflowNodeInput[]
+  edges?: WorkflowEdgeInput[]
 }
 
 export interface WorkflowListResponse {

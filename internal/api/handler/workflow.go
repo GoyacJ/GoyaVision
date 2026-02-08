@@ -13,16 +13,19 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func RegisterWorkflow(g *echo.Group, h *Handlers) {
+func RegisterWorkflowRoutes(public *echo.Group, protected *echo.Group, h *Handlers) {
 	handler := &workflowHandler{h: h}
-	g.GET("/workflows", handler.List)
-	g.POST("/workflows", handler.Create)
-	g.GET("/workflows/:id", handler.Get)
-	g.PUT("/workflows/:id", handler.Update)
-	g.DELETE("/workflows/:id", handler.Delete)
-	g.POST("/workflows/:id/enable", handler.Enable)
-	g.POST("/workflows/:id/disable", handler.Disable)
-	g.POST("/workflows/:id/trigger", handler.Trigger)
+	// Public
+	public.GET("/workflows", handler.List)
+	public.GET("/workflows/:id", handler.Get)
+
+	// Protected
+	protected.POST("/workflows", handler.Create)
+	protected.PUT("/workflows/:id", handler.Update)
+	protected.DELETE("/workflows/:id", handler.Delete)
+	protected.POST("/workflows/:id/enable", handler.Enable)
+	protected.POST("/workflows/:id/disable", handler.Disable)
+	protected.POST("/workflows/:id/trigger", handler.Trigger)
 }
 
 type workflowHandler struct {

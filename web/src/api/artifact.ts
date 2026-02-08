@@ -16,6 +16,7 @@ export interface Artifact {
 
 export interface ArtifactListQuery {
   task_id?: string
+  node_key?: string
   type?: 'asset' | 'result' | 'timeline' | 'diagnostic'
   asset_id?: string
   page?: number

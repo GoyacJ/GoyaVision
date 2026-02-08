@@ -44,6 +44,7 @@ func (a *Artifact) IsReport() bool {
 
 type ArtifactFilter struct {
 	TaskID  *uuid.UUID
+	NodeKey *string
 	Type    *ArtifactType
 	AssetID *uuid.UUID
 	From    *time.Time

@@ -14,15 +14,18 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func RegisterAsset(g *echo.Group, h *Handlers) {
+func RegisterAssetRoutes(public *echo.Group, protected *echo.Group, h *Handlers) {
 	handler := &assetHandler{h: h}
-	g.GET("/assets", handler.List)
-	g.POST("/assets", handler.Create)
-	g.GET("/assets/:id", handler.Get)
-	g.PUT("/assets/:id", handler.Update)
-	g.DELETE("/assets/:id", handler.Delete)
-	g.GET("/assets/:id/children", handler.ListChildren)
-	g.GET("/assets/tags", handler.GetAllTags)
+	// Public routes (Optional Auth)
+	public.GET("/assets", handler.List)
+	public.GET("/assets/:id", handler.Get)
+	public.GET("/assets/:id/children", handler.ListChildren)
+	public.GET("/assets/tags", handler.GetAllTags)
+
+	// Protected routes (Strict Auth)
+	protected.POST("/assets", handler.Create)
+	protected.PUT("/assets/:id", handler.Update)
+	protected.DELETE("/assets/:id", handler.Delete)
 }
 
 type assetHandler struct {

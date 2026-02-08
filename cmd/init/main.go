@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/datatypes"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -94,6 +95,10 @@ func main() {
 		log.Fatalf("初始化管理员用户失败: %v", err)
 	}
 
+	if err := initSystemConfig(ctx, db); err != nil {
+		log.Fatalf("初始化系统配置失败: %v", err)
+	}
+
 	log.Println("\n✅ 数据库初始化完成！")
 	log.Println("\n默认管理员账号:")
 	log.Println("  用户名: admin")
@@ -134,6 +139,7 @@ func createTables(db *gorm.DB) error {
 	log.Println("    - tasks, artifacts")
 	log.Println("    - files")
 	log.Println("    - user_identities")
+	log.Println("    - system_configs")
 
 	// 兼容性处理：删除旧版本的 legacy 字段
 	// 由于 operator 重设计去除了这些字段，如果数据库中残留会导致 GORM 插入失败（因旧字段可能为 NOT NULL）
@@ -309,6 +315,8 @@ func initPermissions(ctx context.Context, db *gorm.DB) error {
 		{"tenant:create", "创建租户", "POST", "/api/v1/tenants", ""},
 		{"tenant:update", "更新租户", "PUT", "/api/v1/tenants/*", ""},
 		{"tenant:delete", "删除租户", "DELETE", "/api/v1/tenants/*", ""},
+		{"system:config:view", "查看系统配置", "GET", "/api/v1/public/config", "允许查看系统配置"},
+		{"system:config:update", "修改系统配置", "PUT", "/api/v1/system/config", "允许修改系统配置"},
 	}
 
 	addedPerms := 0
@@ -402,6 +410,7 @@ func initMenus(ctx context.Context, db *gorm.DB) error {
 		{uuid.MustParse("00000000-0000-0000-0000-000000000004"), ptrUUID("00000000-0000-0000-0000-000000000001"), "system:menu", "菜单管理", 2, "/system/menu", "Menu", "system/menu/index", "menu:list", 3, true},
 		{uuid.MustParse("00000000-0000-0000-0000-000000000005"), ptrUUID("00000000-0000-0000-0000-000000000001"), "system:file", "文件管理", 2, "/system/file", "Document", "system/file/index", "file:list", 4, true},
 		{uuid.MustParse("00000000-0000-0000-0000-000000000006"), ptrUUID("00000000-0000-0000-0000-000000000001"), "system:tenant", "租户管理", 2, "/system/tenant", "OfficeBuilding", "system/tenant/index", "tenant:list", 5, true},
+		{uuid.MustParse("00000000-0000-0000-0000-000000000007"), ptrUUID("00000000-0000-0000-0000-000000000001"), "system:config", "系统配置", 2, "/system/config", "Tools", "system/config/index", "system:config:view", 6, true},
 	}
 
 	addedMenus := 0
@@ -719,4 +728,51 @@ func confirm(msg string) bool {
 		return false
 	}
 	return response == "y" || response == "Y"
+}
+
+func initSystemConfig(ctx context.Context, db *gorm.DB) error {
+	log.Println("\n[7/6] 初始化系统配置")
+
+	if *dryRun {
+		log.Println("  （模拟运行，跳过实际初始化）")
+		return nil
+	}
+
+	configs := []model.SystemConfigModel{
+		{
+			Key:         "system.home_path",
+			Value:       datatypes.JSON([]byte(`"/assets"`)),
+			Description: "系统默认首页路径",
+		},
+		{
+			Key:         "system.public_menus",
+			Value:       datatypes.JSON([]byte(`[]`)),
+			Description: "未登录用户可见的菜单ID列表",
+		},
+	}
+
+	for _, c := range configs {
+		var existing model.SystemConfigModel
+		err := db.WithContext(ctx).Where("key = ?", c.Key).First(&existing).Error
+		if err == nil {
+			if *force {
+				existing.Value = c.Value
+				existing.Description = c.Description
+				if err := db.WithContext(ctx).Save(&existing).Error; err != nil {
+					return fmt.Errorf("更新配置失败 %s: %w", c.Key, err)
+				}
+				log.Printf("  ✓ 更新配置: %s", c.Key)
+			} else {
+				log.Printf("  ⊙ 跳过已存在配置: %s", c.Key)
+			}
+		} else {
+			if err := db.WithContext(ctx).Create(&c).Error; err != nil {
+				return fmt.Errorf("创建配置失败 %s: %w", c.Key, err)
+			}
+			log.Printf("  ✓ 创建配置: %s", c.Key)
+		}
+	}
+
+	log.Println("✅ 系统配置初始化完成")
+	return nil
 }

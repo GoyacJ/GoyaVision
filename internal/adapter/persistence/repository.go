@@ -9,6 +9,7 @@ import (
 	"goyavision/internal/domain/media"
 	"goyavision/internal/domain/operator"
 	"goyavision/internal/domain/storage"
+	"goyavision/internal/domain/system"
 	"goyavision/internal/domain/workflow"
 	"goyavision/internal/infra/persistence/model"
 	"goyavision/internal/infra/persistence/repo"
@@ -42,6 +43,7 @@ type repository struct {
 	files          *repo.FileRepo
 	aiModels       *repo.AIModelRepo
 	userIdentities *repo.UserIdentityRepo
+	systemConfigs  *repo.SystemConfigRepo
 }
 
 func NewRepository(db *gorm.DB) *repository {
@@ -60,6 +62,7 @@ func NewRepository(db *gorm.DB) *repository {
 		files:          repo.NewFileRepo(db),
 		aiModels:       repo.NewAIModelRepo(db),
 		userIdentities: repo.NewUserIdentityRepo(db),
+		systemConfigs:  repo.NewSystemConfigRepo(db),
 	}
 }
 
@@ -94,6 +97,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&model.FileModel{},
 		&model.AIModelModel{},
 		&model.UserIdentityModel{},
+		&model.SystemConfigModel{},
 	)
 }
 
@@ -803,4 +807,33 @@ func (r *repository) ListAIModels(ctx context.Context, filter ai_model.Filter) (
 		return nil, 0, err
 	}
 	return r.aiModels.List(ctx, filter)
+}
+
+// SystemConfig methods
+func (r *repository) GetSystemConfig(ctx context.Context, key string) (*system.SystemConfig, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	return r.systemConfigs.Get(ctx, key)
+}
+
+func (r *repository) ListSystemConfigs(ctx context.Context) ([]*system.SystemConfig, error) {
+	if err := r.checkDB(); err != nil {
+		return nil, err
+	}
+	return r.systemConfigs.List(ctx)
+}
+
+func (r *repository) SaveSystemConfig(ctx context.Context, config *system.SystemConfig) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.systemConfigs.Save(ctx, config)
+}
+
+func (r *repository) DeleteSystemConfig(ctx context.Context, key string) error {
+	if err := r.checkDB(); err != nil {
+		return err
+	}
+	return r.systemConfigs.Delete(ctx, key)
 }

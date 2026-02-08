@@ -8,6 +8,7 @@ import (
 	"goyavision/internal/domain/media"
 	"goyavision/internal/domain/operator"
 	"goyavision/internal/domain/storage"
+	"goyavision/internal/domain/system"
 	"goyavision/internal/domain/workflow"
 
 	"github.com/google/uuid"
@@ -142,4 +143,10 @@ type Repository interface {
 	UpdateAIModel(ctx context.Context, d *ai_model.AIModel) error
 	DeleteAIModel(ctx context.Context, id uuid.UUID) error
 	ListAIModels(ctx context.Context, filter ai_model.Filter) ([]*ai_model.AIModel, int64, error)
+
+	// SystemConfig
+	GetSystemConfig(ctx context.Context, key string) (*system.SystemConfig, error)
+	ListSystemConfigs(ctx context.Context) ([]*system.SystemConfig, error)
+	SaveSystemConfig(ctx context.Context, config *system.SystemConfig) error
+	DeleteSystemConfig(ctx context.Context, key string) error
 }

@@ -35,40 +35,52 @@ type TaskUpdateReq struct {
 	Error       *string `json:"error,omitempty"`
 }
 
+// NodeExecutionDTO 节点执行状态 DTO
+type NodeExecutionDTO struct {
+	NodeKey     string      `json:"node_key"`
+	Status      string      `json:"status"`
+	Error       string      `json:"error,omitempty"`
+	StartedAt   *time.Time  `json:"started_at,omitempty"`
+	CompletedAt *time.Time  `json:"completed_at,omitempty"`
+	ArtifactIDs []uuid.UUID `json:"artifact_ids,omitempty"`
+}
+
 // TaskResponse 任务响应
 type TaskResponse struct {
-	ID          uuid.UUID              `json:"id"`
-	WorkflowID  uuid.UUID              `json:"workflow_id"`
-	AssetID     *uuid.UUID             `json:"asset_id,omitempty"`
-	Status      string                 `json:"status"`
-	Progress    int                    `json:"progress"`
-	CurrentNode string                 `json:"current_node,omitempty"`
-	InputParams map[string]interface{} `json:"input_params,omitempty"`
-	Error       string                 `json:"error,omitempty"`
-	Duration    float64                `json:"duration"`
-	StartedAt   *time.Time             `json:"started_at,omitempty"`
-	CompletedAt *time.Time             `json:"completed_at,omitempty"`
-	CreatedAt   time.Time              `json:"created_at"`
-	UpdatedAt   time.Time              `json:"updated_at"`
+	ID             uuid.UUID              `json:"id"`
+	WorkflowID     uuid.UUID              `json:"workflow_id"`
+	AssetID        *uuid.UUID             `json:"asset_id,omitempty"`
+	Status         string                 `json:"status"`
+	Progress       int                    `json:"progress"`
+	CurrentNode    string                 `json:"current_node,omitempty"`
+	InputParams    map[string]interface{} `json:"input_params,omitempty"`
+	Error          string                 `json:"error,omitempty"`
+	NodeExecutions []NodeExecutionDTO     `json:"node_executions,omitempty"`
+	Duration       float64                `json:"duration"`
+	StartedAt      *time.Time             `json:"started_at,omitempty"`
+	CompletedAt    *time.Time             `json:"completed_at,omitempty"`
+	CreatedAt      time.Time              `json:"created_at"`
+	UpdatedAt      time.Time              `json:"updated_at"`
 }
 
 // TaskWithRelationsResponse 任务及关联数据响应
 type TaskWithRelationsResponse struct {
-	ID          uuid.UUID              `json:"id"`
-	WorkflowID  uuid.UUID              `json:"workflow_id"`
-	Workflow    *WorkflowResponse      `json:"workflow,omitempty"`
-	AssetID     *uuid.UUID             `json:"asset_id,omitempty"`
-	Asset       *AssetResponse         `json:"asset,omitempty"`
-	Status      string                 `json:"status"`
-	Progress    int                    `json:"progress"`
-	CurrentNode string                 `json:"current_node,omitempty"`
-	InputParams map[string]interface{} `json:"input_params,omitempty"`
-	Error       string                 `json:"error,omitempty"`
-	Duration    float64                `json:"duration"`
-	StartedAt   *time.Time             `json:"started_at,omitempty"`
-	CompletedAt *time.Time             `json:"completed_at,omitempty"`
-	CreatedAt   time.Time              `json:"created_at"`
-	UpdatedAt   time.Time              `json:"updated_at"`
+	ID             uuid.UUID              `json:"id"`
+	WorkflowID     uuid.UUID              `json:"workflow_id"`
+	Workflow       *WorkflowResponse      `json:"workflow,omitempty"`
+	AssetID        *uuid.UUID             `json:"asset_id,omitempty"`
+	Asset          *AssetResponse         `json:"asset,omitempty"`
+	Status         string                 `json:"status"`
+	Progress       int                    `json:"progress"`
+	CurrentNode    string                 `json:"current_node,omitempty"`
+	InputParams    map[string]interface{} `json:"input_params,omitempty"`
+	Error          string                 `json:"error,omitempty"`
+	NodeExecutions []NodeExecutionDTO     `json:"node_executions,omitempty"`
+	Duration       float64                `json:"duration"`
+	StartedAt      *time.Time             `json:"started_at,omitempty"`
+	CompletedAt    *time.Time             `json:"completed_at,omitempty"`
+	CreatedAt      time.Time              `json:"created_at"`
+	UpdatedAt      time.Time              `json:"updated_at"`
 }
 
 // TaskListResponse 任务列表响应
@@ -87,6 +99,24 @@ type TaskStatsResponse struct {
 	Cancelled int64 `json:"cancelled"`
 }
 
+func nodeExecutionsToDTOs(execs []workflow.NodeExecution) []NodeExecutionDTO {
+	if len(execs) == 0 {
+		return nil
+	}
+	dtos := make([]NodeExecutionDTO, len(execs))
+	for i, e := range execs {
+		dtos[i] = NodeExecutionDTO{
+			NodeKey:     e.NodeKey,
+			Status:      string(e.Status),
+			Error:       e.Error,
+			StartedAt:   e.StartedAt,
+			CompletedAt: e.CompletedAt,
+			ArtifactIDs: e.ArtifactIDs,
+		}
+	}
+	return dtos
+}
+
 // TaskToResponse 转换为响应
 func TaskToResponse(t *workflow.Task) *TaskResponse {
 	if t == nil {
@@ -99,19 +129,20 @@ func TaskToResponse(t *workflow.Task) *TaskResponse {
 	}
 
 	return &TaskResponse{
-		ID:          t.ID,
-		WorkflowID:  t.WorkflowID,
-		AssetID:     t.AssetID,
-		Status:      string(t.Status),
-		Progress:    t.Progress,
-		CurrentNode: t.CurrentNode,
-		InputParams: inputParams,
-		Error:       t.Error,
-		Duration:    t.Duration(),
-		StartedAt:   t.StartedAt,
-		CompletedAt: t.CompletedAt,
-		CreatedAt:   t.CreatedAt,
-		UpdatedAt:   t.UpdatedAt,
+		ID:             t.ID,
+		WorkflowID:     t.WorkflowID,
+		AssetID:        t.AssetID,
+		Status:         string(t.Status),
+		Progress:       t.Progress,
+		CurrentNode:    t.CurrentNode,
+		InputParams:    inputParams,
+		Error:          t.Error,
+		NodeExecutions: nodeExecutionsToDTOs(t.NodeExecutions),
+		Duration:       t.Duration(),
+		StartedAt:      t.StartedAt,
+		CompletedAt:    t.CompletedAt,
+		CreatedAt:      t.CreatedAt,
+		UpdatedAt:      t.UpdatedAt,
 	}
 }
 
@@ -127,19 +158,20 @@ func TaskToResponseWithRelations(t *workflow.Task, workflow *workflow.Workflow, 
 	}
 
 	resp := &TaskWithRelationsResponse{
-		ID:          t.ID,
-		WorkflowID:  t.WorkflowID,
-		AssetID:     t.AssetID,
-		Status:      string(t.Status),
-		Progress:    t.Progress,
-		CurrentNode: t.CurrentNode,
-		InputParams: inputParams,
-		Error:       t.Error,
-		Duration:    t.Duration(),
-		StartedAt:   t.StartedAt,
-		CompletedAt: t.CompletedAt,
-		CreatedAt:   t.CreatedAt,
-		UpdatedAt:   t.UpdatedAt,
+		ID:             t.ID,
+		WorkflowID:     t.WorkflowID,
+		AssetID:        t.AssetID,
+		Status:         string(t.Status),
+		Progress:       t.Progress,
+		CurrentNode:    t.CurrentNode,
+		InputParams:    inputParams,
+		Error:          t.Error,
+		NodeExecutions: nodeExecutionsToDTOs(t.NodeExecutions),
+		Duration:       t.Duration(),
+		StartedAt:      t.StartedAt,
+		CompletedAt:    t.CompletedAt,
+		CreatedAt:      t.CreatedAt,
+		UpdatedAt:      t.UpdatedAt,
 	}
 
 	if workflow != nil {

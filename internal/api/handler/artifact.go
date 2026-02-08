@@ -41,6 +41,7 @@ func (h *artifactHandler) List(c echo.Context) error {
 
 	req := &app.ListArtifactsRequest{
 		TaskID:  query.TaskID,
+		NodeKey: query.NodeKey,
 		AssetID: query.AssetID,
 		Limit:   query.Limit,
 		Offset:  query.Offset,

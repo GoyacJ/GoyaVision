@@ -8,6 +8,21 @@
 ## [未发布]
 
 ### 新增
+- **工作流与任务管理重构**：实现基于 DAG 的可视化工作流编排与实时任务监控。
+  - **后端增强**：
+    - 修复节点配置 (Config)、位置 (Position) 及边条件 (Condition) 的持久化问题。
+    - 任务实体增加 `NodeExecutions` 追踪每个节点的执行状态、时间与产物关联。
+    - DAG 引擎支持并行执行、数据流传递与条件分支评估 (`always`/`on_success`/`on_failure`)。
+    - 新增 SSE (Server-Sent Events) 端点 `GET /api/v1/tasks/:id/progress/stream` 实时推送任务进度。
+    - 产物查询支持按 `node_key` 过滤，方便前端按节点展示产物。
+  - **可视化编辑器**：
+    - 基于 `@vue-flow/core` 与 `dagre` 实现拖拽式 DAG 设计器。
+    - 支持算子库拖拽、连线、参数动态表单配置、连线 Schema 兼容性校验。
+    - 支持自动布局 (TB/LR) 与全屏编辑。
+  - **任务监控中心**：
+    - 任务详情页支持只读 DAG 视图展示。
+    - 接入 SSE 实时更新节点执行状态着色（等待/运行/成功/失败/跳过）。
+    - 集成节点级产物查看器，点击节点即可查看产生的资产、结果或报告。
 - **AI 模型厂商扩展**：新增千问(Qwen)、豆包(Doubao)、智谱(Zhipu)、vLLM 四种提供商支持。
   - 领域层：`ProviderQwen`、`ProviderDoubao`、`ProviderZhipu`、`ProviderVLLM` 常量及校验。
   - 创建/测试：CreateAIModel、TestAIModel 支持上述 provider；测试连接时按厂商选择对应 HTTP 客户端。
@@ -21,7 +36,7 @@
   - **API适配**：更新所有核心资源（Asset, Source, Operator, Workflow, AIModel）的 DTO 和 Handler，支持前端传递可见性设置。
   - **前端适配**：媒体资产与算子管理表单新增“可见范围”与“可见角色”配置项。
   - **设计文档**：新增 `docs/refactoring-multitenancy-design.md` 完整设计方案。
-- **前端响应式重构**：全面优化移动端适配。
+- **前端响应式重构**：全面优化移动端适配.
   - **全局导航**：移动端自动切换为左侧抽屉式菜单（Hamburger Menu）。
   - **资产库**：移动端自适应为单栏布局，强制使用网格视图，优化筛选栏展示。
   - **表格组件**：`GvTable` 支持移动端水平滚动，分页器自动简化布局。
@@ -136,7 +151,7 @@
   - 更新 development-workflow.mdc：引用新增的规则文件
 - **完善 Claude Code 配置**：增强 CLAUDE.md 项目指南
   - 添加信息完整性与提问规范（何时提问、提问标准、禁止行为）
-  - 添加 App 层 CQRS 结构详情（39 个 Command/Query Handler、Port 接口、服务列表）
+  - 添加 App 层 CQRS structure 详情（39 个 Command/Query Handler、Port 接口、服务列表）
   - 添加前端 Composables 模式说明（useTable、useAsyncData、usePagination 及使用示例）
   - 增强开发工作流章节（Pre-Development、During Development、Post-Development 详细步骤）
   - 添加常见开发模式（创建实体流程、执行工作流流程）
@@ -342,6 +357,12 @@
 - **清理重构遗留文件**：删除未使用的 `operator/index-refactored.vue`、`operator/index-old.vue`、`workflow/index-refactored.vue`、`workflow/index-old.vue`，消除构建时的循环依赖警告
 
 ### 修复
+- **工作流编辑器修复**：修复从算子库拖拽算子到画布无法落位的问题。
+  - 修正事件冒泡拦截逻辑，确保 `drop` 事件能被正确捕获。
+  - 优化 `vueFlowRef` 绑定位置至容器 DOM，提高坐标投影计算准确性。
+  - 移除导致无限更新循环的冗余 `v-model` 绑定。
+  - 激活连线校验监听，修复节点间无法连线的问题。
+  - 统一全局 `useVueFlow` ID，解决多组件状态不同步及操作失效问题。
 - **文件管理页 500 错误**：修复系统管理-文件管理页打开时报 `column "visibility" does not exist` 的问题。文件列表使用 `ScopeTenant` 会查询 `visibility` 列，但 `files` 表此前未包含该列。已为 `FileModel` 增加 `Visibility` 字段（默认 0），并在 `cmd/init/main.go` 中为已有数据库增加 `files.visibility` 列的兼容性迁移。
 - **编辑保存后 visibility 无法变更**：修复编辑或保存后 visibility 响应与数据库一直为 0 的问题；应用层 Update 命令（Asset、Source、Operator、AIModel、Workflow）未将 `cmd.Visibility` 写回实体，已补全写回逻辑。
 - **可见性参数传递修复**：修复所有涉及页面（资产、媒体源、算子、工作流、AI模型）可见性设置下拉框参数传递始终为 0 的问题。统一前端 visibility 字段为 Number 类型，消除与 options 的类型冲突。
@@ -578,8 +599,7 @@
 
 - **前端**
   - 媒体源管理页（`/sources`）：列表 CRUD、创建（拉流/推流）、编辑、删除、预览（含 type=push 时展示 push_url）、流预览对话框
-  - 添加资产-流媒体接入：支持「输入流地址」传 `stream_url` 新建媒体源并创建资产；支持「从已有媒体源创建」选择媒体源传 `source_id`
-  - 新增 `web/src/api/source.ts` 与媒体源页面 `web/src/views/source/index.vue`，路由与菜单（init_data 权限与菜单项）
+  - 添加资产-流媒体支持 stream_url 与从已有媒体源创建；API 文档 Sources 与实现对齐；domain path_name 单元测试。
 - **API 文档**
   - `docs/api.md` 媒体源章节与当前实现对齐：已实现端点（列表、创建、详情、更新、删除、预览）与响应格式；未实现端点标注为「计划实现」
   - 资产创建说明更新：流媒体接入注明 `stream_url` / `source_id` 两种方式

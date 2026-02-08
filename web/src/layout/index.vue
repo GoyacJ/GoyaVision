@@ -28,20 +28,25 @@
         </el-menu>
       </div>
       <div class="header-right">
-        <el-dropdown @command="handleCommand">
-          <span class="user-info">
-            <el-avatar :size="32" icon="UserFilled" />
-            <span class="username">{{ userStore.nickname }}</span>
-            <el-icon><ArrowDown /></el-icon>
-          </span>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="profile">个人信息</el-dropdown-item>
-              <el-dropdown-item command="password">修改密码</el-dropdown-item>
-              <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
+        <template v-if="userStore.isLoggedIn">
+          <el-dropdown @command="handleCommand">
+            <span class="user-info">
+              <el-avatar :size="32" icon="UserFilled" />
+              <span class="username">{{ userStore.nickname }}</span>
+              <el-icon><ArrowDown /></el-icon>
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="profile">个人信息</el-dropdown-item>
+                <el-dropdown-item command="password">修改密码</el-dropdown-item>
+                <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </template>
+        <template v-else>
+          <el-button type="primary" link @click="handleLogin">登录</el-button>
+        </template>
       </div>
     </el-header>
     <el-main class="layout-main">
@@ -106,6 +111,7 @@ import { ref, computed, reactive, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { useUserStore } from '../store/user'
+import { useAppStore } from '@/store/app'
 import { authApi } from '../api/auth'
 import { useBreakpoint } from '@/composables/useBreakpoint'
 import SidebarItem from './SidebarItem.vue'
@@ -113,6 +119,7 @@ import SidebarItem from './SidebarItem.vue'
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+const appStore = useAppStore()
 const { isMobile } = useBreakpoint()
 
 const mobileMenuVisible = ref(false)
@@ -149,12 +156,19 @@ const passwordRules: FormRules = {
 }
 
 const menuRoutes = computed(() => {
-  return userStore.menus.filter(menu => menu.visible)
+  if (userStore.isLoggedIn) {
+    return userStore.menus.filter(menu => menu.visible)
+  }
+  return appStore.publicMenus.filter(menu => menu.visible)
 })
 
 const activeMenu = computed(() => {
   return route.path
 })
+
+function handleLogin() {
+  router.push(`/login?redirect=${route.path}`)
+}
 
 function handleCommand(command: string) {
   switch (command) {

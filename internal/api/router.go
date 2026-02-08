@@ -55,21 +55,24 @@ func RegisterRouter(e *echo.Echo, h *handler.Handlers, webFS fs.FS) {
 	handler.RegisterAuth(authGroup, h)
 
 	api := e.Group("/api/v1", authMiddleware.JWTAuth(h.Cfg.JWT))
+	optionalApi := e.Group("/api/v1", authMiddleware.OptionalJWTAuth(h.Cfg.JWT))
 
 	authProtected := api.Group("/auth")
 	handler.RegisterAuthProtected(authProtected, h)
 
 	api.Use(authMiddleware.LoadUserPermissions(h.Repo))
+	optionalApi.Use(authMiddleware.LoadUserPermissions(h.Repo))
 
-	handler.RegisterAsset(api, h)
-	handler.RegisterSource(api, h)
+	handler.RegisterSystemConfig(optionalApi, api, h)
+	handler.RegisterAssetRoutes(optionalApi, api, h)
+	handler.RegisterSourceRoutes(optionalApi, api, h)
 	handler.RegisterUpload(api, h)
 	handler.RegisterFile(api, h)
-	handler.RegisterOperator(api, h)
-	handler.RegisterWorkflow(api, h)
-	handler.RegisterTask(api, h)
+	handler.RegisterOperatorRoutes(optionalApi, api, h)
+	handler.RegisterWorkflowRoutes(optionalApi, api, h)
+	handler.RegisterTaskRoutes(optionalApi, api, h)
 	handler.RegisterArtifact(api, h)
-	handler.RegisterAIModel(api, h)
+	handler.RegisterAIModelRoutes(optionalApi, api, h)
 
 	admin := api.Group("")
 	handler.RegisterUser(admin, h)

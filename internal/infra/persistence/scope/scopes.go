@@ -22,6 +22,17 @@ func ScopeTenant(ctx context.Context) func(db *gorm.DB) *gorm.DB {
 	}
 }
 
+// ScopeTenantOnly adds tenant_id filter based on context, without visibility check
+func ScopeTenantOnly(ctx context.Context) func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		tenantID, ok := middleware.GetTenantID(ctx)
+		if ok && tenantID != uuid.Nil {
+			return db.Where("tenant_id = ?", tenantID)
+		}
+		return db
+	}
+}
+
 // ScopeVisibility adds visibility filter based on context user
 func ScopeVisibility(ctx context.Context) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
