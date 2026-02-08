@@ -1,8 +1,8 @@
-# GoyaVision V1.0 开发进度
+# GoyaVision 开发进度
 
 ## 版本说明
 
-**当前版本**: V1.0（架构重构版本）
+**当前版本**: V1.0.0（架构重构发布版）
 
 **核心变更**:
 - 引入全新核心概念：MediaAsset、MediaSource、Operator、Workflow、Task、Artifact
